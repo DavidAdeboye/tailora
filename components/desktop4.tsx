@@ -83,7 +83,6 @@ const Desktop4: NextPage<Desktop4Type> = ({ className = "" }) => {
           </div>
 
 
-
           {/* Nav links — hidden on tablet/mobile */}
 
           <div className="flex items-center gap-6 mq800:hidden">
