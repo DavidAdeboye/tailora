@@ -40,7 +40,7 @@ const Button: NextPage<ButtonType> = ({
         className="relative text-sm leading-5 font-medium font-[Satoshi] text-[#fff] text-left"
         style={createAccountStyle}
       >
-        Get Started
+        <a href="/signup">Get Started</a>
       </div>
     </button>
   );
