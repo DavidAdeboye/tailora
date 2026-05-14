@@ -4,6 +4,9 @@ import { ReactNode } from "react";
 
 export const metadata = {
   title: `Tailora \(Copy\)`,
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({
