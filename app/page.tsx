@@ -11,7 +11,7 @@ const Button = ({
   createAccountColor,
 }: {
   className?: string;
-  property1?: CSSProperties["property1"];
+  property1?: string;
   buttonBackgroundColor?: CSSProperties["backgroundColor"];
   createAccountColor?: CSSProperties["color"];
 }) => {
