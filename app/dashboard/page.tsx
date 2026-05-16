@@ -1,5 +1,8 @@
 "use client";
 import { useState } from "react";
+import AddClientModal from "../../components/AddModalClient";
+import Sidebar from "../../components/Sidebar";
+
 
 const orders = [
   { id: "#28373", client: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Wedding gown", status: "Collected", statusType: "collected" },
@@ -86,7 +89,7 @@ function HomeIcon() {
 function SearchIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M17 17L12.3333 12.3333M13.8889 8.44444C13.8889 11.4513 11.4513 13.8889 8.44444 13.8889C5.43756 13.8889 3 11.4513 3 8.44444C3 5.43756 5.43756 3 8.44444 3C11.4513 3 13.8889 5.43756 13.8889 8.44444Z" stroke="#667185" stroke-width="1.67" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M17 17L12.3333 12.3333M13.8889 8.44444C13.8889 11.4513 11.4513 13.8889 8.44444 13.8889C5.43756 13.8889 3 11.4513 3 8.44444C3 5.43756 5.43756 3 8.44444 3C11.4513 3 13.8889 5.43756 13.8889 8.44444Z" stroke="#667185" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
 
   );
@@ -116,7 +119,7 @@ function FilterIcon() {
 function CalendarIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M6.66663 0.833496C7.12686 0.833496 7.49996 1.20659 7.49996 1.66683V2.50016H12.5V1.66683C12.5 1.20659 12.8731 0.833496 13.3333 0.833496C13.7935 0.833496 14.1666 1.20659 14.1666 1.66683V2.50016H15C16.8409 2.50016 18.3333 3.99255 18.3333 5.8335V15.0002C18.3333 16.8411 16.8409 18.3335 15 18.3335H4.99996C3.15901 18.3335 1.66663 16.8411 1.66663 15.0002V5.8335C1.66663 3.99255 3.15901 2.50016 4.99996 2.50016H5.83329V1.66683C5.83329 1.20659 6.20639 0.833496 6.66663 0.833496ZM12.5 4.16683C12.5 4.62707 12.8731 5.00016 13.3333 5.00016C13.7935 5.00016 14.1666 4.62707 14.1666 4.16683H15C15.9204 4.16683 16.6666 4.91302 16.6666 5.8335V6.25016H3.33329V5.8335C3.33329 4.91302 4.07948 4.16683 4.99996 4.16683H5.83329C5.83329 4.62707 6.20639 5.00016 6.66663 5.00016C7.12686 5.00016 7.49996 4.62707 7.49996 4.16683H12.5ZM16.6666 7.91683H3.33329V15.0002C3.33329 15.9206 4.07948 16.6668 4.99996 16.6668H15C15.9204 16.6668 16.6666 15.9206 16.6666 15.0002V7.91683Z" fill="#344054"/>
+        <path fillRule="evenodd" clipRule="evenodd" d="M6.66663 0.833496C7.12686 0.833496 7.49996 1.20659 7.49996 1.66683V2.50016H12.5V1.66683C12.5 1.20659 12.8731 0.833496 13.3333 0.833496C13.7935 0.833496 14.1666 1.20659 14.1666 1.66683V2.50016H15C16.8409 2.50016 18.3333 3.99255 18.3333 5.8335V15.0002C18.3333 16.8411 16.8409 18.3335 15 18.3335H4.99996C3.15901 18.3335 1.66663 16.8411 1.66663 15.0002V5.8335C1.66663 3.99255 3.15901 2.50016 4.99996 2.50016H5.83329V1.66683C5.83329 1.20659 6.20639 0.833496 6.66663 0.833496ZM12.5 4.16683C12.5 4.62707 12.8731 5.00016 13.3333 5.00016C13.7935 5.00016 14.1666 4.62707 14.1666 4.16683H15C15.9204 4.16683 16.6666 4.91302 16.6666 5.8335V6.25016H3.33329V5.8335C3.33329 4.91302 4.07948 4.16683 4.99996 4.16683H5.83329C5.83329 4.62707 6.20639 5.00016 6.66663 5.00016C7.12686 5.00016 7.49996 4.62707 7.49996 4.16683H12.5ZM16.6666 7.91683H3.33329V15.0002C3.33329 15.9206 4.07948 16.6668 4.99996 16.6668H15C15.9204 16.6668 16.6666 15.9206 16.6666 15.0002V7.91683Z" fill="#344054"/>
 </svg>
 
   );
@@ -197,6 +200,7 @@ export default function TailoraDashboard() {
   const [activeMenu, setActiveMenu] = useState("Dashboard");
   const [currentPage, setCurrentPage] = useState(3);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showAddClient, setShowAddClient] = useState(false);
   const totalPages = 30;
 
   const sidebarMainItems = [
@@ -205,12 +209,12 @@ export default function TailoraDashboard() {
       label: "Client Management",
       icon: (
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path opacity="0.4" d="M14.6083 6.47484C14.55 6.46651 14.4917 6.46651 14.4333 6.47484C13.1417 6.43317 12.1167 5.37484 12.1167 4.07484C12.1167 2.74984 13.1917 1.6665 14.525 1.6665C15.85 1.6665 16.9333 2.7415 16.9333 4.07484C16.925 5.37484 15.9 6.43317 14.6083 6.47484Z" fill="#B6B6B6"/>
-<path opacity="0.4" d="M17.325 12.2498C16.3917 12.8748 15.0833 13.1082 13.875 12.9498C14.1917 12.2665 14.3583 11.5082 14.3667 10.7082C14.3667 9.87485 14.1833 9.08318 13.8333 8.39152C15.0667 8.22485 16.375 8.45817 17.3167 9.08317C18.6333 9.94984 18.6333 11.3748 17.325 12.2498Z" fill="#B6B6B6"/>
-<path opacity="0.4" d="M5.36667 6.47484C5.425 6.46651 5.48333 6.46651 5.54167 6.47484C6.83333 6.43317 7.85833 5.37484 7.85833 4.07484C7.85833 2.74984 6.78333 1.6665 5.45 1.6665C4.125 1.6665 3.04167 2.7415 3.04167 4.07484C3.05 5.37484 4.075 6.43317 5.36667 6.47484Z" fill="#B6B6B6"/>
-<path opacity="0.4" d="M5.45833 10.7083C5.45833 11.5167 5.63333 12.2833 5.95 12.975C4.775 13.1 3.55 12.85 2.65 12.2583C1.33333 11.3833 1.33333 9.95833 2.65 9.08333C3.54167 8.48333 4.8 8.24167 5.98333 8.37501C5.64166 9.07501 5.45833 9.86668 5.45833 10.7083Z" fill="#B6B6B6"/>
-<path d="M10.1 13.225C10.0333 13.2167 9.95833 13.2167 9.88333 13.225C8.35 13.175 7.125 11.9167 7.125 10.3667C7.125 8.78334 8.4 7.5 9.99167 7.5C11.575 7.5 12.8583 8.78334 12.8583 10.3667C12.8583 11.9167 11.6417 13.175 10.1 13.225Z" fill="#B6B6B6"/>
-<path d="M7.39166 14.9502C6.13333 15.7919 6.13333 17.1752 7.39166 18.0085C8.825 18.9669 11.175 18.9669 12.6083 18.0085C13.8667 17.1669 13.8667 15.7835 12.6083 14.9502C11.1833 13.9919 8.83333 13.9919 7.39166 14.9502Z" fill="#B6B6B6"/>
+<path opacity="0.4" d="M14.6083 1.6665H6.50833C3.475 1.6665 1.66667 3.47484 1.66667 6.50817V13.4832C1.66667 16.5248 3.475 18.3332 6.50833 18.3332H13.4833C16.5167 18.3332 18.325 16.5248 18.325 13.4915V6.50817C18.3333 3.47484 16.525 1.6665 13.4917 1.6665Z" fill="#B6B6B6"/>
+<path d="M13.3333 9.37484H10.625V6.6665C10.625 6.32484 10.3417 6.0415 10 6.0415C9.65833 6.0415 9.375 6.32484 9.375 6.6665V9.37484H6.66667C6.325 9.37484 6.04167 9.65817 6.04167 9.99984C6.04167 10.3415 6.325 10.6248 6.66667 10.6248H9.375V13.3332C9.375 13.6748 9.65833 13.9582 10 13.9582C10.3417 13.9582 10.625 13.6748 10.625 13.3332V10.6248H13.3333C13.675 10.6248 13.9583 10.3415 13.9583 9.99984C13.9583 9.65817 13.675 9.37484 13.3333 9.37484Z" fill="#B6B6B6"/>
+<path opacity="0.4" d="M9 2C6.38 2 4.25 4.13 4.25 6.75C4.25 9.32 6.26 11.4 8.88 11.49C8.96 11.48 9.04 11.48 9.1 11.49C9.12 11.49 9.13 11.49 9.15 11.49C9.16 11.49 9.16 11.49 9.17 11.49C11.73 11.4 13.74 9.32 13.75 6.75C13.75 4.13 11.62 2 9 2Z" fill="#B6B6B6"/>
+<path d="M14.08 14.1504C11.29 12.2904 6.73996 12.2904 3.92996 14.1504C2.65996 15.0004 1.95996 16.1504 1.95996 17.3804C1.95996 18.6104 2.65996 19.7504 3.91996 20.5904C5.31996 21.5304 7.15996 22.0004 8.99996 22.0004C10.84 22.0004 12.68 21.5304 14.08 20.5904C15.34 19.7404 16.04 18.6004 16.04 17.3604C16.03 16.1304 15.34 14.9904 14.08 14.1504Z" fill="#B6B6B6"/>
+<path opacity="0.4" d="M19.9899 7.3401C20.1499 9.2801 18.7699 10.9801 16.8599 11.2101C16.8499 11.2101 16.8499 11.2101 16.8399 11.2101H16.8099C16.7499 11.2101 16.6899 11.2101 16.6399 11.2301C15.6699 11.2801 14.7799 10.9701 14.1099 10.4001C15.1399 9.4801 15.7299 8.1001 15.6099 6.6001C15.5399 5.7901 15.2599 5.0501 14.8399 4.4201C15.2199 4.2301 15.6599 4.1101 16.1099 4.0701C18.0699 3.9001 19.8199 5.3601 19.9899 7.3401Z" fill="#B6B6B6"/>
+<path d="M21.9902 16.5904C21.9102 17.5604 21.2902 18.4004 20.2502 18.9704C19.2502 19.5204 17.9902 19.7804 16.7402 19.7504C17.4602 19.1004 17.8802 18.2904 17.9602 17.4304C18.0602 16.1904 17.4702 15.0004 16.2902 14.0504C15.6202 13.5204 14.8402 13.1004 13.9902 12.7904C16.2002 12.1504 18.9802 12.5804 20.6902 13.9604C21.6102 14.7004 22.0802 15.6304 21.9902 16.5904Z" fill="#B6B6B6"/>
 </svg>
 
       ),
@@ -262,111 +266,11 @@ export default function TailoraDashboard() {
   return (
     <div style={{ display: "flex", height: "100vh", background: "#FDFDFD", fontFamily: "'Satoshi', 'Inter', sans-serif", overflow: "hidden" }}>
       {/* Sidebar */}
-      <aside style={{ width: 272, minWidth: 272, background: "#121212", display: "flex", flexDirection: "column", height: "100vh", position: "relative" }}>
-        {/* Logo */}
-        <div style={{ padding: "24px 24px 0", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <img src="/logo.png" alt="Tailora logo" />
-            <span style={{ color: "#E7E7E7", fontWeight: 700, fontSize: 20, fontFamily: "Sora, sans-serif" }}>Tailora</span>
-          </div>
-          <button style={{ background: "none", border: "none", cursor: "pointer", padding: 0, color: "#B6B6B6" }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path opacity="0.4" d="M16.19 2H7.81C4.17 2 2 4.17 2 7.81V16.18C2 19.83 4.17 22 7.81 22H16.18C19.82 22 21.99 19.83 21.99 16.19V7.81C22 4.17 19.83 2 16.19 2Z" fill="#B6B6B6"/>
-<path d="M13.26 16.2802C13.07 16.2802 12.88 16.2102 12.73 16.0602L9.2 12.5302C8.91 12.2402 8.91 11.7602 9.2 11.4702L12.73 7.94016C13.02 7.65016 13.5 7.65016 13.79 7.94016C14.08 8.23016 14.08 8.71016 13.79 9.00016L10.79 12.0002L13.79 15.0002C14.08 15.2902 14.08 15.7702 13.79 16.0602C13.65 16.2102 13.46 16.2802 13.26 16.2802Z" fill="#B6B6B6"/>
-</svg>
-
-          </button>
-        </div>
-
-        {/* Main Nav */}
-        <div style={{ padding: "0 8px", marginBottom: 8 }}>
-          <div style={{ padding: "0 12px 8px", color: "#98A2B3", fontSize: 14, fontWeight: 500 }}>Main Menu</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {sidebarMainItems.map((item) => {
-              const isActive = activeMenu === item.label;
-              return (
-                <button
-                  key={item.label}
-                  onClick={() => setActiveMenu(item.label)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 12,
-                    padding: "12px 16px", borderRadius: 4,
-                    background: isActive ? "#FDF6EC" : "transparent",
-                    border: "none", cursor: "pointer", width: "100%", textAlign: "left",
-                    color: isActive ? "#28292D" : "#B6B6B6",
-                    fontSize: 14, fontWeight: isActive ? 500 : 400,
-                    transition: "background 0.15s",
-                  }}
-                >
-                  <span style={{ flexShrink: 0 }}>{item.icon}</span>
-                  <span>{item.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div style={{ margin: "0 8px 8px", height: 1, background: "#33353A" }} />
-
-        {/* Actions */}
-        <div style={{ padding: "0 8px", marginBottom: "auto" }}>
-          <div style={{ padding: "0 12px 8px", color: "#98A2B3", fontSize: 14, fontWeight: 500 }}>Actions</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {sidebarActionItems.map((item) => (
-              <button
-                key={item.label}
-                style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  padding: "12px 16px", borderRadius: 4,
-                  background: "transparent", border: "none", cursor: "pointer",
-                  width: "100%", textAlign: "left",
-                  color: "#B6B6B6", fontSize: 14, fontWeight: 400,
-                }}
-              >
-                <span style={{ flexShrink: 0 }}>{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Bottom */}
-        <div style={{ padding: "0 8px 12px" }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            {bottomItems.map((item) => (
-              <button
-                key={item.label}
-                style={{
-                  display: "flex", alignItems: "center", gap: 12,
-                  padding: "12px 16px", borderRadius: 4,
-                  background: "transparent", border: "none", cursor: "pointer",
-                  width: "100%", textAlign: "left",
-                  color: "#B6B6B6", fontSize: 14, fontWeight: 400,
-                }}
-              >
-                <span style={{ flexShrink: 0 }}>{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* User Profile */}
-        <div style={{ padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <img src="/Ellipse2481.png" alt="" style={{ width: 40, height: 40, borderRadius: "50%" }} />
-            <div>
-              <div style={{ color: "#E7E7E7", fontSize: 14, fontWeight: 600, fontFamily: "Inter, sans-serif" }}>Joshua's Couture</div>
-              <div style={{ color: "#B6B6B6", fontSize: 14, fontWeight: 400 }}>Atelier</div>
-            </div>
-            
-          </div>
-          <button style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}>
-            <LogoutIcon />
-          </button>
-        </div>
-      </aside>
+      <Sidebar
+        activeMenu={activeMenu}
+        onMenuChange={setActiveMenu}
+        onAddClient={() => setShowAddClient(true)}
+      />
 
       {/* Main Content */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -426,7 +330,7 @@ export default function TailoraDashboard() {
                   Your all-in-one tailoring business management hub
                 </p>
               </div>
-              <button style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 16px", background: "#121212", border: "none", borderRadius: 100, cursor: "pointer", color: "white", fontSize: 14, fontWeight: 400, whiteSpace: "nowrap" }}>
+              <button onClick={() => setShowAddClient(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 16px", background: "#121212", border: "none", borderRadius: 100, cursor: "pointer", color: "white", fontSize: 14, fontWeight: 400, whiteSpace: "nowrap" }}>
                 <AddIcon />
                 Add Client
               </button>
@@ -559,6 +463,12 @@ export default function TailoraDashboard() {
           </div>
         </div>
       </div>
+      <AddClientModal
+        isOpen={showAddClient}
+        onClose={() => setShowAddClient(false)}
+        onSaveDraft={(data) => console.log("Draft saved:", data)}
+        onContinue={(data) => console.log("Continue with:", data)}
+      />
     </div>
   );
 }
