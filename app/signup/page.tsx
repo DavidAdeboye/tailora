@@ -51,6 +51,7 @@ export default function SignupPage() {
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const [done, setDone] = useState<boolean>(false);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [countdown, setCountdown] = useState(58);
 
   // Slideshow state
   const [currentSlide, setCurrentSlide] = useState<number>(0);
@@ -74,6 +75,16 @@ export default function SignupPage() {
     };
   }, [isPaused]);
 
+  // Countdown timer effect
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown]);
+
   const goToSlide = (index: number): void => {
     setCurrentSlide(index);
   };
@@ -90,11 +101,17 @@ export default function SignupPage() {
     next[i] = val;
     setOtp(next);
     if (val && i < 5) otpRefs.current[i + 1]?.focus();
+    if (val && i === 5 && otp.every(d => d !== "")) {
+      setDone(true);
+    }
   };
 
   const handleOtpKeyDown = (e: KeyboardEvent<HTMLInputElement>, i: number): void => {
     if (e.key === "Backspace" && !otp[i] && i > 0) {
       otpRefs.current[i - 1]?.focus();
+    }
+    if (e.key === "Enter" && otp.every(d => d !== "")) {
+      setDone(true);
     }
   };
 
@@ -236,6 +253,8 @@ export default function SignupPage() {
               handleOtpChange={handleOtpChange}
               handleOtpKeyDown={handleOtpKeyDown}
               goNext={goNext}
+              countdown={countdown}
+              onResend={() => setCountdown(58)}
             />
           </div>
         </div>
@@ -255,11 +274,13 @@ interface StepFieldsProps {
   handleOtpChange: (val: string, i: number) => void;
   handleOtpKeyDown: (e: KeyboardEvent<HTMLInputElement>, i: number) => void;
   goNext: () => void;
+  countdown: number;
+  onResend: () => void;
 }
 
 function StepFields({
   step, formData, otp, otpRefs,
-  handleFormChange, handleOtpChange, handleOtpKeyDown, goNext,
+  handleFormChange, handleOtpChange, handleOtpKeyDown, goNext, countdown, onResend,
 }: StepFieldsProps) {
   return (
     <div className="flex flex-col gap-6">
@@ -267,7 +288,7 @@ function StepFields({
         <>
           <div>
             <FieldLabel>Full Name</FieldLabel>
-            <input type="text" placeholder="Your First and Last name" value={formData.fullName} onChange={handleFormChange("fullName")} className={inputCls} />
+            <input type="text" placeholder="Your First and Last name" value={formData.fullName} onChange={handleFormChange("fullName")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
           </div>
           <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
           <TermsText />
@@ -277,7 +298,7 @@ function StepFields({
         <>
           <div>
             <FieldLabel>Business Name</FieldLabel>
-            <input type="text" placeholder="Your Business Name" value={formData.businessName} onChange={handleFormChange("businessName")} className={inputCls} />
+            <input type="text" placeholder="Your Business Name" value={formData.businessName} onChange={handleFormChange("businessName")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
           </div>
           <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
           <TermsText />
@@ -287,7 +308,7 @@ function StepFields({
         <>
           <div>
             <FieldLabel>Email Address</FieldLabel>
-            <input type="email" placeholder="Your Email Address" value={formData.email} onChange={handleFormChange("email")} className={inputCls} />
+            <input type="email" placeholder="Your Email Address" value={formData.email} onChange={handleFormChange("email")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
           </div>
           <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
           <TermsText />
@@ -297,7 +318,7 @@ function StepFields({
         <>
           <div>
             <FieldLabel>Create Password</FieldLabel>
-            <input type="password" placeholder="Enter Password" value={formData.password} onChange={handleFormChange("password")} className={inputCls} />
+            <input type="password" placeholder="Enter Password" value={formData.password} onChange={handleFormChange("password")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
           </div>
           <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
           <TermsText />
@@ -306,8 +327,8 @@ function StepFields({
       {step === 5 && (
         <div className="flex flex-col">
           <p className="font-['Satoshi'] text-[15px] text-[#595653] leading-relaxed mb-5">
-            Enter the 6-digit code sent to your phone: <br className="hidden sm:block" />
-            <strong className="text-[#121212] font-semibold tracking-wide">+08000000000</strong> via SMS
+            Enter the 6-digit code sent to your email address: <br className="hidden sm:block" />
+            <strong className="text-[#121212] font-semibold tracking-wide">{formData.email}</strong> via Email
           </p>
           
           {/* OTP Row: Fixed for mobile, identical to original on PC */}
@@ -330,10 +351,14 @@ function StepFields({
 
           <p className="font-['Satoshi'] text-[14px] text-[#595653] mb-2">
             Didn't receive it?{" "}
-            <button className="text-[#121212] font-semibold underline underline-offset-2 hover:opacity-70 transition-opacity">
+            <button 
+              onClick={onResend}
+              disabled={countdown > 0}
+              className={`text-[#121212] font-semibold underline underline-offset-2 transition-opacity ${countdown > 0 ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-70'}`}
+            >
               Resend
             </button>
-            {" "}(58s)
+            {" "}{countdown > 0 ? `(${countdown}s)` : ''}
           </p>
 
           <PrimaryButton onClick={goNext}>Verify</PrimaryButton>
