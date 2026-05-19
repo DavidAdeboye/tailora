@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 /* ── Icons (same as dashboard) ── */
 function HomeIcon({ color = "#B6B6B6" }: { color?: string }) {
@@ -142,6 +143,7 @@ export default function Sidebar({
   onAddClient,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const router = useRouter();
 
   const W = collapsed ? 72 : 272;
 
@@ -157,8 +159,8 @@ export default function Sidebar({
   ];
 
   const bottomItems = [
-    { label: "Settings", icon: SettingsIcon },
-    { label: "Help & Support", icon: HelpIcon },
+    { label: "Settings", icon: SettingsIcon, href: "/settings" },
+    { label: "Help & Support", icon: HelpIcon, href: "/help" },
   ];
 
   const NavBtn = ({
@@ -359,7 +361,16 @@ export default function Sidebar({
       <div style={{ padding: `0 ${collapsed ? 8 : 8}px 12px` }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {bottomItems.map((item) => (
-            <NavBtn key={item.label} label={item.label} icon={item.icon} />
+            <NavBtn
+              key={item.label}
+              label={item.label}
+              icon={item.icon}
+              active={activeMenu === item.label}
+              onClick={() => {
+                onMenuChange?.(item.label);
+                if (item.href) router.push(item.href);
+              }}
+            />
           ))}
         </div>
       </div>
@@ -378,9 +389,9 @@ export default function Sidebar({
       >
         {collapsed ? (
           <Tooltip label="Joshua's Couture">
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#3A3A3A", overflow: "hidden", flexShrink: 0 }}>
-                <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#F5B500,#e07b00)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14 }}>J</div>
-              </div>
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#3A3A3A", overflow: "hidden", flexShrink: 0 }}>
+              <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#F5B500,#e07b00)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14 }}>J</div>
+            </div>
           </Tooltip>
         ) : (
           <>
