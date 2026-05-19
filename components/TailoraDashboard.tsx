@@ -1,831 +1,426 @@
 "use client";
 import { useState } from "react";
-import InviteTeamMemberModal from "./InviteTeamMemberModal";
-import SuccessModal from "./SuccessModal";
-import Sidebar from "./Sidebar";
+import { useRouter } from "next/navigation";
 
-/* TYPES */
-type Step = "dashboard" | "measurements" | "orderDetails";
-
-interface ClientFormData {
-  name: string; phone: string; email: string; gender: string; outfitType: string;
-}
-interface CustomField { id: string; name: string; value: string; }
-interface MeasurementData {
-  unit: "IN" | "CM"; fields: Record<string, string>; customFields: CustomField[];
-}
-interface OrderDetailsData {
-  dateReceived: string; collectionDate: string; price: string;
-  paymentStatus: string; assignedStaff: string;
-}
-
-/* ================================================================
-   ICONS
-================================================================ */
-const BellIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 26 26" fill="none">
-    <path opacity="0.4" d="M22.1 17.69C21.8 18.5 21.16 19.12 20.32 19.4C19.15 19.79 17.95 20.08 16.74 20.29L16.38 20.34C16.18 20.38 15.99 20.4 15.8 20.42C15.56 20.45 15.31 20.47 15.06 20.5C14.38 20.55 13.7 20.58 13.02 20.58C12.33 20.58 11.64 20.55 10.95 20.49C10.66 20.46 10.38 20.43 10.1 20.39C9.93 20.37 9.77 20.34 9.62 20.32C9.5 20.3 9.38 20.29 9.26 20.27C8.06 20.07 6.87 19.78 5.71 19.39C4.84 19.1 4.18 18.48 3.89 17.69C3.6 16.91 3.71 16 4.17 15.22L5.4 13.18C5.65 12.74 5.89 11.88 5.89 11.36V9.35C5.89 5.42 9.08 2.22 13.02 2.22C16.94 2.22 20.14 5.42 20.14 9.35V11.36C20.14 11.88 20.38 12.74 20.65 13.18L21.87 15.22C22.32 15.98 22.4 16.87 22.1 17.69Z" fill="#121212"/>
-    <path d="M13 11.66C12.55 11.66 12.18 11.29 12.18 10.83V7.48C12.18 7.02 12.55 6.65 13 6.65C13.46 6.65 13.82 7.02 13.82 7.48V10.83C13.82 11.29 13.44 11.66 13 11.66Z" fill="#121212"/>
-    <path d="M16.07 21.68C15.61 22.93 14.41 23.83 13 23.83C12.14 23.83 11.3 23.49 10.7 22.87C10.36 22.54 10.1 22.11 9.94 21.67C10.09 21.69 10.23 21.7 10.38 21.72C10.63 21.75 10.89 21.79 11.15 21.81C11.77 21.86 12.4 21.89 13.02 21.89C13.64 21.89 14.26 21.86 14.86 21.81C15.09 21.79 15.32 21.77 15.54 21.74C15.71 21.72 15.88 21.7 16.07 21.68Z" fill="#121212"/>
-  </svg>
-);
-
-const ChevronDownIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-    <path opacity="0.4" d="M15.48 13.23L11.69 8.18H6.08C5.12 8.18 4.64 9.34 5.32 10.02L10.5 15.2C11.33 16.03 12.68 16.03 13.51 15.2L15.48 13.23Z" fill="#121212"/>
-    <path d="M17.92 8.18H11.69L15.48 13.23L18.69 10.02C19.36 9.34 18.88 8.18 17.92 8.18Z" fill="#121212"/>
-  </svg>
-);
-
-const BackArrow = () => (
-  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-    <path opacity="0.4" d="M7.97 4.94L2.91 10L7.97 15.06" stroke="#121212" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M17.09 10H3.05" stroke="#121212" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const SmallChevron = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
-    <path d="M19.92 8.95L13.4 15.47C12.63 16.24 11.37 16.24 10.6 15.47L4.08 8.95" stroke="#595653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-/* ================================================================
-   SHARED: Header (used across all pages)
-================================================================ */
-function AppHeader({ onUserMenuToggle, title = "Dashboard" }: { onUserMenuToggle?: () => void; title?: string }) {
+/* ── Icons ── */
+function HomeIcon({ color = "#B6B6B6" }: { color?: string }) {
   return (
-    <header style={{ background: "#fff", borderBottom: "1px solid #F0F2F5", height: 83, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 36px", flexShrink: 0 }}>
-      <span style={{ fontFamily: "Sora, sans-serif", fontWeight: 700, fontSize: 18, color: "#28292D" }}>{title}</span>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button style={{ width: 40, height: 40, borderRadius: "50%", background: "#FEFCF9", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 1px rgba(78,78,78,0.16)" }}>
-          <BellIcon />
-        </button>
-        <button onClick={onUserMenuToggle} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "1px solid #F1F1F2", borderRadius: 100, padding: "8px 12px", cursor: "pointer" }}>
-          <img src="/Ellipse2481.png" alt="" />
-          <ChevronDownIcon />
-        </button>
-      </div>
-    </header>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path opacity="0.4" d="M10.07 2.82L3.14 8.37C2.36 8.99 1.86 10.3 2.03 11.28L3.36 19.24C3.6 20.66 4.96 21.81 6.4 21.81H17.6C19.03 21.81 20.4 20.65 20.64 19.24L21.97 11.28C22.13 10.3 21.63 8.99 20.86 8.37L13.93 2.83C12.86 1.97 11.13 1.97 10.07 2.82Z" fill={color} />
+      <path d="M12 15.81V18.81" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
-/* ================================================================
-   SHARED: Step progress bar
-================================================================ */
-const ALL_STEPS = ["Client", "Measurements", "Order Details", "Review"];
-
-function StepBar({ current }: { current: number }) {
+function PeopleIcon({ color = "#B6B6B6" }: { color?: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center" }}>
-      {ALL_STEPS.map((label, i) => {
-        const done = i < current;
-        const active = i === current;
-        return (
-          <div key={i} style={{ display: "flex", alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 20, height: 20, borderRadius: "50%", background: done || active ? "#121212" : "#DBDBDB", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {done ? (
-                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6L5 9L10 3" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                ) : (
-                  <span style={{ fontSize: 11, fontWeight: 600, color: active ? "#fff" : "#717680", fontFamily: "Satoshi, sans-serif" }}>{i + 1}</span>
-                )}
-              </div>
-              <span style={{ fontSize: 14, fontWeight: active || done ? 500 : 400, color: active || done ? "#121212" : "#696969", fontFamily: "Satoshi, sans-serif", whiteSpace: "nowrap" }}>
-                {label}
-              </span>
-            </div>
-            {i < ALL_STEPS.length - 1 && <div style={{ width: 36, height: 1, background: "#D3D5D8", margin: "0 8px" }} />}
-          </div>
-        );
-      })}
-    </div>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path opacity="0.4" d="M14.6083 6.47484C14.55 6.46651 14.4917 6.46651 14.4333 6.47484C13.1417 6.43317 12.1167 5.37484 12.1167 4.07484C12.1167 2.74984 13.1917 1.6665 14.525 1.6665C15.85 1.6665 16.9333 2.7415 16.9333 4.07484C16.925 5.37484 15.9 6.43317 14.6083 6.47484Z" fill={color} />
+      <path opacity="0.4" d="M17.325 12.2498C16.3917 12.8748 15.0833 13.1082 13.875 12.9498C14.1917 12.2665 14.3583 11.5082 14.3667 10.7082C14.3667 9.87485 14.1833 9.08318 13.8333 8.39152C15.0667 8.22485 16.375 8.45817 17.3167 9.08317C18.6333 9.94984 18.6333 11.3748 17.325 12.2498Z" fill={color} />
+      <path opacity="0.4" d="M5.36667 6.47484C5.425 6.46651 5.48333 6.46651 5.54167 6.47484C6.83333 6.43317 7.85833 5.37484 7.85833 4.07484C7.85833 2.74984 6.78333 1.6665 5.45 1.6665C4.125 1.6665 3.04167 2.7415 3.04167 4.07484C3.05 5.37484 4.075 6.43317 5.36667 6.47484Z" fill={color} />
+      <path opacity="0.4" d="M5.45833 10.7083C5.45833 11.5167 5.63333 12.2833 5.95 12.975C4.775 13.1 3.55 12.85 2.65 12.2583C1.33333 11.3833 1.33333 9.95833 2.65 9.08333C3.54167 8.48333 4.8 8.24167 5.98333 8.37501C5.64166 9.07501 5.45833 9.86668 5.45833 10.7083Z" fill={color} />
+      <path d="M10.1 13.225C10.0333 13.2167 9.95833 13.2167 9.88333 13.225C8.35 13.175 7.125 11.9167 7.125 10.3667C7.125 8.78334 8.4 7.5 9.99167 7.5C11.575 7.5 12.8583 8.78334 12.8583 10.3667C12.8583 11.9167 11.6417 13.175 10.1 13.225Z" fill={color} />
+      <path d="M7.39166 14.9502C6.13333 15.7919 6.13333 17.1752 7.39166 18.0085C8.825 18.9669 11.175 18.9669 12.6083 18.0085C13.8667 17.1669 13.8667 15.7835 12.6083 14.9502C11.1833 13.9919 8.83333 13.9919 7.39166 14.9502Z" fill={color} />
+    </svg>
   );
 }
 
-/* ================================================================
-   SHARED: Gradient strip with Back + StepBar
-================================================================ */
-function FlowHeader({ step, orderId, onBack }: { step: number; orderId: string; onBack: () => void }) {
+function TeamIcon({ color = "#B6B6B6" }: { color?: string }) {
   return (
-    <div style={{ background: "linear-gradient(180deg, #FDF6EC 0%, rgba(253,246,236,0) 100%)", padding: "28px 36px 24px", flexShrink: 0 }}>
-      <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", marginBottom: 28, padding: 0 }}>
-        <BackArrow /> Back
-      </button>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", maxWidth: 1073, margin: "0 auto" }}>
-        <StepBar current={step} />
-        <span style={{ fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 14, color: "#121212" }}>Order: {orderId}</span>
-      </div>
-    </div>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path opacity="0.4" d="M7.5 1.6665C5.31667 1.6665 3.54167 3.4415 3.54167 5.62484C3.54167 7.7665 5.21667 9.49984 7.4 9.57484C7.46667 9.5665 7.53333 9.5665 7.58333 9.57484C7.6 9.57484 7.60833 9.57484 7.625 9.57484C7.63333 9.57484 7.63333 9.57484 7.64167 9.57484C9.775 9.49984 11.45 7.7665 11.4583 5.62484C11.4583 3.4415 9.68333 1.6665 7.5 1.6665Z" fill={color} />
+      <path d="M11.7333 11.7919C9.40834 10.2419 5.61667 10.2419 3.275 11.7919C2.21667 12.5002 1.63334 13.4586 1.63334 14.4836C1.63334 15.5086 2.21667 16.4586 3.26667 17.1586C4.43334 17.9419 5.96667 18.3336 7.5 18.3336C9.03334 18.3336 10.5667 17.9419 11.7333 17.1586C12.7833 16.4502 13.3667 15.5002 13.3667 14.4669C13.3583 13.4419 12.7833 12.4919 11.7333 11.7919Z" fill={color} />
+      <path opacity="0.4" d="M16.6583 6.11659C16.7917 7.73325 15.6417 9.14992 14.05 9.34159C14.0417 9.34159 14.0417 9.34159 14.0333 9.34159H14.0083C13.9583 9.34159 13.9083 9.34159 13.8667 9.35825C13.0583 9.39992 12.3167 9.14159 11.7583 8.66659C12.6167 7.89992 13.1083 6.74992 13.0083 5.49992C12.95 4.82492 12.7167 4.20825 12.3667 3.68325C12.6833 3.52492 13.05 3.42492 13.425 3.39159C15.0583 3.24992 16.5167 4.46659 16.6583 6.11659Z" fill={color} />
+      <path d="M18.325 13.8252C18.2583 14.6335 17.7417 15.3335 16.875 15.8085C16.0417 16.2668 14.9917 16.4835 13.95 16.4585C14.55 15.9168 14.9 15.2418 14.9667 14.5252C15.05 13.4918 14.5583 12.5002 13.575 11.7085C13.0167 11.2668 12.3667 10.9168 11.6583 10.6585C13.5 10.1252 15.8167 10.4835 17.2417 11.6335C18.0083 12.2502 18.4 13.0252 18.325 13.8252Z" fill={color} />
+    </svg>
   );
 }
 
-/* ================================================================
-   SHARED: Action buttons row (Save Draft + primary)
-================================================================ */
-function ActionButtons({ onDraft, onPrimary, primaryLabel = "Continue", primaryDisabled = false }: { onDraft: () => void; onPrimary: () => void; primaryLabel?: string; primaryDisabled?: boolean }) {
+function AddClientIcon({ color = "#B6B6B6" }: { color?: string }) {
   return (
-    <div style={{ background: "#fff", borderRadius: 16, padding: 24, display: "flex", justifyContent: "flex-end", gap: 24 }}>
-      <button onClick={onDraft} disabled={primaryDisabled} style={{ padding: "13px 24px", width: 177, background: primaryDisabled ? "#ccc" : "transparent", border: "1px solid #121212", borderRadius: 999, fontSize: 14, fontWeight: 500, color: primaryDisabled ? "#999" : "#121212", fontFamily: "Satoshi, sans-serif", cursor: primaryDisabled ? "not-allowed" : "pointer" }}
-        onMouseEnter={(e) => { if (!primaryDisabled) e.currentTarget.style.background = "#F5F5F5"; }}
-        onMouseLeave={(e) => { if (!primaryDisabled) e.currentTarget.style.background = "transparent"; }}>
-        Save Draft
-      </button>
-      <button onClick={onPrimary} disabled={primaryDisabled} style={{ padding: "13px 24px", width: 177, background: primaryDisabled ? "#ccc" : "#121212", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 500, color: primaryDisabled ? "#999" : "#fff", fontFamily: "Satoshi, sans-serif", cursor: primaryDisabled ? "not-allowed" : "pointer" }}
-        onMouseEnter={(e) => { if (!primaryDisabled) e.currentTarget.style.background = "#333"; }}
-        onMouseLeave={(e) => { if (!primaryDisabled) e.currentTarget.style.background = "#121212"; }}>
-        {primaryLabel}
-      </button>
-    </div>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path opacity="0.4" d="M13.4917 1.6665H6.50833C3.475 1.6665 1.66667 3.47484 1.66667 6.50817V13.4832C1.66667 16.5248 3.475 18.3332 6.50833 18.3332H13.4833C16.5167 18.3332 18.325 16.5248 18.325 13.4915V6.50817C18.3333 3.47484 16.525 1.6665 13.4917 1.6665Z" fill={color} />
+      <path d="M13.3333 9.37484H10.625V6.6665C10.625 6.32484 10.3417 6.0415 10 6.0415C9.65833 6.0415 9.375 6.32484 9.375 6.6665V9.37484H6.66667C6.325 9.37484 6.04167 9.65817 6.04167 9.99984C6.04167 10.3415 6.325 10.6248 6.66667 10.6248H9.375V13.3332C9.375 13.6748 9.65833 13.9582 10 13.9582C10.3417 13.9582 10.625 13.6748 10.625 13.3332V10.6248H13.3333C13.675 10.6248 13.9583 10.3415 13.9583 9.99984C13.9583 9.65817 13.675 9.37484 13.3333 9.37484Z" fill={color} />
+    </svg>
   );
 }
 
-/* ================================================================
-   ADD CLIENT MODAL
-================================================================ */
-function AddClientModal({ isOpen, onClose, onContinue }: { isOpen: boolean; onClose: () => void; onContinue: (d: ClientFormData) => void }) {
-  const [form, setForm] = useState<ClientFormData>({ name: "", phone: "", email: "", gender: "", outfitType: "" });
-  const set = (k: keyof ClientFormData, v: string) => setForm(p => ({ ...p, [k]: v }));
-
-  if (!isOpen) return null;
-
-  const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 12px", border: "1px solid #E2E4E9", borderRadius: 10, fontSize: 14, color: "#1A1A1A", fontFamily: "Satoshi, Inter, sans-serif", outline: "none", boxSizing: "border-box", background: "#fff" };
-
+function InviteIcon({ color = "#B6B6B6" }: { color?: string }) {
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,13,18,0.70)", backdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div onClick={e => e.stopPropagation()} style={{ position: "relative", width: 514, background: "#fff", borderRadius: 16, overflow: "hidden", fontFamily: "Satoshi, Inter, sans-serif" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 180, background: "linear-gradient(180deg, #FDF6EC 30%, rgba(253,246,236,0) 100%)", pointerEvents: "none", zIndex: 0 }} />
-        <button onClick={onClose} style={{ position: "absolute", top: 20, right: 20, width: 32, height: 32, borderRadius: "50%", background: "#F5F7F8", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="#000" strokeWidth="1.8" strokeLinecap="round"/></svg>
-        </button>
-        <div style={{ padding: "32px 30px 30px", position: "relative", zIndex: 1 }}>
-          <h2 style={{ margin: "0 0 16px", fontFamily: "Sora, sans-serif", fontWeight: 800, fontSize: 24, color: "#1A1A1A" }}>Add New Client</h2>
-          <div style={{ height: 1, background: "#F1F1F2", marginBottom: 24 }} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-            {[
-              { label: "Client Name", key: "name" as const, placeholder: "Add name", type: "text" },
-              { label: "Phone Number", key: "phone" as const, placeholder: "Add number", type: "tel" },
-            ].map(f => (
-              <div key={f.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontSize: 14, fontWeight: 500, color: "#283145" }}>{f.label}</label>
-                <input type={f.type} placeholder={f.placeholder} value={form[f.key]} onChange={e => set(f.key, e.target.value)} style={inputStyle}
-                  onFocus={e => (e.currentTarget.style.borderColor = "#121212")}
-                  onBlur={e => (e.currentTarget.style.borderColor = "#E2E4E9")} />
-              </div>
-            ))}
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 14, fontWeight: 500, color: "#283145" }}>Email Address <span style={{ fontWeight: 400, color: "#525866" }}>(Optional)</span></label>
-              <input type="email" placeholder="Add email address" value={form.email} onChange={e => set("email", e.target.value)} style={inputStyle}
-                onFocus={e => (e.currentTarget.style.borderColor = "#121212")}
-                onBlur={e => (e.currentTarget.style.borderColor = "#E2E4E9")} />
-            </div>
-            {[
-              { label: "Gender", key: "gender" as const, placeholder: "Select gender", opts: ["Male", "Female", "Other"] },
-              { label: "Outfit Type", key: "outfitType" as const, placeholder: "Select outfit type", opts: ["Wedding Gown", "Suit", "Senator", "Agbada", "Ankara", "Kaftan"] },
-            ].map(f => (
-              <div key={f.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <label style={{ fontSize: 14, fontWeight: 500, color: "#283145" }}>{f.label}</label>
-                <div style={{ position: "relative" }}>
-                  <select value={form[f.key]} onChange={e => set(f.key, e.target.value)} style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}>
-                    <option value="" disabled>{f.placeholder}</option>
-                    {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                  <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><SmallChevron /></div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", gap: 16, marginTop: 28 }}>
-            <button onClick={onClose} style={{ flex: 1, padding: "13px 24px", background: "transparent", border: "1px solid #121212", borderRadius: 999, fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", cursor: "pointer" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#F5F5F5")}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-              Save Draft
-            </button>
-            <button onClick={() => onContinue(form)} style={{ flex: 1, padding: "13px 24px", background: "#121212", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 500, color: "#fff", fontFamily: "Satoshi, sans-serif", cursor: "pointer" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#333")}
-              onMouseLeave={e => (e.currentTarget.style.background = "#121212")}>
-              Continue
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path opacity="0.4" d="M14 7.5H6C3.33333 7.5 1.66667 9.16667 1.66667 11.8333V13.9917C1.66667 16.6667 3.33333 18.3333 6 18.3333H13.9917C16.6583 18.3333 18.325 16.6667 18.325 14V11.8333C18.3333 9.16667 16.6667 7.5 14 7.5Z" fill={color} />
+      <path d="M13.2333 10.3582L10.4417 13.1498C10.2 13.3915 9.8 13.3915 9.55833 13.1498L6.76666 10.3582C6.525 10.1165 6.525 9.7165 6.76666 9.47484C7.00833 9.23317 7.40833 9.23317 7.65 9.47484L9.375 11.1998V2.2915C9.375 1.94984 9.65833 1.6665 10 1.6665C10.3417 1.6665 10.625 1.94984 10.625 2.2915V11.1998L12.35 9.47484C12.475 9.34984 12.6333 9.2915 12.7917 9.2915C12.95 9.2915 13.1083 9.34984 13.2333 9.47484C13.4833 9.7165 13.4833 10.1082 13.2333 10.3582Z" fill={color} />
+    </svg>
   );
 }
 
-/* ================================================================
-   MEASUREMENTS PAGE
-================================================================ */
-const MEASURE_ROWS = [
-  [{ key: "neck", label: "Neck", hint: "Around base" }, { key: "chest", label: "Chest / Bust", hint: "Fullest point" }, { key: "waist", label: "Waist", hint: "Natural line" }],
-  [{ key: "hip", label: "Hip", hint: "Fullest point" }, { key: "shoulder", label: "Shoulder", hint: "Seam to seam" }, { key: "sleeve", label: "Sleeve", hint: "Shoulder to wrist" }],
-  [{ key: "trouserLength", label: "Trouser Length", hint: "Waist to hem" }],
-];
-
-function MeasurementsPage({ orderId, onBack, onContinue }: { orderId: string; onBack: () => void; onContinue: (d: MeasurementData) => void }) {
-  const [unit, setUnit] = useState<"IN" | "CM">("IN");
-  const [fields, setFields] = useState<Record<string, string>>({});
-  const [customs, setCustoms] = useState<CustomField[]>([{ id: "cf-0", name: "", value: "" }]);
-
-  const setF = (k: string, v: string) => setFields(p => ({ ...p, [k]: v }));
-  const addCustom = () => setCustoms(p => [...p, { id: `cf-${Date.now()}`, name: "", value: "" }]);
-  const removeCustom = (id: string) => setCustoms(p => p.filter(f => f.id !== id));
-  const updateCustom = (id: string, k: "name" | "value", v: string) => setCustoms(p => p.map(f => f.id === id ? { ...f, [k]: v } : f));
-
-  const MeasureInput = ({ label, hint, fkey }: { label: string; hint: string; fkey: string }) => {
-    const [focused, setFocused] = useState(false);
-    return (
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: "#283145", fontFamily: "Satoshi, sans-serif" }}>{label}</span>
-          <span style={{ fontSize: 12, color: "#98A2B3", fontFamily: "Satoshi, sans-serif" }}>{hint}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", border: `1px solid ${focused ? "#121212" : "#E2E4E9"}`, borderRadius: 10, background: "#fff", overflow: "hidden", height: 40, transition: "border-color 0.15s" }}>
-          <input type="number" min="0" step="0.1" value={fields[fkey] ?? ""} placeholder="0.0"
-            onChange={e => setF(fkey, e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-            style={{ flex: 1, padding: "0 12px", border: "none", outline: "none", height: "100%", fontSize: 14, color: "#525866", fontFamily: "Inter, sans-serif", background: "transparent", width: 0 }} />
-          <span style={{ padding: "0 12px", fontSize: 13, fontWeight: 500, color: "#525866", fontFamily: "Inter, sans-serif", borderLeft: "1px solid #F1F1F2", height: "100%", display: "flex", alignItems: "center", background: "#FAFAFA" }}>{unit}</span>
-        </div>
-      </div>
-    );
-  };
-
+function SettingsIcon({ color = "#B6B6B6" }: { color?: string }) {
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <AppHeader title="Dashboard" />
-      <FlowHeader step={1} orderId={orderId} onBack={onBack} />
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 36px 48px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ width: "100%", maxWidth: 1073, display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ background: "#fff", borderRadius: 16, padding: "32px 24px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <h2 style={{ margin: 0, fontFamily: "Sora, sans-serif", fontWeight: 800, fontSize: 24, color: "#1A1A1A" }}>Body measurements</h2>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 14, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Units</span>
-                <div style={{ position: "relative" }}>
-                  <select value={unit} onChange={e => setUnit(e.target.value as "IN" | "CM")} style={{ appearance: "none", WebkitAppearance: "none", padding: "8px 30px 8px 14px", border: "1px solid #E7E7E7", borderRadius: 8, background: "#fff", fontSize: 14, color: "#121212", fontFamily: "Satoshi, sans-serif", cursor: "pointer", outline: "none" }}>
-                    <option value="IN">inches</option>
-                    <option value="CM">cm</option>
-                  </select>
-                  <div style={{ position: "absolute", right: 9, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><SmallChevron /></div>
-                </div>
-              </div>
-            </div>
-            <div style={{ height: 1, background: "#F1F1F2", marginBottom: 32 }} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-              {MEASURE_ROWS.map((row, ri) => (
-                <div key={ri} style={{ display: "flex", gap: 30 }}>
-                  {row.map(f => <MeasureInput key={f.key} label={f.label} hint={f.hint} fkey={f.key} />)}
-                  {Array.from({ length: 3 - row.length }).map((_, si) => <div key={si} style={{ flex: 1 }} />)}
-                </div>
-              ))}
-              {/* Custom measurements */}
-              <div style={{ border: "1.5px dashed #D3D5D8", borderRadius: 10, padding: 16, display: "flex", flexDirection: "column", gap: 20, width: 341, boxSizing: "border-box" }}>
-                <span style={{ fontSize: 16, fontWeight: 300, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Custom measurements</span>
-                {customs.map(cf => (
-                  <div key={cf.id} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                    <input value={cf.name} onChange={e => updateCustom(cf.id, "name", e.target.value)} placeholder="Field name (e.g. Inseam)"
-                      style={{ border: "none", borderBottom: "1px solid #E2E4E9", outline: "none", fontSize: 14, fontWeight: 500, color: "#283145", fontFamily: "Satoshi, sans-serif", background: "transparent", padding: "2px 0" }} />
-                    <div style={{ display: "flex", alignItems: "center", border: "1px solid #E2E4E9", borderRadius: 10, background: "#fff", height: 40, overflow: "hidden" }}>
-                      <input type="number" min="0" step="0.1" value={cf.value} placeholder="0.0" onChange={e => updateCustom(cf.id, "value", e.target.value)}
-                        style={{ flex: 1, padding: "0 12px", border: "none", outline: "none", height: "100%", fontSize: 14, color: "#525866", fontFamily: "Inter, sans-serif", background: "transparent", width: 0 }} />
-                      <span style={{ padding: "0 10px", fontSize: 13, fontWeight: 500, color: "#525866", borderLeft: "1px solid #F1F1F2", height: "100%", display: "flex", alignItems: "center", background: "#FAFAFA" }}>{unit}</span>
-                      <button onClick={() => removeCustom(cf.id)} style={{ padding: "0 10px", border: "none", background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", borderLeft: "1px solid #F1F1F2", height: "100%" }}>
-                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5.333 4V2.667h5.334V4M6.667 7.333v4M9.333 7.333v4M3.333 4l.667 9.333h8l.667-9.333H3.333z" stroke="#FF3434" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button onClick={addCustom} style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 8, padding: "12px 20px", background: "#121212", border: "none", borderRadius: 100, cursor: "pointer", fontSize: 14, color: "#fff", fontFamily: "Satoshi, sans-serif" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "#333")} onMouseLeave={e => (e.currentTarget.style.background = "#121212")}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 3.333v9.334M3.333 8h9.334" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                Add Custom Measurement
-              </button>
-            </div>
-          </div>
-          <ActionButtons onDraft={() => {}} onPrimary={() => onContinue({ unit, fields, customFields: customs })} primaryLabel="Save" />
-        </div>
-      </div>
-    </div>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path opacity="0.4" d="M1.66667 10.7334V9.26669C1.66667 8.40003 2.375 7.68336 3.25 7.68336C4.75833 7.68336 5.375 6.61669 4.61667 5.30836C4.18333 4.55836 4.44167 3.58336 5.2 3.15003L6.64167 2.32503C7.3 1.93336 8.15 2.1667 8.54167 2.82503L8.63333 2.98336C9.38333 4.2917 10.6167 4.2917 11.375 2.98336L11.4667 2.82503C11.8583 2.1667 12.7083 1.93336 13.3667 2.32503L14.8083 3.15003C15.5667 3.58336 15.825 4.55836 15.3917 5.30836C14.6333 6.61669 15.25 7.68336 16.7583 7.68336C17.625 7.68336 18.3417 8.39169 18.3417 9.26669V10.7334C18.3417 11.6 17.6333 12.3167 16.7583 12.3167C15.25 12.3167 14.6333 13.3834 15.3917 14.6917C15.825 15.45 15.5667 16.4167 14.8083 16.85L13.3667 17.675C12.7083 18.0667 11.8583 17.8334 11.4667 17.175L11.375 17.0167C10.625 15.7084 9.39167 15.7084 8.63333 17.0167L8.54167 17.175C8.15 17.8334 7.3 18.0667 6.64167 17.675L5.2 16.85C4.44167 16.4167 4.18333 15.4417 4.61667 14.6917C5.375 13.3834 4.75833 12.3167 3.25 12.3167C2.375 12.3167 1.66667 11.6 1.66667 10.7334Z" fill={color} />
+      <path d="M10 12.7082C11.4958 12.7082 12.7083 11.4956 12.7083 9.99984C12.7083 8.50407 11.4958 7.2915 10 7.2915C8.50423 7.2915 7.29167 8.50407 7.29167 9.99984C7.29167 11.4956 8.50423 12.7082 10 12.7082Z" fill={color} />
+    </svg>
   );
 }
 
-/* ================================================================
-   ORDER DETAILS PAGE
-================================================================ */
-function OrderDetailsPage({ orderId, onBack, onSave }: { orderId: string; onBack: () => void; onSave: (d: OrderDetailsData) => void }) {
-  const [form, setForm] = useState<OrderDetailsData>({ dateReceived: "2026-02-23", collectionDate: "2026-02-23", price: "", paymentStatus: "Paid", assignedStaff: "Ayo Adebusola" });
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [hasInvitedTeamMember, setHasInvitedTeamMember] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const set = (k: keyof OrderDetailsData, v: string) => setForm(p => ({ ...p, [k]: v }));
-  const fmtDate = (iso: string) => iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
-
-  const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 12px", border: "1px solid #E2E4E9", borderRadius: 10, background: "#fff", fontSize: 14, color: "#525866", fontFamily: "Inter, sans-serif", outline: "none", boxSizing: "border-box", height: 40, transition: "border-color 0.15s" };
-
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 6 }}>
-      <span style={{ fontSize: 14, fontWeight: 500, color: "#283145", fontFamily: "Satoshi, sans-serif" }}>{label}</span>
-      {children}
-    </div>
-  );
-
-  const SelectF = ({ value, opts, onChange }: { value: string; opts: string[]; onChange: (v: string) => void }) => (
-    <div style={{ position: "relative" }}>
-      <select value={value} onChange={e => onChange(e.target.value)} style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}
-        onFocus={e => (e.currentTarget.style.borderColor = "#121212")} onBlur={e => (e.currentTarget.style.borderColor = "#E2E4E9")}>
-        {opts.map(o => <option key={o} value={o}>{o}</option>)}
-      </select>
-      <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><SmallChevron /></div>
-    </div>
-  );
-
+function HelpIcon({ color = "#B6B6B6" }: { color?: string }) {
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <AppHeader />
-      <FlowHeader step={2} orderId={orderId} onBack={onBack} />
-      <div style={{ flex: 1, overflowY: "auto", padding: "0 36px 48px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <div style={{ width: "100%", maxWidth: 1073, display: "flex", flexDirection: "column", gap: 20 }}>
-          <div style={{ background: "#fff", borderRadius: 16, padding: "32px 24px" }}>
-            <h2 style={{ margin: "0 0 12px", fontFamily: "Sora, sans-serif", fontWeight: 800, fontSize: 24, color: "#1A1A1A" }}>Order Details</h2>
-            <div style={{ height: 1, background: "#F1F1F2", marginBottom: 32 }} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-              <div style={{ display: "flex", gap: 30 }}>
-                <Field label="Date Received">
-                  <div style={{ position: "relative" }}>
-                    <input type="date" value={form.dateReceived} onChange={e => set("dateReceived", e.target.value)} style={{ ...inputStyle, color: "transparent" }}
-                      onFocus={e => (e.currentTarget.style.borderColor = "#121212")} onBlur={e => (e.currentTarget.style.borderColor = "#E2E4E9")} />
-                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#525866", fontFamily: "Inter, sans-serif", pointerEvents: "none" }}>{fmtDate(form.dateReceived)}</span>
-                  </div>
-                </Field>
-                <Field label="Collection Date">
-                  <div style={{ position: "relative" }}>
-                    <input type="date" value={form.collectionDate} onChange={e => set("collectionDate", e.target.value)} style={{ ...inputStyle, color: "transparent" }}
-                      onFocus={e => (e.currentTarget.style.borderColor = "#121212")} onBlur={e => (e.currentTarget.style.borderColor = "#E2E4E9")} />
-                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#525866", fontFamily: "Inter, sans-serif", pointerEvents: "none" }}>{fmtDate(form.collectionDate)}</span>
-                  </div>
-                </Field>
-                <Field label="Price">
-                  <div style={{ position: "relative" }}>
-                    <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 14, color: "#98A2B3", pointerEvents: "none", zIndex: 1 }}>₦</span>
-                    <input type="number" min="0" placeholder="00" value={form.price} onChange={e => set("price", e.target.value)} style={{ ...inputStyle, paddingLeft: 28 }}
-                      onFocus={e => (e.currentTarget.style.borderColor = "#121212")} onBlur={e => (e.currentTarget.style.borderColor = "#E2E4E9")} />
-                  </div>
-                </Field>
-              </div>
-              <div style={{ display: "flex", gap: 30 }}>
-                <Field label="Payment Status">
-                  <SelectF value={form.paymentStatus} opts={["Paid", "Unpaid", "Part Payment", "Pending"]} onChange={v => set("paymentStatus", v)} />
-                </Field>
-                <Field label="Assigned Staff">
-                  <SelectF value={form.assignedStaff} opts={["Ayo Adebusola", "Chidi Okafor", "Ngozi Eze", "Emeka Nwosu"]} onChange={v => set("assignedStaff", v)} />
-                </Field>
-                <div style={{ flex: 1 }} />
-              </div>
-              <button onClick={() => { setShowInviteModal(true); setHasInvitedTeamMember(true); }} style={{ alignSelf: "flex-start", display: "flex", alignItems: "center", gap: 8, padding: "12px 20px", background: "#121212", border: "none", borderRadius: 100, cursor: "pointer", fontSize: 14, color: "#fff", fontFamily: "Satoshi, sans-serif" }}
-                onMouseEnter={e => (e.currentTarget.style.background = "#333")} onMouseLeave={e => (e.currentTarget.style.background = "#121212")}>
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path opacity="0.4" d="M9 9C11.07 9 12.75 7.32 12.75 5.25C12.75 3.18 11.07 1.5 9 1.5C6.93 1.5 5.25 3.18 5.25 5.25C5.25 7.32 6.93 9 9 9Z" fill="white"/><path d="M9 11.25C5.69 11.25 3 13.43 3 16.13C3 16.34 3.17 16.5 3.37 16.5H14.63C14.84 16.5 15 16.34 15 16.13C15 13.43 12.31 11.25 9 11.25Z" fill="white"/><path d="M15.75 7.5V10.5M15.75 9H14.25M15.75 9H17.25" stroke="white" strokeWidth="1.2" strokeLinecap="round"/></svg>
-                Invite Team Member
-              </button>
-            </div>
-          </div>
-<ActionButtons onDraft={() => {}} onPrimary={() => setShowSuccessModal(true)} primaryLabel="Save" primaryDisabled={!hasInvitedTeamMember} />        </div>
-      </div>
-      <InviteTeamMemberModal isOpen={showInviteModal} onClose={() => setShowInviteModal(false)} />
-     <SuccessModal isOpen={showSuccessModal} title="Order Saved" message="Order details have been saved successfully" buttonLabel="Back to Dashboard" onAction={() => { setShowSuccessModal(false); onSave(form); }} />    </div>
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path opacity="0.4" d="M14.1666 7.49984C14.1666 10.7248 11.3666 13.3332 7.91663 13.3332L7.14163 14.2665L6.6833 14.8165C6.29163 15.2832 5.54162 15.1832 5.28329 14.6248L4.16663 12.1665C2.64996 11.0998 1.66663 9.40817 1.66663 7.49984C1.66663 4.27484 4.46663 1.6665 7.91663 1.6665C10.4333 1.6665 12.6083 3.05818 13.5833 5.05818C13.9583 5.79984 14.1666 6.62484 14.1666 7.49984Z" fill={color} />
+      <path d="M18.3334 10.7169C18.3334 12.6252 17.3501 14.3169 15.8334 15.3836L14.7167 17.8419C14.4584 18.4002 13.7084 18.5086 13.3167 18.0336L12.0834 16.5502C10.0667 16.5502 8.26672 15.6586 7.14172 14.2669L7.91672 13.3336C11.3667 13.3336 14.1667 10.7253 14.1667 7.50025C14.1667 6.62525 13.9584 5.80026 13.5834 5.05859C16.3084 5.68359 18.3334 7.98358 18.3334 10.7169Z" fill={color} />
+    </svg>
   );
 }
 
-/* ================================================================
-   DASHBOARD VIEW (the main screen)
-================================================================ */
-const orders = [
-  { id: "#28373", client: "Chioma Adeyemi", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Wedding gown", status: "Collected", type: "collected" },
-  { id: "#32876", client: "Chidi Adeyemi", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Suit", status: "Due in 3 days", type: "due" },
-  { id: "#11394", client: "Ikenna Okonkwo", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Agbada", status: "Overdue 2 days", type: "overdue" },
-  { id: "#99822", client: "Chidi Eze", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Senator", status: "Collected", type: "collected" },
-  { id: "#11873", client: "Chioma Okonkwo", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Wedding gown", status: "Due in 3 days", type: "due" },
-  { id: "#44921", client: "Oluwakemi Adekunle", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Ankara", status: "Collected", type: "collected" },
-  { id: "#55102", client: "Babatunde Okonkwo", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Agbada", status: "Overdue 2 days", type: "overdue" },
-];
+function LogoutIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path opacity="0.4" d="M7.5 5.99984V13.9915C7.5 16.6665 9.16667 18.3332 11.8333 18.3332H13.9917C16.6583 18.3332 18.325 16.6665 18.325 13.9998V5.99984C18.3333 3.33317 16.6667 1.6665 14 1.6665H11.8333C9.16667 1.6665 7.5 3.33317 7.5 5.99984Z" fill="#B6B6B6" />
+      <path d="M4.64162 6.7666L1.84995 9.55827C1.60828 9.79994 1.60828 10.1999 1.84995 10.4416L4.64162 13.2333C4.88328 13.4749 5.28328 13.4749 5.52495 13.2333C5.76662 12.9916 5.76662 12.5916 5.52495 12.3499L3.79995 10.6249H12.7083C13.05 10.6249 13.3333 10.3416 13.3333 9.99993C13.3333 9.65827 13.05 9.37493 12.7083 9.37493H3.79995L5.52495 7.64994C5.64995 7.52494 5.70828 7.3666 5.70828 7.20827C5.70828 7.04993 5.64995 6.88327 5.52495 6.7666C5.28328 6.5166 4.89162 6.5166 4.64162 6.7666Z" fill="#B6B6B6" />
+    </svg>
+  );
+}
 
-const statusStyle: Record<string, { bg: string; color: string }> = {
-  collected: { bg: "#E7F6EC", color: "#036B26" },
-  overdue: { bg: "#FBEAE9", color: "#9E0A05" },
-  due: { bg: "#FEF6E7", color: "#865503" },
+/*
+ * Items that are real Next.js routes → use router.push
+ * Items that are state-based views inside TailoraDashboard → only call onMenuChange
+ */
+const PAGE_ROUTES: Record<string, string> = {
+  "Dashboard": "/dashboard",
+  "Settings": "/settings",
+  "Help & Support": "/help",
 };
 
-function DashboardView({ onAddClient, onSeeAll }: { onAddClient: () => void; onSeeAll: () => void }) {
-  const stats = [
-    { label: "Total Clients", value: "1,240", icon: <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10.1 13.22C10.03 13.22 9.96 13.22 9.88 13.22C8.35 13.18 7.13 11.92 7.13 10.37C7.13 8.78 8.4 7.5 9.99 7.5C11.58 7.5 12.86 8.78 12.86 10.37C12.86 11.92 11.64 13.18 10.1 13.22Z" fill="#121212"/><path d="M7.39 14.95C6.13 15.79 6.13 17.18 7.39 18.01C8.83 18.97 11.18 18.97 12.61 18.01C13.87 17.17 13.87 15.78 12.61 14.95C11.18 13.99 8.83 13.99 7.39 14.95Z" fill="#121212"/></svg> },
-    { label: "Pending Deliveries", value: "38", icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M15.75 9.68V13.5C15.75 15.75 14.25 16.875 12.375 16.875H5.625C3.75 16.875 2.25 15.75 2.25 13.5V9C2.25 6.75 3.75 5.625 5.625 5.625H9" stroke="#121212" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M12.375 1.875V5.625M12.375 5.625V7.5M12.375 5.625H14.25M12.375 5.625H10.5" stroke="#121212" strokeWidth="1.2" strokeLinecap="round"/></svg> },
-    { label: "Orders in Progress", value: "12", icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M13.5 9.49V12.26C13.5 14.6 11.69 16.5 9.5 16.5H9C6.79 16.5 5 14.6 5 12.26V9.49C5 11.83 6.81 13.5 9 13.5C11.19 13.5 13 11.83 13 9.49H13.5Z" fill="#121212"/><path opacity="0.4" d="M13.5 5.74V9.49H13C13 11.83 11.19 13.5 9 13.5C6.81 13.5 5 11.83 5 9.49V5.74C5 3.4 6.81 1.5 9 1.5C11.19 1.5 13 3.4 13.5 5.74Z" fill="#121212"/><path d="M13.5 5.74C13 3.4 11.19 1.5 9 1.5C6.81 1.5 5 3.4 5 5.74C5 6.56 5.21 7.33 5.59 8C6.45 9.41 7.94 10.5 9 10.5C10.06 10.5 11.55 9.41 12.41 8C12.79 7.33 13 6.56 13 5.74H13.5Z" fill="#121212"/></svg> },
-    { label: "Team Members", value: "5", icon: <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path opacity="0.4" d="M6.75 1.5C4.68 1.5 3 3.18 3 5.25C3 7.29 4.63 8.97 6.72 9.02C6.78 9.01 6.84 9.01 6.89 9.02C8.79 8.97 10.5 7.29 10.5 5.25C10.5 3.18 8.82 1.5 6.75 1.5Z" fill="#121212"/><path d="M10.57 10.69C8.35 9.19 5.17 9.19 2.93 10.69C1.92 11.37 1.37 12.29 1.37 13.27C1.37 14.25 1.92 15.16 2.92 15.83C4.04 16.58 5.4 16.95 6.75 16.95C8.1 16.95 9.46 16.58 10.57 15.83C11.57 15.15 12.12 14.24 12.12 13.25C12.11 12.27 11.57 11.36 10.57 10.69Z" fill="#121212"/><path opacity="0.4" d="M15.47 5.52C15.6 7.14 14.45 8.54 12.85 8.73C12.75 8.73 12.75 8.73 12.65 8.73C12.59 8.73 12.53 8.73 12.47 8.75C11.7 8.79 10.99 8.55 10.46 8.1C11.28 7.36 11.76 6.24 11.66 5.02C11.6 4.37 11.38 3.77 11.04 3.26C11.31 3.11 11.62 3.01 11.96 2.98C13.58 2.84 15.06 4.06 15.47 5.52Z" fill="#121212"/><path d="M16.84 13.5C16.78 14.27 16.28 14.94 15.43 15.38C14.62 15.8 13.6 16.01 12.6 15.99C13.16 15.46 13.49 14.8 13.56 14.1C13.64 13.1 13.17 12.13 12.21 11.36C11.67 10.94 11.04 10.62 10.37 10.36C12.11 9.86 14.35 10.25 15.7 11.34C16.41 11.92 16.84 12.7 16.84 13.5Z" fill="#121212"/></svg> },
+/* ── Types ── */
+interface SidebarProps {
+  activeMenu?: string;
+  onMenuChange?: (label: string) => void;
+  onAddClient?: () => void;
+}
+
+/* ── Tooltip for collapsed state ── */
+function Tooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div
+      style={{ position: "relative", display: "flex" }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      {children}
+      {visible && (
+        <div
+          style={{
+            position: "absolute",
+            left: "calc(100% + 12px)",
+            top: "50%",
+            transform: "translateY(-50%)",
+            background: "#2C2C2C",
+            color: "#FFFFFF",
+            fontSize: 12,
+            fontWeight: 500,
+            padding: "5px 10px",
+            borderRadius: 6,
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+            zIndex: 300,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+          }}
+        >
+          {label}
+          <div
+            style={{
+              position: "absolute",
+              right: "100%",
+              top: "50%",
+              transform: "translateY(-50%)",
+              borderWidth: "5px 6px 5px 0",
+              borderStyle: "solid",
+              borderColor: "transparent #2C2C2C transparent transparent",
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Main Sidebar ── */
+export default function Sidebar({
+  activeMenu = "Dashboard",
+  onMenuChange,
+  onAddClient,
+}: SidebarProps) {
+  const [collapsed, setCollapsed] = useState(false);
+  const router = useRouter();
+
+  const W = collapsed ? 72 : 272;
+
+  /* Navigate: always update the active label for highlight.
+     Only push a route for real Next.js pages — state-based
+     views (Client Management, Team Collaboration) stay inside
+     TailoraDashboard and are handled by onMenuChange alone. */
+  const navigate = (label: string) => {
+    onMenuChange?.(label);
+    const href = PAGE_ROUTES[label];
+    if (href) router.push(href);
+  };
+
+  const mainItems = [
+    { label: "Dashboard", icon: HomeIcon },
+    { label: "Client Management", icon: PeopleIcon },
+    { label: "Team Collaboration", icon: TeamIcon },
   ];
 
-  return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <AppHeader />
-      <div style={{ flex: 1, overflowY: "auto", background: "#FDFDFD", position: "relative" }}>
-        <div style={{ background: "linear-gradient(180deg, #FDF6EC 0%, rgba(253,246,236,0) 100%)", height: 144, position: "absolute", left: 0, right: 0, top: 0, pointerEvents: "none" }} />
-        <div style={{ padding: "40px 36px", position: "relative" }}>
-          {/* Welcome row */}
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
-            <div>
-              <h1 style={{ margin: "0 0 8px", fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 24, color: "#121212" }}>Welcome Joshua's Couture 🧵</h1>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 300, color: "#696969" }}>Your all-in-one tailoring business management hub</p>
-            </div>
-            <button onClick={onAddClient} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 16px", background: "#121212", border: "none", borderRadius: 100, cursor: "pointer", color: "#fff", fontSize: 14, fontWeight: 400, whiteSpace: "nowrap", fontFamily: "Satoshi, sans-serif" }}>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path opacity="0.4" d="M12.14 1.5H5.86C3.13 1.5 1.5 3.13 1.5 5.86V12.14C1.5 14.87 3.13 16.5 5.86 16.5H12.14C14.87 16.5 16.5 14.87 16.5 12.14V5.86C16.5 3.13 14.87 1.5 12.14 1.5Z" fill="white"/><path d="M13.5 8.44H9.56V4.5C9.56 4.19 9.31 3.94 9 3.94C8.69 3.94 8.44 4.19 8.44 4.5V8.44H4.5C4.19 8.44 3.94 8.69 3.94 9C3.94 9.31 4.19 9.56 4.5 9.56H8.44V13.5C8.44 13.81 8.69 14.06 9 14.06C9.31 14.06 9.56 13.81 9.56 13.5V9.56H13.5C13.81 9.56 14.06 9.31 14.06 9C14.06 8.69 13.81 8.44 13.5 8.44Z" fill="white"/></svg>
-              Add Client
-            </button>
-          </div>
+  const actionItems = [
+    { label: "Add Client", icon: AddClientIcon, onClick: onAddClient },
+    { label: "Invite Co-worker", icon: InviteIcon },
+  ];
 
-          {/* Stats */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 32, marginBottom: 40 }}>
-            {stats.map((s, i) => (
-              <div key={i} style={{ background: "#fff", border: "1px solid #F1F1F2", borderRadius: 16, padding: "24px 21px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                  {s.icon}
-                  <span style={{ fontSize: 14, color: "#696969" }}>{s.label}</span>
-                </div>
-                <div style={{ fontSize: 18, fontWeight: 700, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>{s.value}</div>
-              </div>
-            ))}
-          </div>
+  const bottomItems = [
+    { label: "Settings", icon: SettingsIcon },
+    { label: "Help & Support", icon: HelpIcon },
+  ];
 
-          {/* Recent Orders table */}
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 15 }}>
-              <h2 style={{ margin: 0, fontFamily: "Sora, sans-serif", fontWeight: 400, fontSize: 18, color: "#121212" }}>Recent Orders</h2>
-              <button onClick={onSeeAll} style={{ fontSize: 14, color: "#121212", textDecoration: "underline", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>See all</button>
-            </div>
-            <div style={{ background: "#fff", border: "1px solid #E4E7EC", borderRadius: 10, overflow: "hidden" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#F8F8F8" }}>
-                    {["Client Name", "Phone Number", "Gender", "Outfit Type", "Status", ""].map((h, i) => (
-                      <th key={i} style={{ padding: "12px 24px", textAlign: i === 5 ? "center" : "left", fontSize: 12, fontWeight: 500, color: "#344054", borderBottom: "1px solid #E4E7EC" }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((o, i) => {
-                    const st = statusStyle[o.type];
-                    return (
-                      <tr key={i} style={{ borderBottom: "1px solid #E5E7EB" }}>
-                        <td style={{ padding: "16px 24px", fontSize: 14, fontWeight: 500, color: "#101928" }}>{o.client}</td>
-                        <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{o.phone}</td>
-                        <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{o.gender}</td>
-                        <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{o.outfit}</td>
-                        <td style={{ padding: "16px 24px" }}>
-                          <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, background: st.bg, color: st.color }}>{o.status}</span>
-                        </td>
-                        <td style={{ padding: "16px 24px", textAlign: "center" }}>
-                          <button style={{ width: 32, height: 32, borderRadius: 8, background: "#fff", border: "1px solid #E4E7EC", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill="#000"/><circle cx="12" cy="12" r="2" fill="#000"/><circle cx="12" cy="19" r="2" fill="#000"/></svg>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <div style={{ padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 68 }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#667185", fontFamily: "Inter, sans-serif" }}>Page 1 of 30</span>
-                <div style={{ display: "flex", gap: 16 }}>
-                  {["← Previous", "Next →"].map(lbl => (
-                    <button key={lbl} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "#344054", fontFamily: "Inter, sans-serif" }}>{lbl}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+  const NavBtn = ({
+    label,
+    icon: Icon,
+    active,
+    onClick,
+  }: {
+    label: string;
+    icon: React.FC<{ color?: string }>;
+    active?: boolean;
+    onClick?: () => void;
+  }) => {
+    const iconColor = active ? "#28292D" : "#B6B6B6";
+    const btn = (
+      <button
+        onClick={(e) => { e.stopPropagation(); onClick?.(); }}
+        title={collapsed ? label : undefined}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: collapsed ? 0 : 12,
+          justifyContent: collapsed ? "center" : "flex-start",
+          padding: collapsed ? "12px" : "12px 16px",
+          borderRadius: 6,
+          background: active ? "#FDF6EC" : "transparent",
+          border: "none",
+          cursor: "pointer",
+          width: "100%",
+          color: active ? "#28292D" : "#B6B6B6",
+          fontSize: 14,
+          fontWeight: active ? 500 : 400,
+          fontFamily: "'Satoshi', 'Inter', sans-serif",
+          transition: "background 0.15s",
+          whiteSpace: "nowrap",
+          overflow: "hidden",
+        }}
+        onMouseEnter={(e) => {
+          if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+        }}
+        onMouseLeave={(e) => {
+          if (!active) e.currentTarget.style.background = "transparent";
+        }}
+      >
+        <span style={{ flexShrink: 0 }}>
+          <Icon color={iconColor} />
+        </span>
+        {!collapsed && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>}
+      </button>
+    );
 
-
-/* ================================================================
-   CLIENT DATA
-================================================================ */
-const clientData = [
-  { id: "#28373", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Wedding gown", status: "Collected", type: "collected" },
-  { id: "#32876", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Suit", status: "Collected", type: "collected" },
-  { id: "#11394", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Wedding gown", status: "Overdue 2 days", type: "overdue" },
-  { id: "#99822", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Senator", status: "Due in 3 days", type: "due" },
-  { id: "#11873", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Senator", status: "Due in 3 days", type: "due" },
-  { id: "#33644", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Senator", status: "Collected", type: "collected" },
-  { id: "#00297", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Senator", status: "Collected", type: "collected" },
-  { id: "#00298", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Senator", status: "Collected", type: "collected" },
-];
-
-/* ================================================================
-   CLIENT MANAGEMENT VIEW
-================================================================ */
-function ClientManagementView({ onAddClient }: { onAddClient: () => void }) {
-  const [search, setSearch] = useState("");
-  const filtered = clientData.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.id.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <AppHeader title="Client Management" />
-      <div style={{ flex: 1, overflowY: "auto", background: "#FDFDFD", position: "relative" }}>
-        <div style={{ background: "linear-gradient(180deg, #FDF6EC 0%, rgba(253,246,236,0) 100%)", height: 144, position: "absolute", left: 0, right: 0, top: 0, pointerEvents: "none" }} />
-        <div style={{ padding: "40px 36px", position: "relative" }}>
-
-          {/* Page heading row */}
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
-            <div>
-              <h1 style={{ margin: "0 0 8px", fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 24, color: "#121212", display: "flex", alignItems: "center", gap: 8 }}>
-                Client <span>🧵</span>
-              </h1>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 300, color: "#696969", fontFamily: "Satoshi, sans-serif" }}>Check out the most recent list of clients.</p>
-            </div>
-            <button onClick={onAddClient} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 16px", background: "#121212", border: "none", borderRadius: 100, cursor: "pointer", color: "#fff", fontSize: 14, fontWeight: 400, whiteSpace: "nowrap", fontFamily: "Satoshi, sans-serif" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#333")}
-              onMouseLeave={e => (e.currentTarget.style.background = "#121212")}>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path opacity="0.4" d="M12.14 1.5H5.86C3.13 1.5 1.5 3.13 1.5 5.86V12.14C1.5 14.87 3.13 16.5 5.86 16.5H12.14C14.87 16.5 16.5 14.87 16.5 12.14V5.86C16.5 3.13 14.87 1.5 12.14 1.5Z" fill="white"/><path d="M13.5 8.44H9.56V4.5C9.56 4.19 9.31 3.94 9 3.94C8.69 3.94 8.44 4.19 8.44 4.5V8.44H4.5C4.19 8.44 3.94 8.69 3.94 9C3.94 9.31 4.19 9.56 4.5 9.56H8.44V13.5C8.44 13.81 8.69 14.06 9 14.06C9.31 14.06 9.56 13.81 9.56 13.5V9.56H13.5C13.81 9.56 14.06 9.31 14.06 9C14.06 8.69 13.81 8.44 13.5 8.44Z" fill="white"/></svg>
-              Add Client
-            </button>
-          </div>
-
-          {/* Table card */}
-          <div style={{ background: "#fff", border: "1px solid #E4E7EC", borderRadius: 10, overflow: "hidden", boxShadow: "0 4px 4px -2px rgba(0,0,0,0.04)" }}>
-
-            {/* Controls row */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ position: "relative", width: 291 }}>
-                  <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#667185" strokeWidth="1.67"/><path d="M15 15L13 13" stroke="#667185" strokeWidth="1.67" strokeLinecap="round"/></svg>
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search here..."
-                    style={{ width: "100%", padding: "8px 12px 8px 34px", border: "1px solid #D0D5DD", borderRadius: 6, fontSize: 14, fontFamily: "Satoshi, sans-serif", color: "#667185", outline: "none", boxSizing: "border-box" }}
-                    onFocus={e => (e.currentTarget.style.borderColor = "#121212")}
-                    onBlur={e => (e.currentTarget.style.borderColor = "#D0D5DD")} />
-                </div>
-                <button style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#344054", fontFamily: "Satoshi, sans-serif" }}>
-                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M5 10h10M2 5h16M8 15h4" stroke="#344054" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                  Filter
-                </button>
-              </div>
-              <button style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 6, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#344054", fontFamily: "Satoshi, sans-serif" }}>
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="3" y="4" width="14" height="13" rx="2" stroke="#344054" strokeWidth="1.5"/><path d="M3 8h14M7 2v4M13 2v4" stroke="#344054" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                Select dates
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="#667185" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-            </div>
-
-            {/* Table */}
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: "#F8F8F8" }}>
-                  {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Status", ""].map((h, i) => (
-                    <th key={i} style={{ padding: "12px 24px", textAlign: i === 6 ? "center" : "left", fontSize: 12, fontWeight: 500, color: "#344054", borderBottom: "1px solid #E4E7EC", fontFamily: "Inter, sans-serif" }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((c, i) => {
-                  const st = statusStyle[c.type];
-                  return (
-                    <tr key={i} style={{ borderBottom: "1px solid #E5E7EB" }}>
-                      <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "Satoshi, sans-serif" }}>{c.id}</td>
-                      <td style={{ padding: "16px 24px", fontSize: 14, fontWeight: 500, color: "#101928", fontFamily: "Satoshi, sans-serif" }}>{c.name}</td>
-                      <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "Inter, sans-serif" }}>{c.phone}</td>
-                      <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "Inter, sans-serif" }}>{c.gender}</td>
-                      <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "Inter, sans-serif" }}>{c.outfit}</td>
-                      <td style={{ padding: "16px 24px" }}>
-                        <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, background: st.bg, color: st.color, fontFamily: "Satoshi, sans-serif" }}>{c.status}</span>
-                      </td>
-                      <td style={{ padding: "16px 24px", textAlign: "center" }}>
-                        <button style={{ width: 32, height: 32, borderRadius: 8, background: "#fff", border: "1px solid #E4E7EC", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto" }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill="#000"/><circle cx="12" cy="12" r="2" fill="#000"/><circle cx="12" cy="19" r="2" fill="#000"/></svg>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {/* Pagination */}
-            <div style={{ padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 68 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "#667185", fontFamily: "Inter, sans-serif" }}>Page 1 of 30</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                {[1, 2, 3, "...", 10, 11, 12].map((p, i) => (
-                  <div key={i} style={{ width: 24, height: 24, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, background: p === 3 ? "#FFECE5" : "#fff", color: p === 3 ? "#EB5017" : "#98A2B3", fontFamily: "Inter, sans-serif", cursor: typeof p === "number" ? "pointer" : "default" }}>{p}</div>
-                ))}
-              </div>
-              <div style={{ display: "flex", gap: 16 }}>
-                {["← Previous", "Next →"].map(lbl => (
-                  <button key={lbl} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "#344054", fontFamily: "Inter, sans-serif" }}>{lbl}</button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-
-
-/* ================================================================
-   TEAM COLLABORATION VIEW
-================================================================ */
-const roleStyle: Record<string, { bg: string; color: string }> = {
-  Admin:     { bg: "#E3EFFC", color: "#04326B" },
-  Tailor:    { bg: "#E7F6EC", color: "#036B26" },
-  Assistant: { bg: "#FEF6E7", color: "#865503" },
-};
-
-const teamMembers = [
-  { name: "Olamide Akintan", email: "sara@atelier.co", role: "Admin",     joined: "Joined Jan 2024" },
-  { name: "Olamide Akintan", email: "sara@atelier.co", role: "Tailor",    joined: "Joined Jan 2024" },
-  { name: "Olamide Akintan", email: "sara@atelier.co", role: "Assistant", joined: "Joined Jan 2024" },
-  { name: "Olamide Akintan", email: "sara@atelier.co", role: "Admin",     joined: "Joined Jan 2024" },
-  { name: "Olamide Akintan", email: "sara@atelier.co", role: "Tailor",    joined: "Joined Jan 2024" },
-  { name: "Olamide Akintan", email: "sara@atelier.co", role: "Assistant", joined: "Joined Jan 2024" },
-  { name: "Olamide Akintan", email: "sara@atelier.co", role: "Admin",     joined: "Joined Jan 2024" },
-  { name: "Olamide Akintan", email: "sara@atelier.co", role: "Tailor",    joined: "Joined Jan 2024" },
-  { name: "Olamide Akintan", email: "sara@atelier.co", role: "Assistant", joined: "Joined Jan 2024" },
-];
-
-function TeamCollaborationView() {
-  const [showInvite, setShowInvite] = useState(false);
-  const [search, setSearch] = useState("");
-
-  const filtered = teamMembers.filter(m =>
-    m.name.toLowerCase().includes(search.toLowerCase()) ||
-    m.email.toLowerCase().includes(search.toLowerCase())
-  );
-
-  return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <AppHeader title="Team Collaboration" />
-      <div style={{ flex: 1, overflowY: "auto", background: "#FDFDFD", position: "relative" }}>
-        <div style={{ background: "linear-gradient(180deg, #FDF6EC 0%, rgba(253,246,236,0) 100%)", height: 144, position: "absolute", left: 0, right: 0, top: 0, pointerEvents: "none" }} />
-        <div style={{ padding: "40px 36px", position: "relative" }}>
-
-          {/* Heading row */}
-          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
-            <div>
-              <h1 style={{ margin: "0 0 8px", fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 24, color: "#121212", display: "flex", alignItems: "center", gap: 8 }}>
-                Team Collaboration <span>👕</span>
-              </h1>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 300, color: "#696969", fontFamily: "Satoshi, sans-serif" }}>
-                Manage your atelier's team and control who can access, edit, and assign work across your workspace.
-              </p>
-            </div>
-            <button onClick={() => setShowInvite(true)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 16px", background: "#121212", border: "none", borderRadius: 100, cursor: "pointer", color: "#fff", fontSize: 14, fontWeight: 400, whiteSpace: "nowrap", fontFamily: "Satoshi, sans-serif" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#333")}
-              onMouseLeave={e => (e.currentTarget.style.background = "#121212")}>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path opacity="0.4" d="M9 9C11.07 9 12.75 7.32 12.75 5.25C12.75 3.18 11.07 1.5 9 1.5C6.93 1.5 5.25 3.18 5.25 5.25C5.25 7.32 6.93 9 9 9Z" fill="white"/><path d="M9 11.25C5.69 11.25 3 13.43 3 16.13C3 16.34 3.17 16.5 3.37 16.5H14.63C14.84 16.5 15 16.34 15 16.13C15 13.43 12.31 11.25 9 11.25Z" fill="white"/><path d="M15.75 7.5V10.5M15.75 9H14.25M15.75 9H17.25" stroke="white" strokeWidth="1.2" strokeLinecap="round"/></svg>
-              Invite Member
-            </button>
-          </div>
-
-          {/* Filter bar */}
-          <div style={{ background: "#fff", border: "1px solid #E4E7EC", borderRadius: 10, padding: 16, marginBottom: 24, display: "flex", alignItems: "center", gap: 16, boxShadow: "0 4px 4px -2px rgba(0,0,0,0.04)" }}>
-            <div style={{ position: "relative", width: 291 }}>
-              <svg style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="#667185" strokeWidth="1.67"/><path d="M15 15L13 13" stroke="#667185" strokeWidth="1.67" strokeLinecap="round"/></svg>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search here..."
-                style={{ width: "100%", padding: "8px 12px 8px 34px", border: "1px solid #D0D5DD", borderRadius: 6, fontSize: 14, fontFamily: "Satoshi, sans-serif", color: "#667185", outline: "none", boxSizing: "border-box" }}
-                onFocus={e => (e.currentTarget.style.borderColor = "#121212")}
-                onBlur={e => (e.currentTarget.style.borderColor = "#D0D5DD")} />
-            </div>
-            {["All Roles", "All Status"].map(label => (
-              <button key={label} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 6, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#344054", fontFamily: "Satoshi, sans-serif" }}>
-                {label}
-                <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M5 8l5 5 5-5" stroke="#667185" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-            ))}
-          </div>
-
-          {/* Team grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24 }}>
-            {filtered.map((m, i) => {
-              const rs = roleStyle[m.role];
-              return (
-                <div key={i} style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 10, padding: "16px 26px", display: "flex", flexDirection: "column", gap: 16 }}>
-                  {/* Top row: avatar + name + menu */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <img src="/Ellipse2481.png" alt="" />
-                      <div>
-                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 600, fontSize: 14, color: "#121212", lineHeight: "20px" }}>{m.name}</div>
-                        <div style={{ fontFamily: "Inter, sans-serif", fontWeight: 400, fontSize: 14, color: "#555960", lineHeight: "20px" }}>{m.email}</div>
-                      </div>
-                    </div>
-                    <button style={{ width: 32, height: 32, borderRadius: 8, background: "#fff", border: "1px solid #E4E7EC", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2" fill="#000"/><circle cx="12" cy="12" r="2" fill="#000"/><circle cx="12" cy="19" r="2" fill="#000"/></svg>
-                    </button>
-                  </div>
-
-                  {/* Role + status row */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, background: rs.bg, color: rs.color, fontFamily: "Satoshi, sans-serif" }}>{m.role}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#036B26" }} />
-                      <span style={{ fontSize: 12, color: "#036B26", fontFamily: "Satoshi, sans-serif" }}>Active</span>
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <div style={{ height: 1, background: "#E5E7EB" }} />
-
-                  {/* Joined */}
-                  <div style={{ fontSize: 12, color: "#555960", fontFamily: "Satoshi, sans-serif" }}>{m.joined}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <InviteTeamMemberModal isOpen={showInvite} onClose={() => setShowInvite(false)} />
-    </div>
-  );
-}
-
-
-
-
-/* ================================================================
-   ROOT: TailoraDashboard  ← use this in your app
-================================================================ */
-export default function TailoraDashboard() {
-  const [activeMenu, setActiveMenu] = useState("Dashboard");
-  const [step, setStep] = useState<Step>("dashboard");
-  const [showModal, setShowModal] = useState(false);
-  const [orderId] = useState("#A-2041");
-
-  const handleModalContinue = (_data: ClientFormData) => {
-    setShowModal(false);
-    setStep("measurements");
-  };
-
-  const handleMeasurementsContinue = (_data: MeasurementData) => {
-    setStep("orderDetails");
-  };
-
-  const handleOrderSave = (_data: OrderDetailsData) => {
-    // All done — go back to dashboard
-    setStep("dashboard");
+    return collapsed ? <Tooltip label={label}>{btn}</Tooltip> : btn;
   };
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#FDFDFD", fontFamily: "Satoshi, Inter, sans-serif", overflow: "hidden" }}>
-      {/* Sidebar only shown on dashboard */}
-      {step === "dashboard" && (
-        <Sidebar
-          activeMenu={activeMenu}
-          onMenuChange={setActiveMenu}
-          onAddClient={() => setShowModal(true)}
-        />
+    <aside
+      onClick={collapsed ? () => setCollapsed(false) : undefined}
+      style={{
+        width: W,
+        minWidth: W,
+        background: "#121212",
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        transition: "width 0.22s cubic-bezier(0.4,0,0.2,1), min-width 0.22s cubic-bezier(0.4,0,0.2,1)",
+        overflow: "hidden",
+        position: "relative",
+        flexShrink: 0,
+        cursor: collapsed ? "pointer" : "default",
+      }}
+    >
+      {/* Logo row */}
+      <div
+        style={{
+          padding: collapsed ? "24px 0 0" : "24px 24px 0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: collapsed ? "center" : "space-between",
+          marginBottom: 20,
+          minHeight: 56,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden", flexShrink: 0 }}>
+          <img src="/logo.png" alt="" />
+          {!collapsed && (
+            <span
+              style={{
+                color: "#E7E7E7",
+                fontWeight: 800,
+                fontSize: 20,
+                fontFamily: "'Sora', sans-serif",
+                overflow: "hidden",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Tailora
+            </span>
+          )}
+        </div>
+
+        {!collapsed && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setCollapsed(true); }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 4,
+              color: "#B6B6B6",
+              display: "flex",
+              alignItems: "center",
+              borderRadius: 6,
+              flexShrink: 0,
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path opacity="0.4" d="M16.19 2H7.81C4.17 2 2 4.17 2 7.81V16.18C2 19.83 4.17 22 7.81 22H16.18C19.82 22 21.99 19.83 21.99 16.19V7.81C22 4.17 19.83 2 16.19 2Z" fill="#B6B6B6" />
+              <path d="M13.26 16.28C13.07 16.28 12.88 16.21 12.73 16.06L9.2 12.53C8.91 12.24 8.91 11.76 9.2 11.47L12.73 7.94C13.02 7.65 13.5 7.65 13.79 7.94C14.08 8.23 14.08 8.71 13.79 9L10.79 12L13.79 15C14.08 15.29 14.08 15.77 13.79 16.06C13.65 16.21 13.46 16.28 13.26 16.28Z" fill="#B6B6B6" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Expand button when collapsed */}
+      {collapsed && (
+        <Tooltip label="Expand sidebar">
+          <button
+            onClick={() => setCollapsed(false)}
+            style={{
+              position: "absolute",
+              top: 22,
+              right: 8,
+              background: "rgba(255,255,255,0.07)",
+              border: "none",
+              cursor: "pointer",
+              width: 28,
+              height: 28,
+              borderRadius: 6,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#B6B6B6",
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <path d="M10.74 16.28C10.55 16.28 10.36 16.21 10.21 16.06C9.92 15.77 9.92 15.29 10.21 15L13.21 12L10.21 9C9.92 8.71 9.92 8.23 10.21 7.94C10.5 7.65 10.98 7.65 11.27 7.94L14.8 11.47C15.09 11.76 15.09 12.24 14.8 12.53L11.27 16.06C11.13 16.21 10.93 16.28 10.74 16.28Z" fill="#B6B6B6" />
+            </svg>
+          </button>
+        </Tooltip>
       )}
 
-      {/* Page content */}
-      {step === "dashboard" && activeMenu === "Dashboard" && (
-        <DashboardView
-          onAddClient={() => setShowModal(true)}
-          onSeeAll={() => setActiveMenu("Client Management")}
-        />
-      )}
-      {step === "dashboard" && activeMenu === "Client Management" && (
-        <ClientManagementView onAddClient={() => setShowModal(true)} />
-      )}
-      {step === "dashboard" && activeMenu === "Team Collaboration" && (
-         <TeamCollaborationView />
-      )}
-      {step === "measurements" && (
-        <MeasurementsPage
-          orderId={orderId}
-          onBack={() => { setStep("dashboard"); setShowModal(true); }}
-          onContinue={handleMeasurementsContinue}
-        />
-      )}
-      {step === "orderDetails" && (
-        <OrderDetailsPage
-          orderId={orderId}
-          onBack={() => setStep("measurements")}
-          onSave={handleOrderSave}
-        />
-      )}
+      {/* Main Menu */}
+      <div style={{ padding: `0 ${collapsed ? 8 : 8}px`, marginBottom: 8 }}>
+        {!collapsed && (
+          <div style={{ padding: "0 12px 6px", color: "#98A2B3", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            Main Menu
+          </div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {mainItems.map((item) => (
+            <NavBtn
+              key={item.label}
+              label={item.label}
+              icon={item.icon}
+              active={activeMenu === item.label}
+              onClick={() => navigate(item.label)}
+            />
+          ))}
+        </div>
+      </div>
 
-      {/* Add Client modal */}
-      <AddClientModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onContinue={handleModalContinue}
-      />
-    </div>
+      {/* Divider */}
+      <div style={{ margin: `0 ${collapsed ? 12 : 8}px 8px`, height: 1, background: "#33353A" }} />
+
+      {/* Actions */}
+      <div style={{ padding: `0 ${collapsed ? 8 : 8}px`, marginBottom: "auto" }}>
+        {!collapsed && (
+          <div style={{ padding: "0 12px 6px", color: "#98A2B3", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            Actions
+          </div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {actionItems.map((item) => (
+            <NavBtn
+              key={item.label}
+              label={item.label}
+              icon={item.icon}
+              onClick={item.onClick}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom items */}
+      <div style={{ padding: `0 ${collapsed ? 8 : 8}px 12px` }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          {bottomItems.map((item) => (
+            <NavBtn
+              key={item.label}
+              label={item.label}
+              icon={item.icon}
+              active={activeMenu === item.label}
+              onClick={() => navigate(item.label)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* User profile */}
+      <div
+        style={{
+          padding: collapsed ? "12px 8px" : "12px 16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: collapsed ? "center" : "space-between",
+          borderTop: "1px solid #33353A",
+          gap: 8,
+          overflow: "hidden",
+        }}
+      >
+        {collapsed ? (
+          <Tooltip label="Joshua's Couture">
+            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#3A3A3A", overflow: "hidden", flexShrink: 0 }}>
+              <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#F5B500,#e07b00)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14 }}>J</div>
+            </div>
+          </Tooltip>
+        ) : (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
+              <img src="/Ellipse2481.png" alt="Joshua" />
+              <div style={{ overflow: "hidden" }}>
+                <div style={{ color: "#E7E7E7", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Joshua's Couture</div>
+                <div style={{ color: "#B6B6B6", fontSize: 12 }}>Atelier</div>
+              </div>
+            </div>
+            <button style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+              <LogoutIcon />
+            </button>
+          </>
+        )}
+      </div>
+    </aside>
   );
 }

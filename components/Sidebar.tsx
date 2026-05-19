@@ -1,8 +1,11 @@
 "use client";
-import { useState } from "react";
+
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 
-/* ── Icons (same as dashboard) ── */
+/* ================================================================
+   ICONS
+================================================================ */
 function HomeIcon({ color = "#B6B6B6" }: { color?: string }) {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -81,14 +84,20 @@ function LogoutIcon() {
   );
 }
 
-/* ── Types ── */
+/* ================================================================
+   TYPES
+================================================================ */
 interface SidebarProps {
   activeMenu?: string;
   onMenuChange?: (label: string) => void;
   onAddClient?: () => void;
 }
 
-/* ── Tooltip for collapsed state ── */
+type IconComp = React.FC<{ color?: string }>;
+
+/* ================================================================
+   TOOLTIP
+================================================================ */
 function Tooltip({ label, children }: { label: string; children: React.ReactNode }) {
   const [visible, setVisible] = useState(false);
   return (
@@ -99,44 +108,81 @@ function Tooltip({ label, children }: { label: string; children: React.ReactNode
     >
       {children}
       {visible && (
-        <div
-          style={{
-            position: "absolute",
-            left: "calc(100% + 12px)",
-            top: "50%",
-            transform: "translateY(-50%)",
-            background: "#2C2C2C",
-            color: "#FFFFFF",
-            fontSize: 12,
-            fontWeight: 500,
-            padding: "5px 10px",
-            borderRadius: 6,
-            whiteSpace: "nowrap",
-            pointerEvents: "none",
-            zIndex: 300,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
-          }}
-        >
+        <div style={{
+          position: "absolute", left: "calc(100% + 12px)", top: "50%",
+          transform: "translateY(-50%)", background: "#2C2C2C", color: "#fff",
+          fontSize: 12, fontWeight: 500, padding: "5px 10px", borderRadius: 6,
+          whiteSpace: "nowrap", pointerEvents: "none", zIndex: 300,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+        }}>
           {label}
-          {/* Arrow */}
-          <div
-            style={{
-              position: "absolute",
-              right: "100%",
-              top: "50%",
-              transform: "translateY(-50%)",
-              borderWidth: "5px 6px 5px 0",
-              borderStyle: "solid",
-              borderColor: "transparent #2C2C2C transparent transparent",
-            }}
-          />
+          <div style={{
+            position: "absolute", right: "100%", top: "50%",
+            transform: "translateY(-50%)", borderWidth: "5px 6px 5px 0",
+            borderStyle: "solid", borderColor: "transparent #2C2C2C transparent transparent",
+          }} />
         </div>
       )}
     </div>
   );
 }
 
-/* ── Main Sidebar ── */
+/* ================================================================
+   NAV BUTTON
+================================================================ */
+function NavBtn({
+  label, icon: Icon, active = false, collapsed, onClick,
+}: {
+  label: string;
+  icon: IconComp;
+  active?: boolean;
+  collapsed: boolean;
+  onClick: () => void;
+}) {
+  const iconColor = active ? "#28292D" : "#B6B6B6";
+
+  const btn = (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      style={{
+        display: "flex", alignItems: "center",
+        gap: collapsed ? 0 : 12,
+        justifyContent: collapsed ? "center" : "flex-start",
+        padding: collapsed ? "12px" : "12px 16px",
+        borderRadius: 6,
+        background: active ? "#FDF6EC" : "transparent",
+        border: "none", cursor: "pointer", width: "100%",
+        color: active ? "#28292D" : "#B6B6B6",
+        fontSize: 14, fontWeight: active ? 500 : 400,
+        fontFamily: "'Satoshi', 'Inter', sans-serif",
+        transition: "background 0.15s", whiteSpace: "nowrap", overflow: "hidden",
+      }}
+      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
+      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
+    >
+      <span style={{ flexShrink: 0 }}><Icon color={iconColor} /></span>
+      {!collapsed && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>}
+    </button>
+  );
+
+  return collapsed ? <Tooltip label={label}>{btn}</Tooltip> : btn;
+}
+
+/* ================================================================
+   ROUTE MAP
+   Only real Next.js pages go here.
+   "Client Management" and "Team Collaboration" are state-based
+   views inside TailoraDashboard — no route push for them.
+================================================================ */
+const PAGE_ROUTES: Record<string, string> = {
+  "Dashboard": "/dashboard",
+  "Settings": "/settings",
+  "Help & Support": "/help",
+};
+
+/* ================================================================
+   SIDEBAR
+================================================================ */
 export default function Sidebar({
   activeMenu = "Dashboard",
   onMenuChange,
@@ -144,141 +190,45 @@ export default function Sidebar({
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const router = useRouter();
-
   const W = collapsed ? 72 : 272;
 
-  const mainItems = [
-    { label: "Dashboard", icon: HomeIcon },
-    { label: "Client Management", icon: PeopleIcon },
-    { label: "Team Collaboration", icon: TeamIcon },
-  ];
-
-  const actionItems = [
-    { label: "Add Client", icon: AddClientIcon, onClick: onAddClient },
-    { label: "Invite Co-worker", icon: InviteIcon },
-  ];
-
-  const bottomItems = [
-    { label: "Settings", icon: SettingsIcon, href: "/settings" },
-    { label: "Help & Support", icon: HelpIcon, href: "/help" },
-  ];
-
-  const NavBtn = ({
-    label,
-    icon: Icon,
-    active,
-    onClick,
-  }: {
-    label: string;
-    icon: React.FC<{ color?: string }>;
-    active?: boolean;
-    onClick?: () => void;
-  }) => {
-    const iconColor = active ? "#28292D" : "#B6B6B6";
-    const btn = (
-      <button
-        onClick={(e) => { e.stopPropagation(); onClick?.(); }}
-        title={collapsed ? label : undefined}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: collapsed ? 0 : 12,
-          justifyContent: collapsed ? "center" : "flex-start",
-          padding: collapsed ? "12px" : "12px 16px",
-          borderRadius: 6,
-          background: active ? "#FDF6EC" : "transparent",
-          border: "none",
-          cursor: "pointer",
-          width: "100%",
-          color: active ? "#28292D" : "#B6B6B6",
-          fontSize: 14,
-          fontWeight: active ? 500 : 400,
-          fontFamily: "'Satoshi', 'Inter', sans-serif",
-          transition: "background 0.15s",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-        }}
-        onMouseEnter={(e) => {
-          if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
-        }}
-        onMouseLeave={(e) => {
-          if (!active) e.currentTarget.style.background = "transparent";
-        }}
-      >
-        <span style={{ flexShrink: 0 }}>
-          <Icon color={iconColor} />
-        </span>
-        {!collapsed && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>}
-      </button>
-    );
-
-    return collapsed ? <Tooltip label={label}>{btn}</Tooltip> : btn;
-  };
+  function navigate(label: string) {
+    onMenuChange?.(label);
+    const href = PAGE_ROUTES[label];
+    if (href) router.push(href);
+  }
 
   return (
     <aside
       onClick={collapsed ? () => setCollapsed(false) : undefined}
       style={{
-        width: W,
-        minWidth: W,
-        background: "#121212",
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
+        width: W, minWidth: W, background: "#121212",
+        display: "flex", flexDirection: "column", height: "100vh",
         transition: "width 0.22s cubic-bezier(0.4,0,0.2,1), min-width 0.22s cubic-bezier(0.4,0,0.2,1)",
-        overflow: "hidden",
-        position: "relative",
-        flexShrink: 0,
+        overflow: "hidden", position: "relative", flexShrink: 0,
         cursor: collapsed ? "pointer" : "default",
       }}
     >
       {/* Logo row */}
-      <div
-        style={{
-          padding: collapsed ? "24px 0 0" : "24px 24px 0",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: collapsed ? "center" : "space-between",
-          marginBottom: 20,
-          minHeight: 56,
-        }}
-      >
-        {/* Logo mark — always visible */}
+      <div style={{
+        padding: collapsed ? "24px 0 0" : "24px 24px 0",
+        display: "flex", alignItems: "center",
+        justifyContent: collapsed ? "center" : "space-between",
+        marginBottom: 20, minHeight: 56,
+      }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden", flexShrink: 0 }}>
           <img src="/logo.png" alt="" />
           {!collapsed && (
-            <span
-              style={{
-                color: "#E7E7E7",
-                fontWeight: 800,
-                fontSize: 20,
-                fontFamily: "'Sora', sans-serif",
-                overflow: "hidden",
-                whiteSpace: "nowrap",
-              }}
-            >
+            <span style={{ color: "#E7E7E7", fontWeight: 800, fontSize: 20, fontFamily: "'Sora', sans-serif", overflow: "hidden", whiteSpace: "nowrap" }}>
               Tailora
             </span>
           )}
         </div>
-
-        {/* Collapse toggle — only show when expanded */}
         {!collapsed && (
           <button
             onClick={(e) => { e.stopPropagation(); setCollapsed(true); }}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 4,
-              color: "#B6B6B6",
-              display: "flex",
-              alignItems: "center",
-              borderRadius: 6,
-              flexShrink: 0,
-            }}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#B6B6B6", display: "flex", alignItems: "center", borderRadius: 6, flexShrink: 0 }}
           >
-            {/* chevron-left panel icon */}
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
               <path opacity="0.4" d="M16.19 2H7.81C4.17 2 2 4.17 2 7.81V16.18C2 19.83 4.17 22 7.81 22H16.18C19.82 22 21.99 19.83 21.99 16.19V7.81C22 4.17 19.83 2 16.19 2Z" fill="#B6B6B6" />
               <path d="M13.26 16.28C13.07 16.28 12.88 16.21 12.73 16.06L9.2 12.53C8.91 12.24 8.91 11.76 9.2 11.47L12.73 7.94C13.02 7.65 13.5 7.65 13.79 7.94C14.08 8.23 14.08 8.71 13.79 9L10.79 12L13.79 15C14.08 15.29 14.08 15.77 13.79 16.06C13.65 16.21 13.46 16.28 13.26 16.28Z" fill="#B6B6B6" />
@@ -287,25 +237,16 @@ export default function Sidebar({
         )}
       </div>
 
-      {/* Expand button — floats at top-right when collapsed */}
+      {/* Expand button (collapsed only) */}
       {collapsed && (
         <Tooltip label="Expand sidebar">
           <button
             onClick={() => setCollapsed(false)}
             style={{
-              position: "absolute",
-              top: 22,
-              right: 8,
-              background: "rgba(255,255,255,0.07)",
-              border: "none",
-              cursor: "pointer",
-              width: 28,
-              height: 28,
-              borderRadius: 6,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#B6B6B6",
+              position: "absolute", top: 22, right: 8,
+              background: "rgba(255,255,255,0.07)", border: "none", cursor: "pointer",
+              width: 28, height: 28, borderRadius: 6,
+              display: "flex", alignItems: "center", justifyContent: "center", color: "#B6B6B6",
             }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -315,78 +256,51 @@ export default function Sidebar({
         </Tooltip>
       )}
 
-      {/* Main Menu section */}
-      <div style={{ padding: `0 ${collapsed ? 8 : 8}px`, marginBottom: 8 }}>
+      {/* Main Menu */}
+      <div style={{ padding: "0 8px", marginBottom: 8 }}>
         {!collapsed && (
           <div style={{ padding: "0 12px 6px", color: "#98A2B3", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
             Main Menu
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {mainItems.map((item) => (
-            <NavBtn
-              key={item.label}
-              label={item.label}
-              icon={item.icon}
-              active={activeMenu === item.label}
-              onClick={() => onMenuChange?.(item.label)}
-            />
-          ))}
+          <NavBtn label="Dashboard"          icon={HomeIcon}   active={activeMenu === "Dashboard"}          collapsed={collapsed} onClick={() => navigate("Dashboard")} />
+          <NavBtn label="Client Management"  icon={PeopleIcon} active={activeMenu === "Client Management"}  collapsed={collapsed} onClick={() => navigate("Client Management")} />
+          <NavBtn label="Team Collaboration" icon={TeamIcon}   active={activeMenu === "Team Collaboration"} collapsed={collapsed} onClick={() => navigate("Team Collaboration")} />
         </div>
       </div>
 
       {/* Divider */}
       <div style={{ margin: `0 ${collapsed ? 12 : 8}px 8px`, height: 1, background: "#33353A" }} />
 
-      {/* Actions section */}
-      <div style={{ padding: `0 ${collapsed ? 8 : 8}px`, marginBottom: "auto" }}>
+      {/* Actions */}
+      <div style={{ padding: "0 8px", marginBottom: "auto" }}>
         {!collapsed && (
           <div style={{ padding: "0 12px 6px", color: "#98A2B3", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
             Actions
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {actionItems.map((item) => (
-            <NavBtn
-              key={item.label}
-              label={item.label}
-              icon={item.icon}
-              onClick={item.onClick}
-            />
-          ))}
+          <NavBtn label="Add Client"       icon={AddClientIcon} collapsed={collapsed} onClick={() => { onAddClient?.(); }} />
+          <NavBtn label="Invite Co-worker" icon={InviteIcon}    collapsed={collapsed} onClick={() => {}} />
         </div>
       </div>
 
       {/* Bottom items */}
-      <div style={{ padding: `0 ${collapsed ? 8 : 8}px 12px` }}>
+      <div style={{ padding: "0 8px 12px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {bottomItems.map((item) => (
-            <NavBtn
-              key={item.label}
-              label={item.label}
-              icon={item.icon}
-              active={activeMenu === item.label}
-              onClick={() => {
-                onMenuChange?.(item.label);
-                if (item.href) router.push(item.href);
-              }}
-            />
-          ))}
+          <NavBtn label="Settings"       icon={SettingsIcon} active={activeMenu === "Settings"}       collapsed={collapsed} onClick={() => navigate("Settings")} />
+          <NavBtn label="Help & Support" icon={HelpIcon}     active={activeMenu === "Help & Support"} collapsed={collapsed} onClick={() => navigate("Help & Support")} />
         </div>
       </div>
 
       {/* User profile */}
-      <div
-        style={{
-          padding: collapsed ? "12px 8px" : "12px 16px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: collapsed ? "center" : "space-between",
-          borderTop: "1px solid #33353A",
-          gap: 8,
-          overflow: "hidden",
-        }}
-      >
+      <div style={{
+        padding: collapsed ? "12px 8px" : "12px 16px",
+        display: "flex", alignItems: "center",
+        justifyContent: collapsed ? "center" : "space-between",
+        borderTop: "1px solid #33353A", gap: 8, overflow: "hidden",
+      }}>
         {collapsed ? (
           <Tooltip label="Joshua's Couture">
             <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#3A3A3A", overflow: "hidden", flexShrink: 0 }}>
@@ -402,7 +316,10 @@ export default function Sidebar({
                 <div style={{ color: "#B6B6B6", fontSize: 12 }}>Atelier</div>
               </div>
             </div>
-            <button style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+            <button
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <LogoutIcon />
             </button>
           </>
