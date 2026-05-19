@@ -224,8 +224,8 @@ function Sidebar({ activeMenu, onMenuChange, onAddClient }: { activeMenu: string
 
       {/* Bottom */}
       <div style={{ padding: "0 8px 12px" }}>
-        <NavBtn label="Settings" icon={<SettingsIco />} />
-        <NavBtn label="Help & Support" icon={<HelpIco />} />
+        <a href="/settings"><NavBtn label="Settings" icon={<SettingsIco />} /></a>
+        <a href="/help"><NavBtn label="Help & Support" icon={<HelpIco />} /></a>
       </div>
 
       {/* User */}
