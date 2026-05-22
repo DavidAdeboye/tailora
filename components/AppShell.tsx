@@ -100,7 +100,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
           onCloseMobile={closeMobileMenu}
         />
         <div className="tailora-app-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
-          {children}
+          <div
+            key={pathname}
+            className="tailora-route-enter"
+            style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, width: "100%" }}
+          >
+            {children}
+          </div>
         </div>
       </div>
 

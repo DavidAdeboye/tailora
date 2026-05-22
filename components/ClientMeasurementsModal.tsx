@@ -59,6 +59,7 @@ export default function ClientMeasurementsModal({ isOpen, client, onClose, onSav
 
   return (
     <div
+      className="tailora-modal-backdrop"
       onClick={() => onClose()}
       style={{
         position: "fixed",

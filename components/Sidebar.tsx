@@ -111,7 +111,7 @@ function Tooltip({ label, children }: { label: string; children: React.ReactNode
     >
       {children}
       {visible && (
-        <div style={{
+        <div className="tailora-tooltip" style={{
           position: "absolute", left: "calc(100% + 12px)", top: "50%",
           transform: "translateY(-50%)", background: "#2C2C2C", color: "#fff",
           fontSize: 12, fontWeight: 500, padding: "5px 10px", borderRadius: 6,
@@ -146,6 +146,7 @@ function NavBtn({
 
   const btn = (
     <button
+      className="tailora-nav-btn"
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       style={{
         display: "flex", alignItems: "center",
@@ -158,7 +159,7 @@ function NavBtn({
         color: active ? "#28292D" : "#B6B6B6",
         fontSize: 14, fontWeight: active ? 500 : 400,
         fontFamily: "'Satoshi', 'Inter', sans-serif",
-        transition: "background 0.15s", whiteSpace: "nowrap", overflow: "hidden",
+        whiteSpace: "nowrap", overflow: "hidden",
       }}
       onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
       onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
@@ -203,7 +204,13 @@ export default function Sidebar({
     router.push(href);
   }
 
-  const sidebarClass = `tailora-sidebar${mobileOpen ? " tailora-sidebar--open" : ""}`;
+  const sidebarClass = [
+    "tailora-sidebar",
+    mobileOpen && "tailora-sidebar--open",
+    effectiveCollapsed && !mobileOpen && "tailora-sidebar--collapsed",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <aside

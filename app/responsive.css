@@ -30,6 +30,7 @@
 
   .tailora-sidebar-overlay--visible {
     display: block;
+    animation: tailora-fade-in 0.22s ease both;
   }
 
   .tailora-sidebar {

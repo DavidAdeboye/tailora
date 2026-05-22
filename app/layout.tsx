@@ -1,5 +1,6 @@
 import "./global.css";
 import "./responsive.css";
+import "./animations.css";
 
 import type { Metadata } from "next";
 import { ReactNode } from "react";

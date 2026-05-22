@@ -1,0 +1,389 @@
+/* Tailora motion — opacity & transform only; layout unchanged */
+
+@keyframes tailora-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes tailora-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes tailora-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes tailora-slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes tailora-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  70% {
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ── Route / page enter ── */
+.tailora-route-enter {
+  animation: tailora-fade-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-page-content,
+.tailora-dashboard .tailora-page-content {
+  animation: tailora-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-page-header-row {
+  animation: tailora-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.04s;
+}
+
+/* ── Stats stagger ── */
+.tailora-stats-grid .tailora-stat-card {
+  animation: tailora-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-stats-grid .tailora-stat-card:nth-child(1) { animation-delay: 0.08s; }
+.tailora-stats-grid .tailora-stat-card:nth-child(2) { animation-delay: 0.14s; }
+.tailora-stats-grid .tailora-stat-card:nth-child(3) { animation-delay: 0.2s; }
+.tailora-stats-grid .tailora-stat-card:nth-child(4) { animation-delay: 0.26s; }
+
+.tailora-stat-card {
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+}
+
+.tailora-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.12);
+}
+
+/* ── Panels & cards ── */
+.tailora-data-panel,
+.tailora-orders-card {
+  animation: tailora-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.12s;
+}
+
+.tailora-m-card,
+.tailora-order-card {
+  animation: tailora-fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-m-cards .tailora-m-card:nth-child(1),
+.tailora-orders-cards-mobile .tailora-m-card:nth-child(1) { animation-delay: 0.04s; }
+.tailora-m-cards .tailora-m-card:nth-child(2),
+.tailora-orders-cards-mobile .tailora-m-card:nth-child(2) { animation-delay: 0.08s; }
+.tailora-m-cards .tailora-m-card:nth-child(3),
+.tailora-orders-cards-mobile .tailora-m-card:nth-child(3) { animation-delay: 0.12s; }
+.tailora-m-cards .tailora-m-card:nth-child(4),
+.tailora-orders-cards-mobile .tailora-m-card:nth-child(4) { animation-delay: 0.16s; }
+.tailora-m-cards .tailora-m-card:nth-child(5),
+.tailora-orders-cards-mobile .tailora-m-card:nth-child(5) { animation-delay: 0.2s; }
+
+.tailora-settings-card {
+  animation: tailora-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-help-banner,
+.tailora-help-faq-list {
+  animation: tailora-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-help-contact-grid > * {
+  animation: tailora-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-help-contact-grid > *:nth-child(1) { animation-delay: 0.06s; }
+.tailora-help-contact-grid > *:nth-child(2) { animation-delay: 0.12s; }
+.tailora-help-contact-grid > *:nth-child(3) { animation-delay: 0.18s; }
+
+/* ── Headers ── */
+.tailora-app-page-header,
+.tailora-dashboard-header {
+  animation: tailora-fade-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Sidebar nav ── */
+.tailora-nav-btn {
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tailora-nav-btn:hover {
+  transform: translateX(2px);
+}
+
+.tailora-nav-btn:active {
+  transform: scale(0.98);
+}
+
+.tailora-sidebar--collapsed .tailora-nav-btn:hover {
+  transform: none;
+}
+
+.tailora-sidebar-close-btn,
+.tailora-sidebar-collapse-btn {
+  transition: background 0.2s ease, transform 0.15s ease, opacity 0.2s ease;
+}
+
+.tailora-sidebar-close-btn:hover,
+.tailora-sidebar-collapse-btn:hover {
+  transform: scale(1.06);
+}
+
+.tailora-sidebar-close-btn:active,
+.tailora-sidebar-collapse-btn:active {
+  transform: scale(0.94);
+}
+
+/* Tooltip */
+.tailora-tooltip {
+  animation: tailora-fade-in 0.15s ease both;
+}
+
+/* ── Buttons & inputs ── */
+.tailora-btn-primary {
+  transition:
+    background 0.2s ease,
+    transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s ease;
+}
+
+.tailora-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(18, 18, 18, 0.2);
+}
+
+.tailora-btn-primary:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
+}
+
+.tailora-header-bell-btn,
+.tailora-header-avatar-btn,
+.tailora-menu-btn {
+  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tailora-header-bell-btn:hover,
+.tailora-header-avatar-btn:hover,
+.tailora-menu-btn:hover {
+  transform: scale(1.05);
+}
+
+.tailora-header-bell-btn:active,
+.tailora-header-avatar-btn:active,
+.tailora-menu-btn:active {
+  transform: scale(0.96);
+}
+
+.tailora-table-search input,
+.tailora-settings-card input,
+.tailora-settings-card textarea,
+.tailora-settings-card select,
+.tailora-modal-inner input,
+.tailora-modal-inner select {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tailora-table-search:focus-within {
+  box-shadow: 0 0 0 3px rgba(253, 246, 236, 0.9);
+}
+
+/* ── Modals ── */
+.tailora-modal-backdrop {
+  animation: tailora-fade-in 0.25s ease both;
+}
+
+.tailora-modal-panel,
+.tailora-success-modal {
+  animation: tailora-scale-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Success icon circle */
+.tailora-success-icon {
+  animation: tailora-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Mobile overlay & drawer ── */
+.tailora-sidebar-overlay--visible {
+  animation: tailora-fade-in 0.22s ease both;
+}
+
+/* ── Auth pages ── */
+.tailora-auth-form-panel {
+  animation: tailora-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-auth-slide-panel img {
+  animation: tailora-fade-in 0.6s ease both;
+}
+
+/* Pagination buttons */
+.tailora-pagination-nav button,
+.tailora-pagination-pages button {
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.tailora-pagination-nav button:hover:not(:disabled),
+.tailora-pagination-pages button:hover {
+  transform: translateY(-1px);
+}
+
+/* Settings tabs */
+.tailora-settings-tabs button {
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+/* FAQ accordion feel on help items */
+.tailora-help-faq-list button {
+  transition: background 0.15s ease;
+}
+
+/* ── Landing page (/) ── */
+.tailora-landing {
+  animation: tailora-fade-in 0.4s ease both;
+}
+
+.tailora-landing-hero {
+  animation: tailora-fade-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-landing-hero-content > * {
+  animation: tailora-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-landing-hero-content > *:nth-child(1) { animation-delay: 0.06s; }
+.tailora-landing-hero-content > *:nth-child(2) { animation-delay: 0.12s; }
+.tailora-landing-hero-content > *:nth-child(3) { animation-delay: 0.18s; }
+.tailora-landing-hero-content > *:nth-child(4) { animation-delay: 0.24s; }
+
+.tailora-landing-hero-image {
+  animation: tailora-fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.2s;
+}
+
+.tailora-landing-nav {
+  animation: tailora-fade-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-landing-menu-dropdown {
+  animation: tailora-fade-up 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.tailora-landing-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.tailora-landing-reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tailora-landing-card {
+  transition:
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.25s ease;
+}
+
+.tailora-landing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.14);
+}
+
+.tailora-landing-btn,
+.tailora-landing .cursor-pointer[class*="rounded-[999px]"],
+.tailora-landing .cursor-pointer[class*="rounded-[40px]"] {
+  transition:
+    transform 0.15s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.tailora-landing-btn:hover,
+.tailora-landing .cursor-pointer[class*="rounded-[999px]"]:hover,
+.tailora-landing .cursor-pointer[class*="rounded-[40px]"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(18, 18, 18, 0.18);
+}
+
+.tailora-landing-btn:active,
+.tailora-landing .cursor-pointer[class*="rounded-[999px]"]:active,
+.tailora-landing .cursor-pointer[class*="rounded-[40px]"]:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.tailora-landing nav .cursor-pointer {
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.tailora-landing nav .cursor-pointer:hover {
+  opacity: 0.7;
+}
+
+.tailora-landing footer button {
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.tailora-landing footer button:hover {
+  transform: scale(1.06);
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .tailora-stat-card:hover,
+  .tailora-btn-primary:hover,
+  .tailora-landing-card:hover,
+  .tailora-landing-btn:hover {
+    transform: none;
+  }
+
+  .tailora-landing-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

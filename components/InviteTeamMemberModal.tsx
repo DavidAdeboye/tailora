@@ -12,7 +12,7 @@ export default function InviteTeamMemberModal({ isOpen, onClose }: Props) {
   const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 12px", border: "1px solid #E2E4E9", borderRadius: 10, fontSize: 14, color: "#525866", fontFamily: "Inter, sans-serif", outline: "none", boxSizing: "border-box", background: "#fff" };
 
   return (
-    <div onClick={() => onClose()} style={{ position: "fixed", inset: 0, background: "rgba(10,13,18,0.70)", backdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="tailora-modal-backdrop" onClick={() => onClose()} style={{ position: "fixed", inset: 0, background: "rgba(10,13,18,0.70)", backdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div className="tailora-modal-panel" onClick={(e) => e.stopPropagation()} style={{ position: "relative", width: 514, background: "#fff", borderRadius: 16, overflow: "hidden", fontFamily: "Satoshi, Inter, sans-serif" }}>
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 180, background: "linear-gradient(180deg, #FDF6EC 30%, rgba(253,246,236,0) 100%)", pointerEvents: "none", zIndex: 0 }} />
         <button type="button" onClick={() => onClose()} style={{ position: "absolute", top: 20, right: 20, width: 32, height: 32, borderRadius: "50%", background: "#F5F7F8", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
