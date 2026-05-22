@@ -1,0 +1,576 @@
+/* Mobile & tablet only — desktop (1025px+) unchanged */
+
+/* ── Shared data panels & mobile cards (hidden on desktop) ── */
+.tailora-m-cards,
+.tailora-orders-cards-mobile {
+  display: none;
+}
+
+.tailora-data-panel {
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  box-shadow: 0 4px 4px -2px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* ── App shell: drawer sidebar ── */
+@media (max-width: 1024px) {
+  .tailora-sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 13, 18, 0.55);
+    z-index: 199;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .tailora-sidebar-overlay--visible {
+    display: block;
+  }
+
+  .tailora-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    z-index: 200 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    width: min(300px, 88vw) !important;
+    min-width: min(300px, 88vw) !important;
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    flex-shrink: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .tailora-sidebar.tailora-sidebar--open {
+    transform: translateX(0) !important;
+  }
+
+  .tailora-sidebar-collapse-btn {
+    display: none !important;
+  }
+
+  .tailora-sidebar-close-btn {
+    display: flex !important;
+  }
+
+  .tailora-sidebar button {
+    min-height: 44px !important;
+  }
+
+  .tailora-app-shell {
+    overflow-x: hidden !important;
+  }
+
+  .tailora-app-main,
+  .tailora-page-view,
+  .tailora-page,
+  .tailora-page-scroll,
+  .tailora-dashboard,
+  .tailora-dashboard-scroll {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .tailora-menu-btn {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .tailora-menu-btn,
+  .tailora-sidebar-close-btn {
+    display: none !important;
+  }
+
+  .tailora-sidebar-overlay {
+    display: none !important;
+  }
+}
+
+/* ── Headers ── */
+@media (max-width: 1024px) {
+  .tailora-app-page-header,
+  .tailora-dashboard-header {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    gap: 8px !important;
+  }
+
+  .tailora-app-page-header .tailora-header-title,
+  .tailora-dashboard-header .tailora-header-title,
+  .tailora-dashboard-header > div:first-child > span {
+    font-size: 15px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .tailora-app-page-header > div:first-child,
+  .tailora-dashboard-header > div:first-child {
+    min-width: 0 !important;
+    flex: 1 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .tailora-header-bell-btn {
+    display: none !important;
+  }
+
+  .tailora-header-actions .tailora-header-avatar-btn svg {
+    display: none;
+  }
+
+  .tailora-header-actions .tailora-header-avatar-btn {
+    padding: 6px !important;
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
+
+  .tailora-header-actions {
+    gap: 6px !important;
+  }
+}
+
+/* ── Page content ── */
+@media (max-width: 1024px) {
+  .tailora-page-content {
+    padding: 24px 16px 32px !important;
+  }
+
+  .tailora-page-gradient {
+    height: 120px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .tailora-page-content {
+    padding: 16px 14px 24px !important;
+  }
+}
+
+/* ── Page title + primary CTA ── */
+@media (max-width: 768px) {
+  .tailora-page-header-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    margin-bottom: 20px !important;
+  }
+
+  .tailora-page-title,
+  .tailora-page-header-row h1 {
+    font-size: 20px !important;
+    line-height: 1.3 !important;
+    word-break: break-word !important;
+  }
+
+  .tailora-page-subtitle {
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+
+  .tailora-btn-primary {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .tailora-welcome-title {
+    flex-wrap: wrap !important;
+    align-items: flex-start !important;
+  }
+
+  .tailora-welcome-title h1,
+  .tailora-welcome-title.tailora-page-title {
+    font-size: 18px !important;
+  }
+
+  .tailora-welcome-title img,
+  .tailora-welcome-title span:last-child {
+    font-size: 22px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .tailora-page-title,
+  .tailora-page-header-row h1,
+  .tailora-welcome-title h1 {
+    font-size: 17px !important;
+  }
+
+  .tailora-page-content {
+    padding: 14px 12px 20px !important;
+  }
+}
+
+/* ── Stats grid (dashboard) ── */
+@media (max-width: 1024px) {
+  .tailora-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    margin-bottom: 24px !important;
+  }
+
+  .tailora-stat-value {
+    font-size: 16px !important;
+    word-break: break-word !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .tailora-dashboard .tailora-stats-grid,
+  .tailora-stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .tailora-stat-card {
+    padding: 14px !important;
+  }
+
+  .tailora-stat-card > div:first-child {
+    margin-bottom: 10px !important;
+  }
+
+  .tailora-stat-value {
+    font-size: 15px !important;
+  }
+
+  .tailora-pagination-pages {
+    display: none !important;
+  }
+}
+
+/* ── Mobile list cards (orders, clients, team) ── */
+@media (max-width: 768px) {
+  .tailora-data-table-desktop,
+  .tailora-orders-table-desktop {
+    display: none !important;
+  }
+
+  .tailora-m-cards,
+  .tailora-orders-cards-mobile {
+    display: flex !important;
+    flex-direction: column !important;
+    border-top: 1px solid #e4e7ec !important;
+  }
+
+  .tailora-m-card,
+  .tailora-order-card {
+    padding: 14px 16px !important;
+    border-bottom: 1px solid #e5e7eb !important;
+    background: #fff !important;
+  }
+
+  .tailora-m-card:last-child,
+  .tailora-order-card:last-child {
+    border-bottom: none !important;
+  }
+
+  .tailora-m-card-top,
+  .tailora-order-card-top {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .tailora-m-card-id,
+  .tailora-order-card-id {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #344054 !important;
+    font-family: var(--font-satoshi) !important;
+  }
+
+  .tailora-m-card-pill,
+  .tailora-m-card-badge {
+    display: inline-block !important;
+    padding: 2px 8px !important;
+    border-radius: 12px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+  }
+
+  .tailora-m-card-badge {
+    background: #f3f4f6 !important;
+    color: #344054 !important;
+  }
+
+  .tailora-m-card-role {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #667185 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  .tailora-m-card-title,
+  .tailora-order-card-name {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: #101928 !important;
+    margin-bottom: 6px !important;
+    word-break: break-word !important;
+    font-family: var(--font-satoshi) !important;
+  }
+
+  .tailora-m-card-meta,
+  .tailora-order-card-meta {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 3px !important;
+    font-size: 13px !important;
+    color: #667185 !important;
+    line-height: 1.4 !important;
+    font-family: var(--font-satoshi) !important;
+  }
+
+  .tailora-data-panel {
+    border-radius: 12px !important;
+  }
+
+  .tailora-recent-orders-header {
+    margin-bottom: 10px !important;
+  }
+
+  .tailora-recent-orders-header h2 {
+    font-size: 16px !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .tailora-m-cards,
+  .tailora-orders-cards-mobile {
+    display: none !important;
+  }
+}
+
+/* ── Table toolbars & pagination ── */
+@media (max-width: 1024px) {
+  .tailora-table-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .tailora-table-toolbar-left {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .tailora-table-search {
+    width: 100% !important;
+    max-width: none !important;
+    box-sizing: border-box !important;
+  }
+
+  .tailora-table-toolbar-left .tailora-table-filter-btn,
+  .tailora-table-toolbar-right,
+  .tailora-table-toolbar-right button {
+    width: 100% !important;
+  }
+
+  .tailora-table-toolbar-right button,
+  .tailora-table-toolbar-left .tailora-table-filter-btn {
+    justify-content: center !important;
+    min-height: 44px !important;
+  }
+
+  .tailora-pagination {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    height: auto !important;
+    padding: 12px 14px 14px !important;
+  }
+
+  .tailora-pagination-pages {
+    justify-content: center !important;
+    flex-wrap: wrap !important;
+  }
+
+  .tailora-pagination-nav {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .tailora-pagination-nav button {
+    width: 100% !important;
+    justify-content: center !important;
+    min-height: 44px !important;
+  }
+
+  .tailora-pagination > span:first-child {
+    text-align: center !important;
+    font-size: 13px !important;
+  }
+}
+
+/* ── Settings ── */
+@media (max-width: 1024px) {
+  .tailora-settings-tabs {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    margin-left: -4px !important;
+    margin-right: -4px !important;
+    padding-bottom: 2px !important;
+  }
+
+  .tailora-settings-tabs button {
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+    min-height: 44px !important;
+  }
+
+  .tailora-settings-row {
+    flex-direction: column !important;
+    gap: 20px !important;
+    padding: 16px 14px !important;
+  }
+
+  .tailora-settings-row-left {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .tailora-settings-card {
+    max-width: none !important;
+    border-radius: 12px !important;
+  }
+
+  .tailora-settings-card input,
+  .tailora-settings-card textarea,
+  .tailora-settings-card select {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .tailora-settings-card button {
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .tailora-settings-tabs button {
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* ── Help ── */
+@media (max-width: 1024px) {
+  .tailora-help-contact-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    max-width: none !important;
+    gap: 12px !important;
+    margin-bottom: 28px !important;
+  }
+
+  .tailora-help-banner {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+    padding: 18px 16px !important;
+    max-width: none !important;
+  }
+
+  .tailora-help-banner a {
+    width: 100% !important;
+    justify-content: center !important;
+    min-height: 44px !important;
+  }
+
+  .tailora-help-search {
+    max-width: none !important;
+    margin-bottom: 28px !important;
+  }
+
+  .tailora-help-search > div {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .tailora-help-contact-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .tailora-help-faq-list {
+    padding: 0 14px !important;
+    border-radius: 12px !important;
+  }
+
+  .tailora-help-content h2 {
+    font-size: 18px !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .tailora-help-contact-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* ── Modals ── */
+@media (max-width: 768px) {
+  .tailora-modal-panel {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: 92vh !important;
+    max-height: 92dvh !important;
+  }
+
+  .tailora-modal-inner {
+    padding: 22px 16px 18px !important;
+  }
+
+  .tailora-modal-actions {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  .tailora-modal-actions button {
+    width: 100% !important;
+    min-height: 44px !important;
+  }
+
+  .tailora-measurements-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .tailora-success-modal {
+    width: calc(100vw - 24px) !important;
+    max-width: 400px !important;
+    padding: 28px 18px 22px !important;
+  }
+}
+
+/* ── Auth pages ── */
+@media (max-width: 480px) {
+  .tailora-auth-form-panel {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}

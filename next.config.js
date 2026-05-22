@@ -1,15 +1,18 @@
-const nextConfig = {
-    reactStrictMode: true,
-    images: {
-      remotePatterns: [
-        {
-          protocol: "https",
-          hostname: "**",
-          pathname: "/**",
-        },
-      ],
-    },
-    
-  };
+const path = require("path");
 
-  module.exports = nextConfig;
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  outputFileTracingRoot: path.join(__dirname),
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**",
+        pathname: "/**",
+      },
+    ],
+  },
+};
+
+module.exports = nextConfig;

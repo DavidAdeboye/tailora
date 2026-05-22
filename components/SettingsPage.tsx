@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import Sidebar from "./Sidebar";
+import AppPageHeader from "./AppPageHeader";
 
 /* ── Types ── */
 type Tab = "Profile" | "Workspace" | "Notifications" | "Security";
@@ -35,37 +35,11 @@ const ImageAddIcon = () => (
   </svg>
 );
 
-/* ── Header ── */
-function AppHeader() {
-  return (
-    <header style={{
-      background: "#fff",
-      borderBottom: "1px solid #F0F2F5",
-      height: 83,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "0 36px",
-      flexShrink: 0,
-    }}>
-      <span style={{ fontFamily: "Sora, sans-serif", fontWeight: 700, fontSize: 18, color: "#28292D" }}>Settings</span>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button style={{ width: 40, height: 40, borderRadius: "50%", background: "#FEFCF9", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 1px rgba(78,78,78,0.16)" }}>
-          <BellIcon />
-        </button>
-        <button style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "1px solid #F1F1F2", borderRadius: 100, padding: "8px 12px", cursor: "pointer" }}>
-          <img src="/Ellipse2481.png" alt="user" style={{ width: 40, height: 40, borderRadius: "50%", border: "2.5px solid #F2F2F6" }} />
-          <ChevronDownIcon />
-        </button>
-      </div>
-    </header>
-  );
-}
-
 /* ── Toggle Switch ── */
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button
+      type="button"
       onClick={() => onChange(!checked)}
       style={{
         width: 44,
@@ -148,9 +122,9 @@ function ProfileTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
       {/* Profile photo section */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 69, padding: "22px 24px" }}>
+      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 69, padding: "22px 24px" }}>
         {/* Left: label + button */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20, width: 305 }}>
+        <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 20, width: 305 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Profile photo</span>
             <span style={{ fontSize: 14, fontWeight: 400, color: "#667185", fontFamily: "Satoshi, sans-serif", lineHeight: "22px" }}>This image will be displayed on your profile</span>
@@ -198,9 +172,9 @@ function ProfileTab() {
       <SectionDivider />
 
       {/* Personal information section */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
+      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
         {/* Left: label + save */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 20, width: 305, flexShrink: 0 }}>
+        <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 20, width: 305, flexShrink: 0 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Personal Information</span>
             <span style={{ fontSize: 14, fontWeight: 400, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>Update your personal details here.</span>
@@ -264,9 +238,9 @@ function WorkspaceTab() {
   const [expressDays, setExpressDays] = useState("5");
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
+    <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
       {/* Left */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 20, width: 305, flexShrink: 0 }}>
+      <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 20, width: 305, flexShrink: 0 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Deadline defaults</span>
           <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>Standard delivery turnaround.</span>
@@ -311,9 +285,9 @@ function NotificationsTab() {
   ];
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
+    <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
       {/* Left */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
+      <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
         <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Notifications</span>
         <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif", lineHeight: "22px" }}>Manage how and when you receive updates.</span>
       </div>
@@ -342,9 +316,9 @@ function SecurityTab() {
   const [twoFA, setTwoFA] = useState(false);
 
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
+    <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
       {/* Left */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
+      <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
         <span style={{ fontSize: 16, fontWeight: 700, color: "#101928", fontFamily: "Satoshi, sans-serif" }}>Security</span>
         <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>Protect your account and data.</span>
       </div>
@@ -393,39 +367,33 @@ function NigeriaBadge() {
 /* ── MAIN SETTINGS PAGE ── */
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("Profile");
-  const [activeMenu, setActiveMenu] = useState("Settings");
 
   const tabs: Tab[] = ["Profile", "Workspace", "Notifications", "Security"];
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#FDFDFD", fontFamily: "Satoshi, Inter, sans-serif", overflow: "hidden" }}>
-      <Sidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} />
+    <div className="tailora-page-view" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+        <AppPageHeader title="Settings" />
 
-      {/* Main content */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <AppHeader />
+        <div className="tailora-page-scroll" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", background: "#FDFDFD", position: "relative", WebkitOverflowScrolling: "touch" }}>
+          <div className="tailora-page-gradient" style={{ background: "linear-gradient(180deg, #FDF6EC 0%, rgba(253,246,236,0) 100%)", height: 144, position: "absolute", left: 0, right: 0, top: 0, pointerEvents: "none" }} />
 
-        <div style={{ flex: 1, overflowY: "auto", background: "#FDFDFD", position: "relative" }}>
-          {/* Gradient */}
-          <div style={{ background: "linear-gradient(180deg, #FDF6EC 0%, rgba(253,246,236,0) 100%)", height: 144, position: "absolute", left: 0, right: 0, top: 0, pointerEvents: "none" }} />
-
-          <div style={{ padding: "40px 36px", position: "relative" }}>
-            {/* Page heading */}
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
-              <div>
-                <h1 style={{ margin: "0 0 4px", fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 24, color: "#121212", display: "flex", alignItems: "center", gap: 8 }}>
+          <div className="tailora-page-content" style={{ padding: "40px 36px", position: "relative" }}>
+            <div className="tailora-page-header-row" style={{ marginBottom: 28 }}>
+              <div className="tailora-page-header-text">
+                <h1 className="tailora-page-title" style={{ margin: "0 0 4px", fontFamily: "var(--font-sora)", fontWeight: 600, fontSize: 24, color: "#121212", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   Settings <NigeriaBadge />
                 </h1>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 300, color: "#696969", fontFamily: "Satoshi, sans-serif" }}>
+                <p className="tailora-page-subtitle" style={{ margin: 0, fontSize: 14, fontWeight: 300, color: "#696969", fontFamily: "var(--font-satoshi)" }}>
                   Manage your personal account, workspace preferences, and security in one place.
                 </p>
               </div>
             </div>
 
             {/* Tab bar */}
-            <div style={{ display: "flex", gap: 0, marginBottom: 20, borderBottom: "1px solid #E4E7EC" }}>
+            <div className="tailora-settings-tabs" style={{ display: "flex", gap: 0, marginBottom: 20, borderBottom: "1px solid #E4E7EC" }}>
               {tabs.map(tab => (
                 <button
+                  type="button"
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   style={{
@@ -448,7 +416,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Tab content card */}
-            <div style={{
+            <div className="tailora-settings-card" style={{
               background: "#fff",
               borderRadius: 10,
               border: "1px solid #E5E7EB",
@@ -462,7 +430,6 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

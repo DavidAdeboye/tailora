@@ -3,6 +3,11 @@ module.exports = {
   content: ["./app/**/*.{js,ts,jsx,tsx}", "./components/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
+      fontFamily: {
+        sora: ["Sora", "system-ui", "sans-serif"],
+        satoshi: ["Satoshi", "system-ui", "sans-serif"],
+        inter: ["Inter", "system-ui", "sans-serif"],
+      },
       colors: {
         "foundation-secondary-light-active": "#fefcf9",
         "foundation-primary-normal": "#121212",

@@ -1,5 +1,12 @@
-// app/settings/page.tsx
-import SettingsPage from '../../components/SettingsPage'
+"use client";
+
+import AppShell from "../../components/AppShell";
+import SettingsPage from "../../components/SettingsPage";
+
 export default function Page() {
-  return <SettingsPage />
+  return (
+    <AppShell>
+      <SettingsPage />
+    </AppShell>
+  );
 }

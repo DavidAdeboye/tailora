@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import Sidebar from "../../components/Sidebar";
+import AppShell from "../../components/AppShell";
+import AppPageHeader from "../../components/AppPageHeader";
 
 /* ── Icons ── */
 const BellIcon = () => (
@@ -36,24 +37,6 @@ const ChevronUpIcon = () => (
     <path d="M15 12.5L10 7.5L5 12.5" stroke="#121212" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
-
-/* ── Header ── */
-function AppHeader() {
-  return (
-    <header style={{ background: "#fff", borderBottom: "1px solid #F0F2F5", height: 83, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 36px", flexShrink: 0 }}>
-      <span style={{ fontFamily: "Sora, sans-serif", fontWeight: 700, fontSize: 18, color: "#28292D" }}>Help & Support</span>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button style={{ width: 40, height: 40, borderRadius: "50%", background: "#FEFCF9", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 1px rgba(78,78,78,0.16)" }}>
-          <BellIcon />
-        </button>
-        <button style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "1px solid #F1F1F2", borderRadius: 100, padding: "8px 12px", cursor: "pointer" }}>
-          <img src="/Ellipse2481.png" alt="" style={{ width: 40, height: 40, borderRadius: "50%", border: "2.5px solid #F2F2F6" }} />
-          <ChevronDownIcon />
-        </button>
-      </div>
-    </header>
-  );
-}
 
 /* ── FAQ data ── */
 const FAQ_ITEMS = [
@@ -125,7 +108,7 @@ const CONTACT_CARDS = [
     ),
     label: "Live Chat",
     value: "Available Mon–Fri, 9am–6pm WAT",
-    action: "#",
+    action: undefined,
     actionLabel: "Start a chat →",
   },
 ];
@@ -136,6 +119,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   return (
     <div style={{ borderBottom: "1px solid #F1F1F2" }}>
       <button
+        type="button"
         onClick={() => setOpen(!open)}
         style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 0", background: "none", border: "none", cursor: "pointer", textAlign: "left", gap: 16 }}
       >
@@ -153,9 +137,7 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
-/* ── Main Help Page ── */
-export default function HelpPage() {
-  const [activeMenu, setActiveMenu] = useState("Help & Support");
+function HelpContent() {
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
 
@@ -166,32 +148,28 @@ export default function HelpPage() {
   );
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#FDFDFD", fontFamily: "Satoshi, Inter, sans-serif", overflow: "hidden" }}>
-      <Sidebar activeMenu={activeMenu} onMenuChange={setActiveMenu} />
+    <div className="tailora-page-view" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+        <AppPageHeader title="Help & Support" />
 
-      {/* Main content */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <AppHeader />
+        <div className="tailora-page-scroll" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", background: "#FDFDFD", position: "relative", WebkitOverflowScrolling: "touch" }}>
+          <div className="tailora-page-gradient" style={{ background: "linear-gradient(180deg, #FDF6EC 0%, rgba(253,246,236,0) 100%)", height: 144, position: "absolute", left: 0, right: 0, top: 0, pointerEvents: "none" }} />
 
-        <div style={{ flex: 1, overflowY: "auto", background: "#FDFDFD", position: "relative" }}>
-          {/* Gradient strip */}
-          <div style={{ background: "linear-gradient(180deg, #FDF6EC 0%, rgba(253,246,236,0) 100%)", height: 144, position: "absolute", left: 0, right: 0, top: 0, pointerEvents: "none" }} />
+          <div className="tailora-page-content tailora-help-content" style={{ padding: "40px 36px 60px", position: "relative" }}>
 
-          <div style={{ padding: "40px 36px 60px", position: "relative" }}>
-
-            {/* Page heading */}
-            <div style={{ marginBottom: 24 }}>
-              <h1 style={{ margin: "0 0 4px", fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 24, color: "#121212", display: "flex", alignItems: "center", gap: 8 }}>
-                Hi, Joshua's Couture
-                <span style={{ fontSize: 26 }}>🧵</span>
-              </h1>
-              <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#696969", fontFamily: "Satoshi, sans-serif" }}>
-                How can we help?
-              </p>
+            <div className="tailora-page-header-row" style={{ marginBottom: 24 }}>
+              <div className="tailora-page-header-text">
+                <h1 className="tailora-page-title tailora-welcome-title" style={{ margin: "0 0 4px", fontFamily: "var(--font-sora)", fontWeight: 600, fontSize: 24, color: "#121212", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  Hi, Joshua&apos;s Couture
+                  <span style={{ fontSize: 26 }}>🧵</span>
+                </h1>
+                <p className="tailora-page-subtitle" style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#696969", fontFamily: "var(--font-satoshi)" }}>
+                  How can we help?
+                </p>
+              </div>
             </div>
 
             {/* Search bar */}
-            <div style={{ marginBottom: 48, maxWidth: 420 }}>
+            <div className="tailora-help-search" style={{ marginBottom: 48, maxWidth: 420 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px", border: `1px solid ${searchFocused ? "#121212" : "#D0D5DD"}`, borderRadius: 6, background: "#fff", boxShadow: "0 4px 8px -2px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04)", transition: "border-color 0.15s" }}>
                 <SearchIcon />
                 <input
@@ -211,7 +189,7 @@ export default function HelpPage() {
             </div>
 
             {/* Contact cards */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginBottom: 48, maxWidth: 900 }}>
+            <div className="tailora-help-contact-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginBottom: 48, maxWidth: 900 }}>
               {CONTACT_CARDS.map((card, i) => (
                 <div key={i} style={{ background: "#fff", border: "1px solid #F1F1F2", borderRadius: 12, padding: "24px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
                   <div style={{ width: 48, height: 48, borderRadius: 12, background: "#FDF6EC", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -221,14 +199,25 @@ export default function HelpPage() {
                     <div style={{ fontSize: 15, fontWeight: 700, color: "#1A1A1A", fontFamily: "Satoshi, sans-serif", marginBottom: 4 }}>{card.label}</div>
                     <div style={{ fontSize: 13, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>{card.value}</div>
                   </div>
-                  <a
-                    href={card.action}
-                    style={{ fontSize: 13, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}
-                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.6")}
-                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
-                  >
-                    {card.actionLabel}
-                  </a>
+                  {card.action ? (
+                    <a
+                      href={card.action}
+                      style={{ fontSize: 13, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.6")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                    >
+                      {card.actionLabel}
+                    </a>
+                  ) : (
+                    <button
+                      type="button"
+                      style={{ fontSize: 13, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+                      onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.6")}
+                      onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
+                    >
+                      {card.actionLabel}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -242,7 +231,7 @@ export default function HelpPage() {
                 Quick answers to common questions about using Tailora.
               </p>
 
-              <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #F1F1F2", padding: "0 24px" }}>
+              <div className="tailora-help-faq-list" style={{ background: "#fff", borderRadius: 12, border: "1px solid #F1F1F2", padding: "0 24px" }}>
                 {filteredFaq.length > 0 ? (
                   filteredFaq.map((item, i) => (
                     <FaqItem key={i} question={item.question} answer={item.answer} />
@@ -256,7 +245,7 @@ export default function HelpPage() {
             </div>
 
             {/* Still need help banner */}
-            <div style={{ maxWidth: 760, marginTop: 32, background: "#121212", borderRadius: 12, padding: "28px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 }}>
+            <div className="tailora-help-banner" style={{ maxWidth: 760, marginTop: 32, background: "#121212", borderRadius: 12, padding: "28px 32px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 24 }}>
               <div>
                 <div style={{ fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 16, color: "#E7E7E7", marginBottom: 6 }}>Still need help?</div>
                 <div style={{ fontSize: 13, color: "#B6B6B6", fontFamily: "Satoshi, sans-serif" }}>Our support team is ready to assist you directly.</div>
@@ -274,7 +263,14 @@ export default function HelpPage() {
 
           </div>
         </div>
-      </div>
     </div>
+  );
+}
+
+export default function HelpPage() {
+  return (
+    <AppShell>
+      <HelpContent />
+    </AppShell>
   );
 }

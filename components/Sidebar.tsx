@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 /* ================================================================
    ICONS
@@ -89,8 +89,11 @@ function LogoutIcon() {
 ================================================================ */
 interface SidebarProps {
   activeMenu?: string;
-  onMenuChange?: (label: string) => void;
   onAddClient?: () => void;
+  onInviteCoworker?: () => void;
+  mobileOpen?: boolean;
+  onNavigate?: () => void;
+  onCloseMobile?: () => void;
 }
 
 type IconComp = React.FC<{ color?: string }>;
@@ -168,14 +171,10 @@ function NavBtn({
   return collapsed ? <Tooltip label={label}>{btn}</Tooltip> : btn;
 }
 
-/* ================================================================
-   ROUTE MAP
-   Only real Next.js pages go here.
-   "Client Management" and "Team Collaboration" are state-based
-   views inside TailoraDashboard — no route push for them.
-================================================================ */
 const PAGE_ROUTES: Record<string, string> = {
   "Dashboard": "/dashboard",
+  "Client Management": "/clients",
+  "Team Collaboration": "/team",
   "Settings": "/settings",
   "Help & Support": "/help",
 };
@@ -185,47 +184,72 @@ const PAGE_ROUTES: Record<string, string> = {
 ================================================================ */
 export default function Sidebar({
   activeMenu = "Dashboard",
-  onMenuChange,
   onAddClient,
+  onInviteCoworker,
+  mobileOpen = false,
+  onNavigate,
+  onCloseMobile,
 }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const router = useRouter();
-  const W = collapsed ? 72 : 272;
+  const pathname = usePathname() ?? "";
+  const effectiveCollapsed = mobileOpen ? false : collapsed;
+  const W = effectiveCollapsed ? 72 : 272;
 
   function navigate(label: string) {
-    onMenuChange?.(label);
     const href = PAGE_ROUTES[label];
-    if (href) router.push(href);
+    if (!href || href === pathname) return;
+    onNavigate?.();
+    router.push(href);
   }
+
+  const sidebarClass = `tailora-sidebar${mobileOpen ? " tailora-sidebar--open" : ""}`;
 
   return (
     <aside
-      onClick={collapsed ? () => setCollapsed(false) : undefined}
+      className={sidebarClass}
+      onClick={effectiveCollapsed ? () => setCollapsed(false) : undefined}
       style={{
         width: W, minWidth: W, background: "#121212",
         display: "flex", flexDirection: "column", height: "100vh",
         transition: "width 0.22s cubic-bezier(0.4,0,0.2,1), min-width 0.22s cubic-bezier(0.4,0,0.2,1)",
         overflow: "hidden", position: "relative", flexShrink: 0,
-        cursor: collapsed ? "pointer" : "default",
+        cursor: effectiveCollapsed ? "pointer" : "default",
       }}
     >
       {/* Logo row */}
       <div style={{
-        padding: collapsed ? "24px 0 0" : "24px 24px 0",
+        padding: effectiveCollapsed ? "24px 0 0" : "24px 24px 0",
         display: "flex", alignItems: "center",
-        justifyContent: collapsed ? "center" : "space-between",
+        justifyContent: effectiveCollapsed ? "center" : "space-between",
         marginBottom: 20, minHeight: 56,
       }}>
+        <a href="/">
         <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden", flexShrink: 0 }}>
-          <img src="/logo.png" alt="" />
-          {!collapsed && (
+         <img src="/logo.png" alt="" />
+          {!effectiveCollapsed && (
             <span style={{ color: "#E7E7E7", fontWeight: 800, fontSize: 20, fontFamily: "'Sora', sans-serif", overflow: "hidden", whiteSpace: "nowrap" }}>
               Tailora
             </span>
           )}
         </div>
-        {!collapsed && (
+        </a>
+        {mobileOpen ? (
           <button
+            type="button"
+            className="tailora-sidebar-close-btn"
+            aria-label="Close menu"
+            onClick={(e) => { e.stopPropagation(); onCloseMobile?.(); }}
+            style={{ background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", width: 36, height: 36, borderRadius: 8, color: "#E7E7E7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </button>
+        ) : !effectiveCollapsed ? (
+          <button
+            type="button"
+            className="tailora-sidebar-collapse-btn"
             onClick={(e) => { e.stopPropagation(); setCollapsed(true); }}
             style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#B6B6B6", display: "flex", alignItems: "center", borderRadius: 6, flexShrink: 0 }}
           >
@@ -234,11 +258,11 @@ export default function Sidebar({
               <path d="M13.26 16.28C13.07 16.28 12.88 16.21 12.73 16.06L9.2 12.53C8.91 12.24 8.91 11.76 9.2 11.47L12.73 7.94C13.02 7.65 13.5 7.65 13.79 7.94C14.08 8.23 14.08 8.71 13.79 9L10.79 12L13.79 15C14.08 15.29 14.08 15.77 13.79 16.06C13.65 16.21 13.46 16.28 13.26 16.28Z" fill="#B6B6B6" />
             </svg>
           </button>
-        )}
+        ) : null}
       </div>
 
       {/* Expand button (collapsed only) */}
-      {collapsed && (
+      {effectiveCollapsed && (
         <Tooltip label="Expand sidebar">
           <button
             onClick={() => setCollapsed(false)}
@@ -258,50 +282,50 @@ export default function Sidebar({
 
       {/* Main Menu */}
       <div style={{ padding: "0 8px", marginBottom: 8 }}>
-        {!collapsed && (
+        {!effectiveCollapsed && (
           <div style={{ padding: "0 12px 6px", color: "#98A2B3", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
             Main Menu
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <NavBtn label="Dashboard"          icon={HomeIcon}   active={activeMenu === "Dashboard"}          collapsed={collapsed} onClick={() => navigate("Dashboard")} />
-          <NavBtn label="Client Management"  icon={PeopleIcon} active={activeMenu === "Client Management"}  collapsed={collapsed} onClick={() => navigate("Client Management")} />
-          <NavBtn label="Team Collaboration" icon={TeamIcon}   active={activeMenu === "Team Collaboration"} collapsed={collapsed} onClick={() => navigate("Team Collaboration")} />
+          <NavBtn label="Dashboard"          icon={HomeIcon}   active={activeMenu === "Dashboard"}          collapsed={effectiveCollapsed} onClick={() => navigate("Dashboard")} />
+          <NavBtn label="Client Management"  icon={PeopleIcon} active={activeMenu === "Client Management"}  collapsed={effectiveCollapsed} onClick={() => navigate("Client Management")} />
+          <NavBtn label="Team Collaboration" icon={TeamIcon}   active={activeMenu === "Team Collaboration"} collapsed={effectiveCollapsed} onClick={() => navigate("Team Collaboration")} />
         </div>
       </div>
 
       {/* Divider */}
-      <div style={{ margin: `0 ${collapsed ? 12 : 8}px 8px`, height: 1, background: "#33353A" }} />
+      <div style={{ margin: `0 ${effectiveCollapsed ? 12 : 8}px 8px`, height: 1, background: "#33353A" }} />
 
       {/* Actions */}
       <div style={{ padding: "0 8px", marginBottom: "auto" }}>
-        {!collapsed && (
+        {!effectiveCollapsed && (
           <div style={{ padding: "0 12px 6px", color: "#98A2B3", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
             Actions
           </div>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <NavBtn label="Add Client"       icon={AddClientIcon} collapsed={collapsed} onClick={() => { onAddClient?.(); }} />
-          <NavBtn label="Invite Co-worker" icon={InviteIcon}    collapsed={collapsed} onClick={() => {}} />
+          <NavBtn label="Add Client"       icon={AddClientIcon} collapsed={effectiveCollapsed} onClick={() => { onAddClient?.(); }} />
+          <NavBtn label="Invite Co-worker" icon={InviteIcon}    collapsed={effectiveCollapsed} onClick={() => onInviteCoworker?.()} />
         </div>
       </div>
 
       {/* Bottom items */}
       <div style={{ padding: "0 8px 12px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <NavBtn label="Settings"       icon={SettingsIcon} active={activeMenu === "Settings"}       collapsed={collapsed} onClick={() => navigate("Settings")} />
-          <NavBtn label="Help & Support" icon={HelpIcon}     active={activeMenu === "Help & Support"} collapsed={collapsed} onClick={() => navigate("Help & Support")} />
+          <NavBtn label="Settings"       icon={SettingsIcon} active={activeMenu === "Settings"}       collapsed={effectiveCollapsed} onClick={() => navigate("Settings")} />
+          <NavBtn label="Help & Support" icon={HelpIcon}     active={activeMenu === "Help & Support"} collapsed={effectiveCollapsed} onClick={() => navigate("Help & Support")} />
         </div>
       </div>
 
       {/* User profile */}
       <div style={{
-        padding: collapsed ? "12px 8px" : "12px 16px",
+        padding: effectiveCollapsed ? "12px 8px" : "12px 16px",
         display: "flex", alignItems: "center",
-        justifyContent: collapsed ? "center" : "space-between",
+        justifyContent: effectiveCollapsed ? "center" : "space-between",
         borderTop: "1px solid #33353A", gap: 8, overflow: "hidden",
       }}>
-        {collapsed ? (
+        {effectiveCollapsed ? (
           <Tooltip label="Joshua's Couture">
             <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#3A3A3A", overflow: "hidden", flexShrink: 0 }}>
               <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#F5B500,#e07b00)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14 }}>J</div>

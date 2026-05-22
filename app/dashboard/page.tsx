@@ -1,10 +1,12 @@
-import React from 'react'
-import TailoraDashboard from '../../components/TailoraDashboard'
+"use client";
 
-const page = () => {
+import AppShell from "../../components/AppShell";
+import TailoraDashboard from "../../components/TailoraDashboard";
+
+export default function DashboardPage() {
   return (
-    <TailoraDashboard/>
-  )
+    <AppShell>
+      <TailoraDashboard />
+    </AppShell>
+  );
 }
-
-export default page
