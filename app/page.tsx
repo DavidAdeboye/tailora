@@ -159,10 +159,36 @@ const MeasurementRows = ({
 const Desktop4 = ({ className = "" }: { className?: string }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const heroCards = [
+    { name: "Ajoke Sandra",   role: "Tailor",          img: "/slide1.png" },
+    { name: "Olabisi & Ella", role: "CEO & Assistant", img: "/slide2.png" },
+    { name: "Joshua Neo",     role: "Tailor",          img: "/slide3.png" },
+    { name: "Folashade Babs", role: "CEO",             img: "/slide2.png" },
+  ];
+
+  // Duplicate cards for seamless infinite loop.
+  // Each card uses marginRight:24 instead of gap so that -50% translateX
+  // lands exactly on the boundary between the two identical sets.
+  const loopCards = [...heroCards, ...heroCards];
+
   return (
     <section
-      className={`tailora-landing-hero w-full rounded-t-none rounded-b-[100px] mq800:rounded-b-[60px] mq450:rounded-b-[40px] bg-[#ffedd4] flex flex-col items-center pt-6 px-[121px] mq1125:px-[60px] mq960:px-[40px] pb-0 box-border relative isolate gap-0 max-w-full overflow-hidden mq800:px-10 mq450:px-4 ${className}`}
+      className={`tailora-landing-hero w-full rounded-t-none rounded-b-[100px] mq800:rounded-b-[60px] mq450:rounded-b-[40px] bg-[#ffedd4] flex flex-col items-center pt-6 px-0 pb-20 mq800:pb-14 mq450:pb-10 box-border relative isolate gap-0 max-w-full overflow-hidden ${className}`}
     >
+      {/* Keyframes injected inline — keeps animation self-contained */}
+      <style>{`
+        @keyframes tailora-hero-scroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .tailora-hero-ticker {
+          animation: tailora-hero-scroll 22s linear infinite;
+        }
+        .tailora-hero-ticker:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+
       {/* Background pattern */}
       <div className="w-[510.1px] h-[510.1px] absolute top-[50px] left-[50%] -translate-x-1/2 overflow-hidden flex items-center justify-center z-[0] pointer-events-none mq800:w-[320px] mq800:h-[320px] mq450:w-[260px] mq450:h-[260px] mq450:opacity-50">
         <Image
@@ -175,68 +201,70 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
         />
       </div>
 
-      {/* Navbar */}
-      <header className="tailora-landing-nav shadow-[0px_0px_4px_rgba(0,_0,_0,_0.04)] rounded-[60px] bg-[#fff] flex flex-col items-start justify-center py-3 pl-6 pr-3 top-6 z-[99] sticky w-full max-w-[1197px] shrink-0">
-        <nav className="m-0 w-full flex items-center justify-between gap-4 text-center text-sm text-foundation-gray-darker font-[Satoshi]">
-          {/* Logo */}
-          <div className="h-[24.5px] flex items-center gap-[1.8px] text-left text-xl text-foundation-primary-normal font-[Sora] shrink-0">
-            <Image
-              className="h-[22px] w-6 relative"
-              width={24}
-              height={22}
-              sizes="100vw"
-              alt=""
-              src="/ChatGPT-Image-May-11-2026-02-50-40-PM-1-Traced.svg"
-            />
-            <h3 className="m-0 h-6 w-[85px] relative text-[length:inherit] leading-6 font-bold font-[inherit] flex items-center shrink-0">
-              Tailora
-            </h3>
-          </div>
-
-          {/* Nav links — hidden on tablet/mobile */}
-          <div className="flex items-center gap-6 mq960:hidden mq800:hidden">
-            {["Home", "Features", "Pricing", "How It Works"].map((item) => (
-              <div key={item} className="flex items-center justify-center py-0 px-2 cursor-pointer">
-                <div className="relative leading-[22px] font-medium">{item}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Right side */}
-          <div className="flex items-center gap-4 shrink-0">
-            <div className="flex items-center justify-center py-0 px-2 cursor-pointer mq960:hidden mq800:hidden">
-              <div className="relative leading-[22px] font-medium">Sign in</div>
+      {/* ── Navbar ── */}
+      <div className="w-full px-[121px] mq1125:px-[60px] mq960:px-[40px] mq800:px-10 mq450:px-4">
+        <header className="tailora-landing-nav shadow-[0px_0px_4px_rgba(0,_0,_0,_0.04)] rounded-[60px] bg-[#fff] flex flex-col items-start justify-center py-3 pl-6 pr-3 top-6 z-[99] sticky w-full max-w-[1197px] mx-auto shrink-0">
+          <nav className="m-0 w-full flex items-center justify-between gap-4 text-center text-sm text-foundation-gray-darker font-[Satoshi]">
+            {/* Logo */}
+            <div className="h-[24.5px] flex items-center gap-[1.8px] text-left text-xl text-foundation-primary-normal font-[Sora] shrink-0">
+              <Image
+                className="h-[22px] w-6 relative"
+                width={24}
+                height={22}
+                sizes="100vw"
+                alt=""
+                src="/ChatGPT-Image-May-11-2026-02-50-40-PM-1-Traced.svg"
+              />
+              <h3 className="m-0 h-6 w-[85px] relative text-[length:inherit] leading-6 font-bold font-[inherit] flex items-center shrink-0">
+                Tailora
+              </h3>
             </div>
-            <Button property1="Default" className="mq960:hidden mq800:hidden" />
-            {/* Hamburger menu for mobile */}
-            <button 
-              className="mq960:flex mq800:flex hidden flex-col items-center justify-center gap-1.5 p-2 cursor-pointer"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              <div className="w-6 h-0.5 bg-foundation-primary-normal rounded-full"></div>
-              <div className="w-6 h-0.5 bg-foundation-primary-normal rounded-full"></div>
-              <div className="w-6 h-0.5 bg-foundation-primary-normal rounded-full"></div>
-            </button>
-          </div>
-        </nav>
 
-        {/* Mobile menu dropdown */}
-        {isMobileMenuOpen && (
-          <div className="tailora-landing-menu-dropdown absolute top-full left-0 right-0 bg-white rounded-b-[60px] shadow-[0px_4px_20px_rgba(0,_0,_0,_0.1)] z-[98] flex flex-col items-center gap-4 py-6 px-4 mq960:flex mq800:flex hidden">
-            {["Home", "Features", "Pricing", "How It Works"].map((item) => (
-              <div key={item} className="flex items-center justify-center py-2 px-4 cursor-pointer w-full">
-                <div className="relative text-base leading-6 font-medium">{item}</div>
-              </div>
-            ))}
-            <div className="flex items-center justify-center py-2 px-4 cursor-pointer w-full">
-              <div className="relative text-base leading-6 font-medium">Sign in</div>
+            {/* Nav links */}
+            <div className="flex items-center gap-6 mq960:hidden mq800:hidden">
+              {["Home", "Features", "Pricing", "How It Works"].map((item) => (
+                <div key={item} className="flex items-center justify-center py-0 px-2 cursor-pointer">
+                  <div className="relative leading-[22px] font-medium">{item}</div>
+                </div>
+              ))}
             </div>
-            <Button property1="Default" />
-          </div>
-        )}
-      </header>
 
-      {/* Floating decorations — hidden on smaller screens */}
+            {/* Right side */}
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="flex items-center justify-center py-0 px-2 cursor-pointer mq960:hidden mq800:hidden">
+                <div className="relative leading-[22px] font-medium">Sign in</div>
+              </div>
+              <Button property1="Default" className="mq960:hidden mq800:hidden" />
+              {/* Hamburger */}
+              <button
+                className="mq960:flex mq800:flex hidden flex-col items-center justify-center gap-1.5 p-2 cursor-pointer"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                <div className="w-6 h-0.5 bg-foundation-primary-normal rounded-full" />
+                <div className="w-6 h-0.5 bg-foundation-primary-normal rounded-full" />
+                <div className="w-6 h-0.5 bg-foundation-primary-normal rounded-full" />
+              </button>
+            </div>
+          </nav>
+
+          {/* Mobile menu dropdown */}
+          {isMobileMenuOpen && (
+            <div className="tailora-landing-menu-dropdown absolute top-full left-0 right-0 bg-white rounded-b-[60px] shadow-[0px_4px_20px_rgba(0,_0,_0,_0.1)] z-[98] flex flex-col items-center gap-4 py-6 px-4 mq960:flex mq800:flex hidden">
+              {["Home", "Features", "Pricing", "How It Works"].map((item) => (
+                <div key={item} className="flex items-center justify-center py-2 px-4 cursor-pointer w-full">
+                  <div className="relative text-base leading-6 font-medium">{item}</div>
+                </div>
+              ))}
+              <div className="flex items-center justify-center py-2 px-4 cursor-pointer w-full">
+                <div className="relative text-base leading-6 font-medium">Sign in</div>
+              </div>
+              <Button property1="Default" />
+            </div>
+          )}
+        </header>
+      </div>
+
+      {/* Floating decorative icons */}
       <Image className="absolute top-[219px] left-[207px] w-[60px] h-[60px] object-contain z-[2] opacity-20 mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-14@2x.png" style={{ transform: "rotate(30.11deg)" }} />
       <Image className="absolute top-[334px] left-[179px] w-[60px] h-[60px] object-contain z-[2] opacity-20 mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-15@2x.png" style={{ transform: "rotate(-42.28deg)" }} />
       <Image className="absolute top-[445px] left-[257px] w-[60px] h-[60px] object-contain z-[2] opacity-20 mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-24@2x.png" style={{ transform: "rotate(-27.72deg)" }} />
@@ -244,13 +272,13 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
       <Image className="absolute top-[333px] right-[167px] w-[60px] h-[60px] object-contain z-[2] opacity-20 mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-18@2x.png" style={{ transform: "rotate(-26.51deg)" }} />
       <Image className="absolute top-[445px] right-[256px] w-[60px] h-[60px] object-contain z-[2] opacity-20 mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-21@2x.png" />
 
-      {/* Hero content */}
-      <div className="tailora-landing-hero-content relative z-[2] flex flex-col items-center gap-4 mt-[50px] mq800:mt-8 mq450:mt-6 max-w-[700px] w-full text-center">
+      {/* ── Hero content ── */}
+      <div className="tailora-landing-hero-content relative z-[2] flex flex-col items-center gap-4 mt-[90px] mq800:mt-14 mq450:mt-10 max-w-[700px] w-full text-center px-[121px] mq1125:px-[60px] mq960:px-[40px] mq800:px-10 mq450:px-4">
         {/* Badge */}
         <div className="rounded-[10px] bg-[#fdf6ec] border-[#ffa82b] border-solid border-[0.5px] flex items-center justify-center py-0 px-[7px]">
           <div className="flex items-center gap-1">
             <div className="h-1.5 w-1.5 rounded-[50%] bg-[#ffa82b]" />
-            <div className="relative text-xs leading-5 font-medium font-[Satoshi] text-foundation-primary-normal">{`FASHION CRM & ERP`}</div>
+            <div className="relative text-xs leading-5 font-medium font-[Satoshi] text-foundation-primary-normal">{`FASHION CRM`}</div>
           </div>
         </div>
 
@@ -277,17 +305,128 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
         />
       </div>
 
-      {/* Hero Image */}
-      <div className="tailora-landing-hero-image relative z-[2] mt-10 mq450:mt-6 w-full flex justify-center">
-        <Image
-          className="w-full max-w-[800px] h-auto object-cover rounded-2xl mq450:rounded-xl"
-          loading="lazy"
-          width={800}
-          height={533}
-          sizes="100vw"
-          alt="Tailora fashion designers"
-          src="/ChatGPT-Image-Apr-26-2026-01-43-19-AM-1@2x.png"
-        />
+      {/* ── Infinite-scroll carousel ── */}
+      <div
+        className="tailora-landing-hero-image relative z-[2] mt-16 mq800:mt-12 mq450:mt-10 w-full"
+        style={{ overflow: "hidden" }}
+      >
+        <div
+          className="tailora-hero-ticker"
+          style={{
+            display: "flex",
+            width: "max-content",
+          }}
+        >
+          {loopCards.map((person, i) => (
+            <div
+              key={i}
+              className="tailora-landing-card"
+              style={{
+                position: "relative",
+                width: 286,
+                height: 339,
+                borderRadius: 16,
+                overflow: "hidden",
+                flexShrink: 0,
+                marginRight: 24,
+                boxShadow: "0px 0px 4px rgba(0,0,0,0.08)",
+              }}
+            >
+              {/* Photo */}
+              <Image
+                fill
+                alt={person.name}
+                src={person.img}
+                style={{ objectFit: "cover", objectPosition: "center top" }}
+              />
+
+              {/* Dark overlay — Figma rgba(0,0,0,0.3) */}
+              <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.30)" }} />
+
+              {/* Top name chip — Figma: 266×48, left:10, top:10, #FDF6EC */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  left: 10,
+                  width: 266,
+                  background: "#FDF6EC",
+                  borderRadius: 10,
+                  padding: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {/* Gold star icon — Figma: 32×32, #FFE1B7 circle */}
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 20,
+                    background: "#FFE1B7",
+                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 2L14.9 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L9.1 8.26L12 2Z"
+                      fill="#F5B500"
+                    />
+                  </svg>
+                </div>
+
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontFamily: "Sora, sans-serif",
+                      fontWeight: 700,
+                      fontSize: 12,
+                      lineHeight: "15px",
+                      color: "#121212",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {person.name}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "Sora, sans-serif",
+                      fontWeight: 400,
+                      fontSize: 12,
+                      lineHeight: "14px",
+                      color: "#121212",
+                    }}
+                  >
+                    {person.role}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Tailora logo badge — Figma: 48×48, left:10, bottom:10 */}
+              <div
+                style={{
+                  position: "absolute",
+                  bottom: 10,
+                  left: 10,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <img src="/lgog2.png" alt="" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
