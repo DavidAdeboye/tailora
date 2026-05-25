@@ -294,7 +294,7 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
             {/* Right side */}
             <div className="flex items-center gap-4 shrink-0">
               <div className="flex items-center justify-center py-0 px-2 cursor-pointer mq960:hidden mq800:hidden">
-                <div className="relative leading-[22px] font-medium">Sign in</div>
+                <div className="relative leading-[22px] font-medium"><a href="/login">Sign in </a></div>
               </div>
               <Button property1="Default" className="mq960:hidden mq800:hidden" />
               {/* Hamburger */}
@@ -622,37 +622,62 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
           </h2>
         </div>
 
-        <div className="self-stretch flex flex-col items-center gap-10 max-w-full mq800:gap-5">
-          {/* Step 1 — orange card */}
-          <section className="w-full max-w-[1214px] rounded-[40px] bg-[#e57301] overflow-hidden shrink-0 flex items-center pt-7 px-10 pb-7 box-border relative gap-[109px] text-left text-[32px] text-[#fff] font-[Sora] mq800:flex-col mq800:gap-6 mq800:px-6 mq800:pt-8 mq800:pb-8 mq1350:gap-[54px] mq450:rounded-[28px] mq450:px-4 mq450:pt-6 mq450:pb-6">
-            <div className="flex flex-col items-start gap-6 shrink-0 mq800:w-full">
-              <h2 className="m-0 w-[489px] max-w-full relative text-[length:inherit] leading-8 font-bold font-[inherit] mq800:text-2xl mq800:leading-[30px] mq450:text-xl mq450:leading-7">{`Add Clients & Measurements`}</h2>
-              <div className="w-[540px] max-w-full relative text-lg leading-6 font-[Satoshi] text-foundation-secondary-light mq450:text-base">
+        <div className="w-full max-w-[1214px] mx-auto flex flex-col gap-10 mq800:gap-5 mq800:items-center">
+          {/* Step 1 — orange card (desktop) */}
+          <section className="w-full rounded-[40px] bg-[#e57301] overflow-hidden shrink-0 flex items-center pt-7 px-10 pb-7 box-border relative gap-[109px] text-left text-[32px] text-[#fff] font-[Sora] mq800:hidden mq1350:gap-[54px]">
+            <div className="flex flex-col items-start gap-6 shrink-0">
+              <h2 className="m-0 w-[489px] max-w-full relative text-[length:inherit] leading-8 font-bold font-[inherit]">{`Add Clients & Measurements`}</h2>
+              <div className="w-[540px] max-w-full relative text-lg leading-6 font-[Satoshi] text-foundation-secondary-light">
                 Create digital profiles for your clients. Record over 30+ body
                 points with visual guides ensuring your team gets the
                 measurements right every single time.
               </div>
             </div>
-            <div className="h-[292px] w-[463px] max-w-full relative shrink-0 mq800:w-full mq800:h-[240px] mq450:h-[200px]">
-              <div className="absolute top-[20px] left-[19px] rounded-2xl bg-[#fedcb3] w-[444px] max-w-[calc(100%-19px)] h-[272px] mq800:h-[220px] mq450:h-[180px] overflow-hidden" />
-              <Image
-                className="absolute top-[0px] left-[0px] rounded-2xl w-[447px] max-w-full h-[276px] mq800:h-[240px] mq450:h-[200px] object-cover z-[1]"
-                loading="lazy"
-                width={447}
-                height={276}
-                sizes="100vw"
-                alt=""
-                src="/Metrics-Container@2x.png"
-              />
+            <div className="h-[292px] w-[463px] max-w-full relative shrink-0">
+              <img src="/image32.png" alt="" className="h-full w-full object-contain" />
             </div>
           </section>
 
-          {/* Steps 2 & 3 */}
-          <div className="self-stretch flex items-center gap-10 max-w-full mq960:flex-col mq960:gap-5 mq800:gap-5 mq800:flex-col mq450:gap-4">
-            {/* Step 2 — purple card */}
-            <section className="h-[636px] w-[588px] mq960:w-full mq960:h-auto max-w-full rounded-3xl bg-[#7e015c] overflow-hidden shrink-0 flex flex-col items-end pt-[57px] px-10 pb-[41px] box-border relative isolate gap-10 text-left text-[32px] text-[#fff] font-[Sora] mq800:w-full mq800:h-auto mq800:pt-10 mq800:pb-10 mq800:gap-6 mq800:items-start mq450:rounded-[28px] mq450:px-4 mq450:pt-6 mq450:pb-6">
+          {/* Step 1 — orange card (mobile) */}
+          <section className="relative hidden h-[512px] w-[357px] max-w-full shrink-0 overflow-hidden rounded-[40px] bg-[#e57301] text-left text-[#fff] font-[Sora] mq800:block">
+            <div
+              className="pointer-events-none absolute left-[47px] top-[369px] h-[267.34px] w-[365px]"
+              aria-hidden
+            >
+              <div
+                className="absolute left-0 top-[18.47px] box-border h-[222.82px] w-[170.58px] rounded-[50%] border-[12px] border-[rgba(255,227,179,0.6)]"
+                style={{ transform: "matrix(0.98, -0.2, 0.26, 0.97, 0, 0)" }}
+              />
+              <div
+                className="absolute left-[70.25px] top-[9.24px] box-border h-[222.82px] w-[170.58px] rounded-[50%] border-[12px] border-[rgba(255,227,179,0.6)]"
+                style={{ transform: "matrix(0.98, -0.2, 0.26, 0.97, 0, 0)" }}
+              />
+              <div
+                className="absolute left-[140.49px] top-0 box-border h-[222.82px] w-[170.58px] rounded-[50%] border-[12px] border-[rgba(255,227,179,0.6)]"
+                style={{ transform: "matrix(0.98, -0.2, 0.26, 0.97, 0, 0)" }}
+              />
+            </div>
+            <h2 className="absolute left-6 top-8 m-0 flex h-7 w-[305px] items-center text-xl font-bold leading-7">
+              {`Add Clients & Measurements`}
+            </h2>
+            <p className="absolute left-6 top-[72px] m-0 flex w-[309px] items-center text-sm leading-[22px] font-[Satoshi] text-[#fffefd]">
+              Create digital profiles for your clients. Record over 30+ body
+              points with visual guides ensuring your team gets the
+              measurements right every single time.
+            </p>
+            <img
+              src="/mobile-image32.png"
+              alt=""
+              className="absolute left-6 top-[188px] h-[276px] w-[298.32px] max-w-[calc(100%-48px)] object-contain object-left-top"
+            />
+          </section>
+
+          {/* Steps 2 & 3 — 588×636 per Figma; 38px gap = 1214px row */}
+          <div className="flex w-full flex-row gap-[38px] mq960:flex-col mq960:items-center mq960:gap-5">
+            {/* Step 2 — purple card (desktop) */}
+            <section className="relative box-border h-[636px] w-[588px] max-w-full shrink-0 flex-none overflow-hidden rounded-3xl bg-[#7e015c] text-left text-[32px] text-[#fff] font-[Sora] mq960:hidden">
               <Image
-                className="w-[200px] h-[200px] absolute top-[506px] left-[-86px] rounded-lg shrink-0 mq800:hidden"
+                className="absolute left-[-86px] top-[506px] h-[200px] w-[200px] rounded-lg"
                 loading="lazy"
                 width={200}
                 height={200}
@@ -661,60 +686,80 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
                 src="/First-Star-Pair.svg"
               />
               <Image
-                className="w-[200px] h-[200px] absolute top-[-84px] left-[504px] rounded-lg shrink-0 mq800:hidden"
+                className="absolute left-[504px] top-[-84px] h-[200px] w-[200px] rounded-lg"
                 width={200}
                 height={200}
                 sizes="100vw"
                 alt=""
                 src="/First-Star-Pair.svg"
               />
-              <div className="w-full relative rounded-2xl bg-[#d4aedf] overflow-hidden shrink-0 z-[1] h-[300px] mq800:h-[240px] mq450:h-[200px]" />
-              <div className="flex flex-col items-start gap-6 z-[1] shrink-0 w-full">
-                <h2 className="m-0 w-full relative text-[length:inherit] leading-8 font-bold font-[inherit] mq800:text-2xl mq800:leading-[30px] mq450:text-xl mq450:leading-7">{`Create & Track Orders`}</h2>
-                <div className="w-full relative text-lg leading-6 font-[Satoshi] text-foundation-secondary-light mq450:text-base">
-                  Convert measurements into orders instantly. Monitor fabric
-                  procurement, cutting progress, and embroidery stages through a
-                  visual Kanban board.
-                </div>
+              <div className="absolute left-10 top-[41px] z-[1] h-[377px] w-[492px] overflow-hidden rounded-2xl">
+                <img
+                  src="/image30.png"
+                  alt=""
+                  className="h-full w-full object-cover object-center"
+                />
               </div>
-              <Image
-                className="w-[492px] max-w-[calc(100%-80px)] h-[300px] mq800:h-[240px] mq450:h-[200px] absolute top-[41px] left-[40px] mq450:left-[16px] rounded-2xl object-cover z-[2] shrink-0"
-                width={492}
-                height={377}
-                sizes="100vw"
+              <h2 className="absolute left-10 top-[474px] z-[1] m-0 flex h-8 w-[508px] items-center text-[32px] font-bold leading-8">
+                {`Create & Track Orders`}
+              </h2>
+              <p className="absolute left-10 top-[530px] z-[1] m-0 flex w-[508px] items-center text-lg leading-6 font-[Satoshi] text-[#fffefd]">
+                Convert measurements into orders instantly. Monitor fabric
+                procurement, cutting progress, and embroidery stages through a
+                visual Kanban board.
+              </p>
+            </section>
+
+            {/* Step 2 — purple card (mobile) */}
+            <section className="relative hidden h-[512px] w-[357px] max-w-full shrink-0 overflow-hidden rounded-[40px] bg-[#7e015c] text-left text-[#fff] font-[Sora] mq960:block">
+              <h2 className="absolute left-6 top-8 m-0 flex h-7 w-[305px] items-center text-xl font-bold leading-7">
+                {`Create & Track Orders`}
+              </h2>
+              <p className="absolute left-6 top-[72px] m-0 flex w-[309px] items-center text-sm leading-[22px] font-[Satoshi] text-[#fffefd]">
+                Convert measurements into orders instantly. Monitor fabric
+                procurement, cutting progress, and embroidery stages through a
+                visual Kanban board.
+              </p>
+              <img
+                src="/mobile-image30.png"
                 alt=""
-                src="/Info-Segments@2x.png"
+                className="absolute left-6 top-[188px] h-[276px] w-[298.32px] max-w-[calc(100%-48px)] object-contain object-left-top"
               />
             </section>
 
-            {/* Step 3 — green card */}
-            <section className="h-[636px] w-[588px] mq960:w-full mq960:h-auto max-w-full rounded-3xl bg-[#007f61] overflow-hidden shrink-0 flex flex-col items-end pt-[41px] px-10 pb-[41px] box-border relative isolate gap-10 text-left text-[32px] text-[#fff] font-[Sora] mq800:w-full mq800:h-auto mq800:pt-10 mq800:pb-10 mq800:gap-6 mq800:items-start mq800:flex-col-reverse mq450:rounded-[28px] mq450:px-4 mq450:pt-6 mq450:pb-6">
-              <Image
-                className="w-[200px] h-[200px] absolute top-[401px] left-[-100px] shrink-0 mq800:hidden"
-                width={200}
-                height={200}
-                sizes="100vw"
-                alt=""
-                src="/Star-5.svg"
-              />
-              <div className="flex flex-col items-start gap-6 z-[1] shrink-0 w-full">
-                <h2 className="m-0 w-full relative text-[length:inherit] leading-8 font-bold font-[inherit] mq800:text-2xl mq800:leading-[30px] mq450:text-xl mq450:leading-7">
-                  Deliver On Time
-                </h2>
-                <div className="w-full relative text-lg leading-6 font-[Satoshi] text-foundation-secondary-light mq450:text-base">
-                  Automated notifications alert clients for final fittings.
-                  Secure their satisfaction with consistent fit quality and
-                  professional documentation.
-                </div>
+            {/* Step 3 — green card (desktop) */}
+            <section className="relative box-border h-[636px] w-[588px] max-w-full shrink-0 flex-none overflow-hidden rounded-3xl bg-[#007f61] text-left text-[32px] text-[#fff] font-[Sora] mq960:hidden">
+              <div className="absolute left-10 top-[41px] z-[1] h-[377px] w-[492px] overflow-hidden rounded-2xl">
+                <img
+                  src="/image31.png"
+                  alt=""
+                  className="h-full w-full object-cover object-center"
+                />
               </div>
-              <div className="w-full h-[300px] mq800:h-[240px] mq450:h-[200px] rounded-2xl bg-[#66b39f] overflow-hidden shrink-0 z-[1]" />
-              <Image
-                className="w-[492px] max-w-[calc(100%-80px)] h-[300px] mq800:h-[240px] mq450:h-[200px] absolute top-[41px] left-[40px] mq450:left-[16px] rounded-3xl object-cover z-[2] shrink-0"
-                width={492}
-                height={377}
-                sizes="100vw"
+              <h2 className="absolute left-10 top-[474px] z-[1] m-0 flex h-8 w-[508px] items-center text-[32px] font-bold leading-8">
+                Deliver On Time
+              </h2>
+              <p className="absolute left-10 top-[530px] z-[1] m-0 flex w-[508px] items-center text-lg leading-6 font-[Satoshi] text-[#fffefd]">
+                Automated notifications alert clients for final fittings.
+                Secure their satisfaction with consistent fit quality and
+                professional documentation.
+              </p>
+            </section>
+
+            {/* Step 3 — green card (mobile) */}
+            <section className="relative hidden h-[512px] w-[357px] max-w-full shrink-0 overflow-hidden rounded-[40px] bg-[#007f61] text-left text-[#fff] font-[Sora] mq960:block">
+              <h2 className="absolute left-6 top-8 m-0 flex h-7 w-[305px] items-center text-xl font-bold leading-7">
+                Deliver On Time
+              </h2>
+              <p className="absolute left-6 top-[72px] m-0 flex w-[309px] items-center text-sm leading-[22px] font-[Satoshi] text-[#fffefd]">
+                Automated notifications alert clients for final fittings. Secure
+                their satisfaction with consistent fit quality and professional
+                documentation.
+              </p>
+              <img
+                src="/mobile-image31.png"
                 alt=""
-                src="/Frame-2147224779@2x.png"
+                className="absolute left-6 top-[188px] h-[276px] w-[298.32px] max-w-[calc(100%-48px)] object-contain object-left-top"
               />
             </section>
           </div>
@@ -775,101 +820,6 @@ const Desktop = ({ className = "" }: { className?: string }) => {
               </div>
               <button className="cursor-pointer border-foundation-primary-normal border-solid border-[1px] py-1.5 px-2.5 bg-[transparent] w-full rounded-[40px] box-border flex items-center justify-center hover:bg-[rgba(69,69,69,0.09)]">
                 <div className="relative text-sm leading-5 font-[Satoshi] text-foundation-primary-normal text-left">Chooser Starters</div>
-              </button>
-            </div>
-          </div>
-
-          {/* Pro */}
-          <div className="w-[276px] mq960:w-full mq960:max-w-[400px] mq800:w-full mq800:max-w-[340px] flex flex-col items-start">
-            <div className="self-stretch rounded-t-3xl rounded-b-none [background:linear-gradient(244.53deg,_rgba(253,_246,_236,_0),_#ffe5c1)] border-foundation-primary-normal border-solid border-[1px] flex flex-col items-start py-[22px] px-[23px]">
-              <div className="self-stretch flex flex-col items-start gap-1">
-                <div className="flex items-center gap-1">
-                  <div className="w-9 relative leading-6 flex items-center shrink-0">PRO</div>
-                  <div className="rounded-[10px] bg-foundation-secondary-normal border-[#ffa82b] border-solid border-[0.5px] flex items-center justify-center py-0 px-[7px] text-center text-[10px] font-[Satoshi]">
-                    <div className="flex items-center">
-                      <div className="relative leading-[18px] font-medium">MOST POPULAR</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="self-stretch flex flex-col items-start gap-1 text-[32px]">
-                  <div className="self-stretch relative leading-[48px]">
-                    <b><span>₦0</span><span className="text-[40px]">{` `}</span></b>
-                    <span className="text-base">Coming Soon</span>
-                  </div>
-                  <div className="self-stretch h-[23px] relative text-xs leading-5 font-medium font-[Satoshi] text-[#696969] flex items-center">Basic features for everyone</div>
-                </div>
-              </div>
-            </div>
-            <div className="self-stretch rounded-t-none rounded-b-3xl bg-foundation-secondary-light-active border-foundation-primary-normal border-solid border-r-[1px] border-b-[1px] border-l-[1px] flex flex-col items-start pt-6 px-[23px] pb-[22px] gap-[60px] text-sm mq450:gap-[30px]">
-              <div className="self-stretch flex flex-col items-start gap-3">
-                <div className="flex flex-col items-start gap-1">
-                  <div className="self-stretch relative leading-[22px]">Features</div>
-                  <div className="self-stretch h-[23px] relative text-xs leading-6 text-foundation-gray-dark flex items-center font-[Satoshi]">
-                    <span><span>{`Everything in `}</span><b>Free plan</b></span>
-                  </div>
-                </div>
-                <div className="self-stretch flex flex-col items-start gap-3 text-xs font-[Satoshi]">
-                  <div className="self-stretch flex items-center gap-3">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path opacity="0.4" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill="#121212"/>
-<path d="M10.58 15.5801C10.38 15.5801 10.19 15.5001 10.05 15.3601L7.22 12.5301C6.93 12.2401 6.93 11.7601 7.22 11.4701C7.51 11.1801 7.99 11.1801 8.28 11.4701L10.58 13.7701L15.72 8.6301C16.01 8.3401 16.49 8.3401 16.78 8.6301C17.07 8.9201 17.07 9.4001 16.78 9.6901L11.11 15.3601C10.97 15.5001 10.78 15.5801 10.58 15.5801Z" fill="#121212"/>
-</svg>
-                    <div className="h-[23px] w-[123px] relative leading-6 flex items-center">Unlimited Clients</div>
-                  </div>
-                  <div className="self-stretch flex items-center gap-3">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path opacity="0.4" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill="#121212"/>
-<path d="M10.58 15.5801C10.38 15.5801 10.19 15.5001 10.05 15.3601L7.22 12.5301C6.93 12.2401 6.93 11.7601 7.22 11.4701C7.51 11.1801 7.99 11.1801 8.28 11.4701L10.58 13.7701L15.72 8.6301C16.01 8.3401 16.49 8.3401 16.78 8.6301C17.07 8.9201 17.07 9.4001 16.78 9.6901L11.11 15.3601C10.97 15.5001 10.78 15.5801 10.58 15.5801Z" fill="#121212"/>
-</svg>
-                    <div className="relative leading-5">Advanced Order Tracking</div>
-                  </div>
-                  <div className="self-stretch flex items-center gap-3">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path opacity="0.4" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill="#121212"/>
-<path d="M10.58 15.5801C10.38 15.5801 10.19 15.5001 10.05 15.3601L7.22 12.5301C6.93 12.2401 6.93 11.7601 7.22 11.4701C7.51 11.1801 7.99 11.1801 8.28 11.4701L10.58 13.7701L15.72 8.6301C16.01 8.3401 16.49 8.3401 16.78 8.6301C17.07 8.9201 17.07 9.4001 16.78 9.6901L11.11 15.3601C10.97 15.5001 10.78 15.5801 10.58 15.5801Z" fill="#121212"/>
-</svg>
-                    <div className="relative leading-5">Client SMS Notifications</div>
-                  </div>
-                </div>
-              </div>
-              <button className="cursor-pointer border-foundation-primary-normal border-solid border-[1px] py-1.5 px-2.5 bg-foundation-primary-normal w-full rounded-[40px] box-border flex items-center justify-center hover:bg-[#454545]">
-                <div className="relative text-sm leading-5 font-[Satoshi] text-foundation-primary-light text-left">Chooser Pro</div>
-              </button>
-            </div>
-          </div>
-
-          {/* Team */}
-          <div className="w-[276px] mq960:w-full mq960:max-w-[400px] mq800:w-full mq800:max-w-[340px] flex flex-col items-start text-sm">
-            <TierColumns sTARTER="TEAM" />
-            <div className="self-stretch rounded-t-none rounded-b-3xl bg-foundation-secondary-light-active border-foundation-primary-normal border-solid border-r-[1px] border-b-[1px] border-l-[1px] flex flex-col items-start pt-6 px-[23px] pb-[22px] gap-[60px] mq450:gap-[30px]">
-              <div className="self-stretch flex flex-col items-start gap-3">
-                <div className="flex flex-col items-start gap-1">
-                  <div className="self-stretch relative leading-[22px]">Features</div>
-                  <div className="self-stretch h-[23px] relative text-xs leading-6 text-foundation-gray-dark flex items-center font-[Satoshi]">
-                    <span><span>{`Everything in `}</span><b>Free plan</b></span>
-                  </div>
-                </div>
-                <div className="self-stretch flex flex-col items-start gap-3 text-xs font-[Satoshi]">
-                  <div className="self-stretch flex items-center gap-3">
-                    <Image className="h-6 w-6 relative" loading="lazy" width={24} height={24} sizes="100vw" alt="" src="/vuesax-bulk-tick-circle.svg" />
-                    <div className="h-[23px] w-[123px] relative leading-6 flex items-center">Multi-Location Support</div>
-                  </div>
-                  <div className="self-stretch flex items-center gap-3">
-                    <Image className="h-6 w-6 relative" loading="lazy" width={24} height={24} sizes="100vw" alt="" src="/vuesax-bulk-tick-circle.svg" />
-                    <div className="relative leading-5">White-label Reports</div>
-                  </div>
-                  <div className="self-stretch flex items-center gap-3">
-                    <Image className="h-6 w-6 relative" loading="lazy" width={24} height={24} sizes="100vw" alt="" src="/vuesax-bulk-tick-circle.svg" />
-                    <div className="relative leading-5">Unlimited Users</div>
-                  </div>
-                  <div className="self-stretch flex items-center gap-3">
-                    <Image className="h-6 w-6 relative" width={24} height={24} sizes="100vw" alt="" src="/vuesax-bulk-tick-circle.svg" />
-                    <div className="relative leading-5">Dedicated Account Manager</div>
-                  </div>
-                </div>
-              </div>
-              <button className="cursor-pointer border-foundation-primary-normal border-solid border-[1px] py-1.5 px-2.5 bg-[transparent] w-full rounded-[40px] box-border flex items-center justify-center hover:bg-[rgba(69,69,69,0.09)]">
-                <div className="relative text-sm leading-5 font-[Satoshi] text-foundation-primary-normal text-left">Chooser Team</div>
               </button>
             </div>
           </div>

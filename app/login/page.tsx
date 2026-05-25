@@ -74,11 +74,17 @@ function CarouselPanel() {
           priority
           key={slides[currentSlide].img}
         />
-        <div className="absolute inset-0 bg-black/20 lg:hidden" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-transparent lg:hidden" />
+
+        {/* Mobile: bottom-only gradient — image stays bright at top */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent lg:hidden" />
+
+        {/* Exact Figma Gradient for Desktop */}
         <div className="absolute inset-0 hidden lg:block bg-gradient-to-t from-[#1A1A1A] via-[#1A1A1A]/80 to-transparent h-[652px] mt-auto" />
-        <div className="absolute top-16 lg:top-auto lg:bottom-0 left-0 right-0 px-6 lg:px-10 lg:pb-10 lg:pt-16 flex flex-col gap-4 text-white z-10">
-          <div className="bg-white/80 backdrop-blur-md shadow-[0px_0px_2px_rgba(0,0,0,0.04)] rounded-[4px] px-1.5 py-1 inline-flex gap-1 w-max mb-2">
+
+        {/* Mobile: bottom | Desktop: bottom */}
+        <div className="absolute bottom-0 left-0 right-0 px-6 pb-8 lg:px-10 lg:pb-10 lg:pt-16 flex flex-col gap-4 text-white z-10">
+          {/* Carousel indicators — centered on mobile, left on desktop */}
+          <div className="bg-white/80 backdrop-blur-md shadow-[0px_0px_2px_rgba(0,0,0,0.04)] rounded-[4px] px-1.5 py-1 inline-flex gap-1 w-max mb-2 self-center lg:self-start">
             {slides.map((_, i) => (
               <div
                 key={i}
@@ -89,10 +95,10 @@ function CarouselPanel() {
               />
             ))}
           </div>
-          <h2 className="font-['Sora'] font-extrabold text-[28px] lg:text-[32px] leading-[36px] lg:leading-[40px] drop-shadow-md lg:drop-shadow-none">
+          <h2 className="font-['Sora'] font-extrabold text-[24px] lg:text-[32px] leading-[32px] lg:leading-[40px] text-center lg:text-left">
             {slides[currentSlide].title}
           </h2>
-          <p className="font-['Satoshi'] font-normal text-[15px] lg:text-[16px] leading-[22px] lg:leading-[24px] text-white/95 lg:text-white drop-shadow-md lg:drop-shadow-none">
+          <p className="font-['Satoshi'] font-normal text-[14px] lg:text-[16px] leading-[22px] lg:leading-[24px] text-white/95 lg:text-white text-center lg:text-left">
             {slides[currentSlide].desc}
           </p>
         </div>
@@ -242,22 +248,41 @@ export default function SigninPage() {
       {/* ── RIGHT PANEL ── */}
       <div className="flex flex-1 flex-col relative min-h-screen z-10 pointer-events-none">
 
-        {/* Top Right Sign Up Link */}
-        <div className="absolute top-[40px] right-6 lg:top-[60px] lg:right-[100px] flex gap-1.5 items-center pointer-events-auto">
-          <span className="hidden lg:inline font-['Satoshi'] font-normal text-[16px] text-[#6C717D]">
-            Don't have an account?
-          </span>
-          <Link
-            href="/signup"
-            className="font-['Satoshi'] font-medium text-[14px] text-white lg:text-[#121212] tracking-[-0.006em] hover:underline bg-white/20 lg:bg-transparent backdrop-blur-xl lg:backdrop-blur-none px-5 py-2 lg:px-0 lg:py-0 rounded-full border border-white/20 lg:border-none shadow-lg lg:shadow-none"
-          >
-            Sign up
-          </Link>
+        {/* ── "Don't have an account?" ──
+             Mobile: centered pill at top of panel
+             Desktop: absolute top-right text link
+        */}
+        <div className="flex justify-center pt-[calc(env(safe-area-inset-top)+64px)] lg:absolute lg:top-[60px] lg:right-[100px] lg:pt-0 pointer-events-auto">
+          {/* Mobile pill */}
+          <div className="flex lg:hidden items-center gap-2 bg-white/40 border border-white/60 backdrop-blur-[50px] rounded-full px-4 py-2.5">
+            <span className="font-['Satoshi'] font-normal text-[14px] text-white tracking-[-0.006em]">
+              Don't have an account?
+            </span>
+            <Link
+              href="/signup"
+              className="font-['Satoshi'] font-bold text-[14px] text-white tracking-[-0.006em]"
+            >
+              Sign up
+            </Link>
+          </div>
+          {/* Desktop text link */}
+          <div className="hidden lg:flex gap-1.5 items-center">
+            <span className="font-['Satoshi'] font-normal text-[16px] text-[#6C717D]">
+              Don't have an account?
+            </span>
+            <Link
+              href="/signup"
+              className="font-['Satoshi'] font-medium text-[14px] text-[#121212] tracking-[-0.006em] hover:underline"
+            >
+              Sign up
+            </Link>
+          </div>
         </div>
 
         {/* Form Wrapper */}
-        <div className="flex flex-1 flex-col justify-center pt-[160px] pb-10 lg:pt-0 lg:pb-0 px-5 lg:px-0 lg:items-start lg:pl-16 xl:pl-24">
-          <div className="w-full max-w-[440px] mx-auto lg:mx-0 flex flex-col pointer-events-auto bg-[#FDFDFD]/92 lg:bg-transparent backdrop-blur-md lg:backdrop-blur-none p-8 lg:p-0 rounded-[32px] lg:rounded-none shadow-[0_8px_40px_rgba(0,0,0,0.15)] lg:shadow-none border border-white/60 lg:border-none ring-1 ring-black/5 lg:ring-0">
+        <div className="flex flex-1 flex-col justify-start pt-6 pb-10 lg:justify-center lg:pt-0 lg:pb-0 px-5 lg:px-0 lg:items-start lg:pl-16 xl:pl-24">
+          {/* Mobile: solid white card | Desktop: transparent */}
+          <div className="w-full max-w-[440px] mx-auto lg:mx-0 flex flex-col pointer-events-auto bg-white lg:bg-transparent py-6 px-4 lg:p-0 rounded-[24px] lg:rounded-none shadow-[0px_0px_4px_rgba(0,0,0,0.08)] lg:shadow-none border-0">
 
             {showBackButton && (
               <button
@@ -274,7 +299,7 @@ export default function SigninPage() {
               <span className="font-['Satoshi'] font-medium text-[14px] text-[#595653] text-right w-full">
                 {step} of {totalSteps}
               </span>
-              <div className="w-full h-1 bg-[#FDF6EC] lg:bg-[#FDF6EC]/80 rounded-full overflow-hidden flex">
+              <div className="w-full h-1 bg-[#FDF6EC] rounded-full overflow-hidden flex">
                 <div
                   className="h-full bg-[#090909] rounded-full transition-all duration-300"
                   style={{ width: `${(step / totalSteps) * 100}%` }}
@@ -282,7 +307,7 @@ export default function SigninPage() {
               </div>
             </div>
 
-            <h1 className="font-['Sora'] font-bold text-[32px] leading-[40px] text-[#121212] mb-6">
+            <h1 className="font-['Sora'] font-bold text-[24px] lg:text-[32px] leading-[32px] lg:leading-[40px] text-[#121212] mb-6">
               {pageTitle}
             </h1>
 
