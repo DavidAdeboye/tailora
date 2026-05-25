@@ -4,8 +4,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import AddClientModal, { type ClientFormData } from "./AddClientModal";
 import { AppModalsContext } from "./AppModalsContext";
-import ClientMeasurementsModal from "./ClientMeasurementsModal";
 import InviteTeamMemberModal from "./InviteTeamMemberModal";
+import OrderCreationFlow from "./OrderCreationFlow";
 import Sidebar from "./Sidebar";
 import SuccessModal from "./SuccessModal";
 
@@ -23,7 +23,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   const [showAddClient, setShowAddClient] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
-  const [showMeasurements, setShowMeasurements] = useState(false);
+  const [showOrderFlow, setShowOrderFlow] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [pendingClient, setPendingClient] = useState<ClientFormData | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -48,21 +48,30 @@ export default function AppShell({ children }: { children: ReactNode }) {
     };
   }, [mobileMenuOpen]);
 
-  const handleContinue = (data: ClientFormData) => {
+  // After client info is filled → open the full-page flow
+  const handleContinueFromModal = (data: ClientFormData) => {
     setPendingClient(data);
     setShowAddClient(false);
-    setShowMeasurements(true);
+    setShowOrderFlow(true);
   };
 
-  const handleMeasurementsSave = () => {
-    setShowMeasurements(false);
+  // "Back" from the flow → re-open the modal so user can edit client info
+  const handleBackToModal = () => {
+    setShowOrderFlow(false);
+    setShowAddClient(true);
+  };
+
+  // Save draft from the flow
+  const handleSaveDraft = () => {
+    setShowOrderFlow(false);
+    setPendingClient(null);
+  };
+
+  // Complete the flow → show success
+  const handleOrderFlowComplete = () => {
+    setShowOrderFlow(false);
     setPendingClient(null);
     setShowSuccess(true);
-  };
-
-  const closeMeasurements = () => {
-    setShowMeasurements(false);
-    setPendingClient(null);
   };
 
   return (
@@ -110,18 +119,24 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
+      {/* Step 1: Client info modal (small) */}
       <AddClientModal
         isOpen={showAddClient}
         onClose={closeAddClient}
         onSaveDraft={closeAddClient}
-        onContinue={handleContinue}
+        onContinue={handleContinueFromModal}
       />
-      <ClientMeasurementsModal
-        isOpen={showMeasurements}
-        client={pendingClient}
-        onClose={closeMeasurements}
-        onSave={handleMeasurementsSave}
-      />
+
+      {/* Steps 2 & 3: Full-page flow (measurements + order details) */}
+      {showOrderFlow && pendingClient && (
+        <OrderCreationFlow
+          client={pendingClient}
+          onBack={handleBackToModal}
+          onSaveDraft={handleSaveDraft}
+          onComplete={handleOrderFlowComplete}
+        />
+      )}
+
       <InviteTeamMemberModal isOpen={showInvite} onClose={closeInvite} />
       <SuccessModal isOpen={showSuccess} onAction={() => setShowSuccess(false)} />
     </AppModalsContext.Provider>
