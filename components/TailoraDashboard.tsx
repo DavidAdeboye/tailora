@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAppModals } from "./AppModalsContext";
 import MobileMenuButton from "./MobileMenuButton";
+import PrimaryButton from "./PrimaryButton";
 
 const orders = [
   { id: "#28373", client: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Wedding gown", status: "Collected", statusType: "collected" as const },
@@ -194,35 +195,33 @@ export default function TailoraDashboard() {
         </header>
 
         <div className="tailora-dashboard-scroll" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", background: "#FDFDFD", position: "relative", WebkitOverflowScrolling: "touch" }}>
-          <div style={{ background: "linear-gradient(180deg, #FDF6EC 0%, rgba(253,246,236,0) 100%)", height: 144, position: "absolute", left: 0, right: 0, top: 0, pointerEvents: "none" }} />
+          <div className="tailora-page-gradient tailora-dashboard-gradient" />
 
-          <div className="tailora-page-content" style={{ padding: "40px 36px 40px", position: "relative" }}>
-            <div className="tailora-page-header-row" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
-              <div>
-                <div className="tailora-welcome-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                  <h1 style={{ margin: 0, fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 24, color: "#121212" }}>
-                    Welcome Joshua&apos;s Couture
-                  </h1>
-                  <img src="/sewingmachine.svg" alt="" />
+          <div className="tailora-page-content tailora-dashboard-content">
+            <div className="tailora-page-header-row tailora-dashboard-hero">
+              <div className="tailora-dashboard-hero-text">
+                <div className="tailora-welcome-title tailora-dashboard-welcome-title">
+                  <h1 className="tailora-dashboard-welcome-heading">Welcome Joshua&apos;s Couture</h1>
+                  <img src="/sewingmachine.svg" alt="" className="tailora-dashboard-welcome-icon" width={32} height={32} />
                 </div>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 300, color: "#696969", fontFamily: "Satoshi, sans-serif" }}>
+                <p className="tailora-dashboard-welcome-subtitle">
                   Your all-in-one tailoring business management hub
                 </p>
               </div>
-              <button type="button" className="tailora-btn-primary" onClick={() => openAddClient()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "12px 16px", background: "#121212", border: "none", borderRadius: 100, cursor: "pointer", color: "white", fontSize: 14, fontWeight: 400, whiteSpace: "nowrap" }}>
+              <PrimaryButton className="tailora-dashboard-add-btn" onClick={() => openAddClient()}>
                 <AddIcon />
                 Add Client
-              </button>
+              </PrimaryButton>
             </div>
 
-            <div className="tailora-stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 32, marginBottom: 40 }}>
+            <div className="tailora-stats-grid tailora-dashboard-stats">
               {stats.map((s, i) => (
-                <div key={i} className="tailora-stat-card" style={{ background: "#FFFFFF", border: "1px solid #F1F1F2", borderRadius: 16, padding: "24px 21px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-                    {s.icon}
-                    <span style={{ fontSize: 14, color: "#696969" }}>{s.label}</span>
+                <div key={i} className="tailora-stat-card">
+                  <div className="tailora-stat-card-top">
+                    <div className="tailora-stat-card-icon">{s.icon}</div>
+                    <span className="tailora-stat-card-label">{s.label}</span>
                   </div>
-                  <div className="tailora-stat-value" style={{ fontSize: 18, fontWeight: 700, color: "#121212" }}>{s.value}</div>
+                  <div className="tailora-stat-value">{s.value}</div>
                 </div>
               ))}
             </div>

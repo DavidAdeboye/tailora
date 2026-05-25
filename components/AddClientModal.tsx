@@ -21,17 +21,37 @@ const OUTFIT_OPTIONS = ["Wedding Gown", "Suit", "Senator", "Agbada", "Ankara", "
 
 export default function AddClientModal({ isOpen, onClose, onSaveDraft, onContinue }: AddClientModalProps) {
   const [form, setForm] = useState<ClientFormData>({ name: "", phone: "", email: "", gender: "", outfitType: "" });
+  const [isCustomOutfit, setIsCustomOutfit] = useState(false);
+  const [customOutfitText, setCustomOutfitText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof ClientFormData, v: string) => setForm((p) => ({ ...p, [k]: v }));
 
   useEffect(() => {
     if (!isOpen) {
       setForm({ name: "", phone: "", email: "", gender: "", outfitType: "" });
+      setIsCustomOutfit(false);
+      setCustomOutfitText("");
       setError(null);
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const handleOutfitChange = (value: string) => {
+    if (value === "Custom") {
+      setIsCustomOutfit(true);
+      setCustomOutfitText("");
+      set("outfitType", "");
+    } else {
+      setIsCustomOutfit(false);
+      set("outfitType", value);
+    }
+  };
+
+  const handleCustomOutfitChange = (value: string) => {
+    setCustomOutfitText(value);
+    set("outfitType", value);
+  };
 
   const handleContinue = () => {
     if (!form.name.trim() || !form.phone.trim() || !form.gender || !form.outfitType) {
@@ -103,15 +123,67 @@ export default function AddClientModal({ isOpen, onClose, onSaveDraft, onContinu
             {/* Outfit Type */}
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <label style={{ fontSize: 14, fontWeight: 500, color: "#283145" }}>Outfit Type</label>
-              <div style={{ position: "relative" }}>
-                <select value={form.outfitType} onChange={e => set("outfitType", e.target.value)} style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}>
-                  <option value="" disabled>Select outfit type</option>
-                  {OUTFIT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
-                </select>
-                <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19.92 8.95L13.4 15.47C12.63 16.24 11.37 16.24 10.6 15.47L4.08 8.95" stroke="#595653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              {!isCustomOutfit ? (
+                <div style={{ position: "relative" }}>
+                  <select
+                    value={form.outfitType || ""}
+                    onChange={e => handleOutfitChange(e.target.value)}
+                    style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}
+                  >
+                    <option value="" disabled>Select outfit type</option>
+                    {OUTFIT_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                  <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19.92 8.95L13.4 15.47C12.63 16.24 11.37 16.24 10.6 15.47L4.08 8.95" stroke="#595653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <textarea
+                    autoFocus
+                    placeholder="Describe the outfit type..."
+                    value={customOutfitText}
+                    onChange={e => handleCustomOutfitChange(e.target.value)}
+                    rows={3}
+                    style={{
+                      ...inputStyle,
+                      padding: "10px 12px",
+                      resize: "none",
+                      lineHeight: "1.5",
+                    }}
+                    onFocus={e => (e.currentTarget.style.borderColor = "#121212")}
+                    onBlur={e => (e.currentTarget.style.borderColor = "#E2E4E9")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomOutfit(false);
+                      setCustomOutfitText("");
+                      set("outfitType", "");
+                    }}
+                    style={{
+                      alignSelf: "flex-start",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 13,
+                      color: "#667185",
+                      fontFamily: "Satoshi, sans-serif",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 4,
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#121212")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "#667185")}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M19.92 8.95L13.4 15.47C12.63 16.24 11.37 16.24 10.6 15.47L4.08 8.95" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Back to presets
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           {error && (
