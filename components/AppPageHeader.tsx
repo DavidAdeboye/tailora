@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import MobileMenuButton from "./MobileMenuButton";
 import NotificationsPanel from "./NotificationsPanel";
+import LogoutModal from "./LogoutModal";
 
 function BellIcon() {
   return (
@@ -15,41 +15,22 @@ function BellIcon() {
   );
 }
 
-function ProfileButtonStyle() {
-  return {
-    width: "100%",
-    padding: "8px 12px",
-    borderRadius: 10,
-    background: "#FDF6EC",
-    border: "none",
-    cursor: "pointer",
-    textAlign: "center",
-    fontSize: 14,
-    fontWeight: 500,
-    color: "#28292D",
-    fontFamily: "var(--font-satoshi)",
-  } as const;
-}
-
-function LogoutButtonStyle() {
-  return {
-    width: "100%",
-    padding: "8px 12px",
-    borderRadius: 10,
-    background: "transparent",
-    border: "none",
-    cursor: "pointer",
-    textAlign: "center",
-    fontSize: 14,
-    fontWeight: 500,
-    color: "#FF4D6D",
-    fontFamily: "var(--font-satoshi)",
-  } as const;
-}
-
 export default function AppPageHeader({ title }: { title: string }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogoutClick = () => {
+    setShowUserMenu(false);       // close dropdown first
+    setShowLogoutModal(true);     // then open modal
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutModal(false);
+    // TODO: add your actual logout logic here
+    // e.g. signOut(), router.push("/login"), etc.
+    console.log("User confirmed logout");
+  };
 
   return (
     <>
@@ -81,7 +62,7 @@ export default function AppPageHeader({ title }: { title: string }) {
             {title}
           </span>
         </div>
-  
+
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {/* Bell */}
           <button
@@ -102,12 +83,12 @@ export default function AppPageHeader({ title }: { title: string }) {
           >
             <BellIcon />
           </button>
-  
-          {/* Avatar (unchanged) */}
+
+          {/* Avatar + dropdown */}
           <div style={{ position: "relative", display: "inline-block" }}>
             <button
               type="button"
-              onClick={() => setShowUserMenu(v => !v)}
+              onClick={() => setShowUserMenu((v) => !v)}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -119,89 +100,106 @@ export default function AppPageHeader({ title }: { title: string }) {
                 cursor: "pointer",
               }}
             >
-              <img src="/Ellipse2481.png" style={{ width: 24, height: 24, borderRadius: "50%" }} />
+              <img
+                src="/Ellipse2481.png"
+                alt="Avatar"
+                style={{ width: 24, height: 24, borderRadius: "50%" }}
+              />
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path opacity="0.4" d="M15.48 13.2302L11.69 8.18018H6.07999C5.11999 8.18018 4.63999 9.34018 5.31999 10.0202L10.5 15.2002C11.33 16.0302 12.68 16.0302 13.51 15.2002L15.48 13.2302Z" fill="#121212" />
                 <path d="M17.9199 8.18018H11.6899L15.4799 13.2302L18.6899 10.0202C19.3599 9.34018 18.8799 8.18018 17.9199 8.18018Z" fill="#121212" />
               </svg>
             </button>
-  
+
             {showUserMenu && (
-  <>
-    {/* backdrop */}
-    <div
-      onClick={() => setShowUserMenu(false)}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9998,
-      }}
-    />
+              <>
+                {/* Backdrop to close dropdown */}
+                <div
+                  onClick={() => setShowUserMenu(false)}
+                  style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+                />
 
-    {/* dropdown */}
-    <div
-      style={{
-        position: "absolute",
-        right: 0,
-        top: "calc(100% + 8px)",
-        width: 184,
-        background: "#FFFFFF",
-        borderRadius: 12,
-        boxShadow: "0px 8px 24px rgba(0,0,0,0.12)",
-        padding: 10,
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        zIndex: 9999,
-      }}
-    >
-      <button
-        style={{
-          width: "100%",
-          padding: "10px 12px",
-          borderRadius: 10,
-          background: "#FDF6EC",
-          border: "none",
-          cursor: "pointer",
-          fontSize: 14,
-          fontWeight: 500,
-        }}
-      >
-        Profile
-      </button>
+                {/* Dropdown */}
+                <div
+                  style={{
+                    position: "absolute",
+                    right: 0,
+                    top: "calc(100% + 8px)",
+                    width: 184,
+                    background: "#FFFFFF",
+                    borderRadius: 12,
+                    boxShadow: "0px 8px 24px rgba(0,0,0,0.12)",
+                    padding: 10,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                    zIndex: 9999,
+                  }}
+                >
+                  <button
+                    type="button"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      background: "#FDF6EC",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 14,
+                      fontWeight: 500,
+                      fontFamily: "var(--font-satoshi)",
+                      color: "#28292D",
+                      textAlign: "center",
+                    }}
+                  >
+                    Profile
+                  </button>
 
-      <button
-        style={{
-          width: "100%",
-          padding: "10px 12px",
-          borderRadius: 10,
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          fontSize: 14,
-          fontWeight: 500,
-          color: "#FF4D6D",
-        }}
-      >
-        Log out
-      </button>
-    </div>
-  </>
-)}
+                  <button
+                    type="button"
+                    onClick={handleLogoutClick}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 14,
+                      fontWeight: 500,
+                      fontFamily: "var(--font-satoshi)",
+                      color: "#FF4D6D",
+                      textAlign: "center",
+                    }}
+                  >
+                    Log out
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </header>
-  
-      {/* THIS is the ONLY spacing fix */}
+
+      {/* Gradient spacing strip */}
       <div
-  style={{
-    height: 40,
-    background: "linear-gradient(180deg, #FDF6EC 80%, rgba(253, 246, 236, 0) 1000%)",
-  }}
-/>
-  
+        style={{
+          height: 40,
+          background:
+            "linear-gradient(180deg, #FDF6EC 80%, rgba(253, 246, 236, 0) 1000%)",
+        }}
+      />
+
       {showNotifications && (
         <NotificationsPanel onClose={() => setShowNotifications(false)} />
+      )}
+
+      {/* Logout confirmation modal */}
+      {showLogoutModal && (
+        <LogoutModal
+          onConfirm={handleLogoutConfirm}
+          onCancel={() => setShowLogoutModal(false)}
+        />
       )}
     </>
   );

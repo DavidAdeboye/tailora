@@ -103,6 +103,7 @@ type IconComp = React.FC<{ color?: string }>;
 ================================================================ */
 function Tooltip({ label, children }: { label: string; children: React.ReactNode }) {
   const [visible, setVisible] = useState(false);
+
   return (
     <div
       style={{ position: "relative", display: "flex" }}
@@ -111,19 +112,25 @@ function Tooltip({ label, children }: { label: string; children: React.ReactNode
     >
       {children}
       {visible && (
-        <div className="tailora-tooltip" style={{
-          position: "absolute", left: "calc(100% + 12px)", top: "50%",
-          transform: "translateY(-50%)", background: "#2C2C2C", color: "#fff",
-          fontSize: 12, fontWeight: 500, padding: "5px 10px", borderRadius: 6,
-          whiteSpace: "nowrap", pointerEvents: "none", zIndex: 300,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
-        }}>
+        <div
+          style={{
+            position: "absolute",
+            left: "calc(100% + 12px)",
+            top: "50%",
+            transform: "translateY(-50%)",
+            background: "#2C2C2C",
+            color: "#fff",
+            fontSize: 12,
+            fontWeight: 500,
+            padding: "5px 10px",
+            borderRadius: 6,
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+            zIndex: 300,
+            boxShadow: "0 2px 8px rgba(0,0,0,0.25)",
+          }}
+        >
           {label}
-          <div style={{
-            position: "absolute", right: "100%", top: "50%",
-            transform: "translateY(-50%)", borderWidth: "5px 6px 5px 0",
-            borderStyle: "solid", borderColor: "transparent #2C2C2C transparent transparent",
-          }} />
         </div>
       )}
     </div>
@@ -134,7 +141,11 @@ function Tooltip({ label, children }: { label: string; children: React.ReactNode
    NAV BUTTON
 ================================================================ */
 function NavBtn({
-  label, icon: Icon, active = false, collapsed, onClick,
+  label,
+  icon: Icon,
+  active = false,
+  collapsed,
+  onClick,
 }: {
   label: string;
   icon: IconComp;
@@ -146,26 +157,39 @@ function NavBtn({
 
   const btn = (
     <button
-      className="tailora-nav-btn"
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
       style={{
-        display: "flex", alignItems: "center",
+        display: "flex",
+        alignItems: "center",
         gap: collapsed ? 0 : 12,
         justifyContent: collapsed ? "center" : "flex-start",
         padding: collapsed ? "12px" : "12px 16px",
         borderRadius: 6,
         background: active ? "#FDF6EC" : "transparent",
-        border: "none", cursor: "pointer", width: "100%",
+        border: "none",
+        cursor: "pointer",
+        width: "100%",
         color: active ? "#28292D" : "#B6B6B6",
-        fontSize: 14, fontWeight: active ? 500 : 400,
+        fontSize: 14,
+        fontWeight: active ? 500 : 400,
         fontFamily: "'Satoshi', 'Inter', sans-serif",
-        whiteSpace: "nowrap", overflow: "hidden",
+        whiteSpace: "nowrap",
+        overflow: "hidden",
       }}
-      onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.06)"; }}
-      onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = "transparent"; }}
+      onMouseEnter={(e) => {
+        if (!active) e.currentTarget.style.background = "rgba(255,255,255,0.06)";
+      }}
+      onMouseLeave={(e) => {
+        if (!active) e.currentTarget.style.background = "transparent";
+      }}
     >
-      <span style={{ flexShrink: 0 }}><Icon color={iconColor} /></span>
-      {!collapsed && <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{label}</span>}
+      <span style={{ flexShrink: 0 }}>
+        <Icon color={iconColor} />
+      </span>
+      {!collapsed && <span>{label}</span>}
     </button>
   );
 
@@ -173,10 +197,10 @@ function NavBtn({
 }
 
 const PAGE_ROUTES: Record<string, string> = {
-  "Dashboard": "/dashboard",
+  Dashboard: "/dashboard",
   "Client Management": "/clients",
   "Team Collaboration": "/team",
-  "Settings": "/settings",
+  Settings: "/settings",
   "Help & Support": "/help",
 };
 
@@ -191,11 +215,13 @@ export default function Sidebar({
   onNavigate,
   onCloseMobile,
 }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
   const router = useRouter();
   const pathname = usePathname() ?? "";
-  const effectiveCollapsed = mobileOpen ? false : collapsed;
-  const W = effectiveCollapsed ? 72 : 272;
+
+  const [hovered, setHovered] = useState(false);
+
+  const isCollapsed = mobileOpen ? false : !hovered;
+  const W = isCollapsed ? 72 : 272;
 
   function navigate(label: string) {
     const href = PAGE_ROUTES[label];
@@ -207,7 +233,7 @@ export default function Sidebar({
   const sidebarClass = [
     "tailora-sidebar",
     mobileOpen && "tailora-sidebar--open",
-    effectiveCollapsed && !mobileOpen && "tailora-sidebar--collapsed",
+    isCollapsed && !mobileOpen && "tailora-sidebar--collapsed",
   ]
     .filter(Boolean)
     .join(" ");
@@ -215,142 +241,198 @@ export default function Sidebar({
   return (
     <aside
       className={sidebarClass}
-      onClick={effectiveCollapsed ? () => setCollapsed(false) : undefined}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       style={{
-        width: W, minWidth: W, background: "#121212",
-        display: "flex", flexDirection: "column", height: "100vh",
-        transition: "width 0.22s cubic-bezier(0.4,0,0.2,1), min-width 0.22s cubic-bezier(0.4,0,0.2,1)",
-        overflow: "hidden", position: "relative", flexShrink: 0,
-        cursor: effectiveCollapsed ? "pointer" : "default",
+        width: W,
+        minWidth: W,
+        background: "#121212",
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        transition:
+          "width 0.22s cubic-bezier(0.4,0,0.2,1), min-width 0.22s cubic-bezier(0.4,0,0.2,1)",
+        overflow: "hidden",
+        position: "relative",
+        flexShrink: 0,
       }}
     >
-      {/* Logo row */}
-      <div style={{
-        padding: effectiveCollapsed ? "24px 0 0" : "24px 24px 0",
-        display: "flex", alignItems: "center",
-        justifyContent: effectiveCollapsed ? "center" : "space-between",
-        marginBottom: 20, minHeight: 56,
-      }}>
+      {/* Logo */}
+      <div
+        style={{
+          padding: isCollapsed ? "24px 0 0" : "24px 24px 0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: isCollapsed ? "center" : "space-between",
+          marginBottom: 20,
+          minHeight: 56,
+        }}
+      >
         <a href="/">
-        <div style={{ display: "flex", alignItems: "center", gap: 8, overflow: "hidden", flexShrink: 0 }}>
-         <img src="/logo.png" alt="" />
-          {!effectiveCollapsed && (
-            <span style={{ color: "#E7E7E7", fontWeight: 800, fontSize: 20, fontFamily: "'Sora', sans-serif", overflow: "hidden", whiteSpace: "nowrap" }}>
-              Tailora
-            </span>
-          )}
-        </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <img src="/logo.png" alt="" />
+            {!isCollapsed && (
+              <span
+                style={{
+                  color: "#E7E7E7",
+                  fontWeight: 800,
+                  fontSize: 20,
+                  fontFamily: "'Sora', sans-serif",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Tailora
+              </span>
+            )}
+          </div>
         </a>
-        {mobileOpen ? (
-          <button
-            type="button"
-            className="tailora-sidebar-close-btn"
-            aria-label="Close menu"
-            onClick={(e) => { e.stopPropagation(); onCloseMobile?.(); }}
-            style={{ background: "rgba(255,255,255,0.08)", border: "none", cursor: "pointer", width: 36, height: 36, borderRadius: 8, color: "#E7E7E7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </button>
-        ) : !effectiveCollapsed ? (
-          <button
-            type="button"
-            className="tailora-sidebar-collapse-btn"
-            onClick={(e) => { e.stopPropagation(); setCollapsed(true); }}
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "#B6B6B6", display: "flex", alignItems: "center", borderRadius: 6, flexShrink: 0 }}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path opacity="0.4" d="M16.19 2H7.81C4.17 2 2 4.17 2 7.81V16.18C2 19.83 4.17 22 7.81 22H16.18C19.82 22 21.99 19.83 21.99 16.19V7.81C22 4.17 19.83 2 16.19 2Z" fill="#B6B6B6" />
-              <path d="M13.26 16.28C13.07 16.28 12.88 16.21 12.73 16.06L9.2 12.53C8.91 12.24 8.91 11.76 9.2 11.47L12.73 7.94C13.02 7.65 13.5 7.65 13.79 7.94C14.08 8.23 14.08 8.71 13.79 9L10.79 12L13.79 15C14.08 15.29 14.08 15.77 13.79 16.06C13.65 16.21 13.46 16.28 13.26 16.28Z" fill="#B6B6B6" />
-            </svg>
-          </button>
-        ) : null}
       </div>
-
-      {/* Expand button (collapsed only) */}
-      {effectiveCollapsed && (
-        <Tooltip label="Expand sidebar">
-          <button
-            onClick={() => setCollapsed(false)}
-            style={{
-              position: "absolute", top: 22, right: 8,
-              background: "rgba(255,255,255,0.07)", border: "none", cursor: "pointer",
-              width: 28, height: 28, borderRadius: 6,
-              display: "flex", alignItems: "center", justifyContent: "center", color: "#B6B6B6",
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M10.74 16.28C10.55 16.28 10.36 16.21 10.21 16.06C9.92 15.77 9.92 15.29 10.21 15L13.21 12L10.21 9C9.92 8.71 9.92 8.23 10.21 7.94C10.5 7.65 10.98 7.65 11.27 7.94L14.8 11.47C15.09 11.76 15.09 12.24 14.8 12.53L11.27 16.06C11.13 16.21 10.93 16.28 10.74 16.28Z" fill="#B6B6B6" />
-            </svg>
-          </button>
-        </Tooltip>
-      )}
 
       {/* Main Menu */}
       <div style={{ padding: "0 8px", marginBottom: 8 }}>
-        {!effectiveCollapsed && (
-          <div style={{ padding: "0 12px 6px", color: "#98A2B3", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+        {!isCollapsed && (
+          <div
+            style={{
+              padding: "0 12px 6px",
+              color: "#98A2B3",
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}
+          >
             Main Menu
           </div>
         )}
+
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <NavBtn label="Dashboard"          icon={HomeIcon}   active={activeMenu === "Dashboard"}          collapsed={effectiveCollapsed} onClick={() => navigate("Dashboard")} />
-          <NavBtn label="Client Management"  icon={PeopleIcon} active={activeMenu === "Client Management"}  collapsed={effectiveCollapsed} onClick={() => navigate("Client Management")} />
-          <NavBtn label="Team Collaboration" icon={TeamIcon}   active={activeMenu === "Team Collaboration"} collapsed={effectiveCollapsed} onClick={() => navigate("Team Collaboration")} />
+          <NavBtn
+            label="Dashboard"
+            icon={HomeIcon}
+            active={activeMenu === "Dashboard"}
+            collapsed={isCollapsed}
+            onClick={() => navigate("Dashboard")}
+          />
+          <NavBtn
+            label="Client Management"
+            icon={PeopleIcon}
+            active={activeMenu === "Client Management"}
+            collapsed={isCollapsed}
+            onClick={() => navigate("Client Management")}
+          />
+          <NavBtn
+            label="Team Collaboration"
+            icon={TeamIcon}
+            active={activeMenu === "Team Collaboration"}
+            collapsed={isCollapsed}
+            onClick={() => navigate("Team Collaboration")}
+          />
         </div>
       </div>
 
       {/* Divider */}
-      <div style={{ margin: `0 ${effectiveCollapsed ? 12 : 8}px 8px`, height: 1, background: "#33353A" }} />
+      <div
+        style={{
+          margin: `0 ${isCollapsed ? 12 : 8}px 8px`,
+          height: 1,
+          background: "#33353A",
+        }}
+      />
 
       {/* Actions */}
       <div style={{ padding: "0 8px", marginBottom: "auto" }}>
-        {!effectiveCollapsed && (
-          <div style={{ padding: "0 12px 6px", color: "#98A2B3", fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+        {!isCollapsed && (
+          <div
+            style={{
+              padding: "0 12px 6px",
+              color: "#98A2B3",
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+            }}
+          >
             Actions
           </div>
         )}
+
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <NavBtn label="Add Client"       icon={AddClientIcon} collapsed={effectiveCollapsed} onClick={() => { onAddClient?.(); }} />
-          <NavBtn label="Invite Co-worker" icon={InviteIcon}    collapsed={effectiveCollapsed} onClick={() => onInviteCoworker?.()} />
+          <NavBtn
+            label="Add Client"
+            icon={AddClientIcon}
+            collapsed={isCollapsed}
+            onClick={() => onAddClient?.()}
+          />
+          <NavBtn
+            label="Invite Co-worker"
+            icon={InviteIcon}
+            collapsed={isCollapsed}
+            onClick={() => onInviteCoworker?.()}
+          />
         </div>
       </div>
 
-      {/* Bottom items */}
+      {/* Bottom */}
       <div style={{ padding: "0 8px 12px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <NavBtn label="Settings"       icon={SettingsIcon} active={activeMenu === "Settings"}       collapsed={effectiveCollapsed} onClick={() => navigate("Settings")} />
-          <NavBtn label="Help & Support" icon={HelpIcon}     active={activeMenu === "Help & Support"} collapsed={effectiveCollapsed} onClick={() => navigate("Help & Support")} />
+          <NavBtn
+            label="Settings"
+            icon={SettingsIcon}
+            active={activeMenu === "Settings"}
+            collapsed={isCollapsed}
+            onClick={() => navigate("Settings")}
+          />
+          <NavBtn
+            label="Help & Support"
+            icon={HelpIcon}
+            active={activeMenu === "Help & Support"}
+            collapsed={isCollapsed}
+            onClick={() => navigate("Help & Support")}
+          />
         </div>
       </div>
 
-      {/* User profile */}
-      <div style={{
-        padding: effectiveCollapsed ? "12px 8px" : "12px 16px",
-        display: "flex", alignItems: "center",
-        justifyContent: effectiveCollapsed ? "center" : "space-between",
-        borderTop: "1px solid #33353A", gap: 8, overflow: "hidden",
-      }}>
-        {effectiveCollapsed ? (
+      {/* Profile */}
+      <div
+        style={{
+          padding: isCollapsed ? "12px 8px" : "12px 16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: isCollapsed ? "center" : "space-between",
+          borderTop: "1px solid #33353A",
+        }}
+      >
+        {isCollapsed ? (
           <Tooltip label="Joshua's Couture">
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#3A3A3A", overflow: "hidden", flexShrink: 0 }}>
-              <div style={{ width: "100%", height: "100%", background: "linear-gradient(135deg,#F5B500,#e07b00)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 14 }}>J</div>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: "50%",
+                background: "#3A3A3A",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontWeight: 700,
+                color: "#fff",
+              }}
+            >
+              J
             </div>
           </Tooltip>
         ) : (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
-              <img src="/Ellipse2481.png" alt="Joshua" />
-              <div style={{ overflow: "hidden" }}>
-                <div style={{ color: "#E7E7E7", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Joshua's Couture</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <img src="/Ellipse2481.png" alt="profile" />
+              <div>
+                <div style={{ color: "#E7E7E7", fontSize: 13, fontWeight: 600 }}>
+                  Joshua's Couture
+                </div>
                 <div style={{ color: "#B6B6B6", fontSize: 12 }}>Atelier</div>
               </div>
             </div>
-            <button
-              style={{ background: "none", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 }}
-              onClick={(e) => e.stopPropagation()}
-            >
+
+            <button style={{ background: "none", border: "none", cursor: "pointer" }}>
               <LogoutIcon />
             </button>
           </>
@@ -358,4 +440,4 @@ export default function Sidebar({
       </div>
     </aside>
   );
-}
+} 
