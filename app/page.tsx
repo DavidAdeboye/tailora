@@ -32,12 +32,14 @@ const Button = ({
       className={`tailora-landing-btn cursor-pointer [border:none] py-[13px] px-6 bg-foundation-primary-normal h-[46px] w-[175px] rounded-[999px] overflow-hidden shrink-0 flex items-center justify-center box-border ${className}`}
       style={buttonStyle}
     >
+      <a href="/signup">
       <div
         className="relative text-sm leading-5 font-medium font-[Satoshi] text-[#fff] text-left"
         style={createAccountStyle}
       >
-        <a href="/signup">Get Started</a>
+        Get Started
       </div>
+      </a>
     </button>
   );
 };
