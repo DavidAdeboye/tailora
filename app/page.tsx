@@ -264,8 +264,14 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
       </div>
 
       {/* ── Navbar ── */}
+      {isMobileMenuOpen && (
+  <div
+    className="fixed inset-0 z-[98] backdrop-blur-sm bg-black/20"
+    onClick={() => setIsMobileMenuOpen(false)}
+  />
+)}
       <div className="w-full px-[121px] mq1125:px-[60px] mq960:px-[40px] mq800:px-10 mq450:px-4">
-        <header className="tailora-landing-nav shadow-[0px_0px_4px_rgba(0,_0,_0,_0.04)] rounded-[60px] bg-[#fff] flex flex-col items-start justify-center py-3 pl-6 pr-3 top-6 z-[99] sticky w-full max-w-[1197px] mx-auto shrink-0">
+        <header className="tailora-landing-nav overflow-vivible shadow-[0px_0px_4px_rgba(0,_0,_0,_0.04)] rounded-[60px] bg-[#fff] flex flex-col items-start justify-center py-3 pl-6 pr-3 top-6 z-[99] sticky w-full max-w-[1197px] mx-auto shrink-0">
           <nav className="m-0 w-full flex items-center justify-between gap-4 text-center text-sm text-foundation-gray-darker font-[Satoshi]">
             {/* Logo */}
             <div className="h-[24.5px] flex items-center gap-[1.8px] text-left text-xl text-foundation-primary-normal font-[Sora] shrink-0">
@@ -298,31 +304,34 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
               </div>
               <Button property1="Default" className="mq960:hidden mq800:hidden" />
               {/* Hamburger */}
-              <button
-                className="mq960:flex mq800:flex hidden flex-col items-center justify-center gap-1.5 p-2 cursor-pointer"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                <div className="w-6 h-0.5 bg-foundation-primary-normal rounded-full" />
-                <div className="w-6 h-0.5 bg-foundation-primary-normal rounded-full" />
-                <div className="w-6 h-0.5 bg-foundation-primary-normal rounded-full" />
-              </button>
+<button
+  className="mq960:flex mq800:flex hidden flex-col items-center justify-center w-[38px] h-[38px] gap-[5px] border border-foundation-gray-light rounded-full cursor-pointer transition-colors hover:bg-foundation-gray-lightest"
+  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+>
+  <span className={`block w-4 h-[1.5px] bg-foundation-primary-normal rounded-full transition-transform duration-300 origin-center ${isMobileMenuOpen ? "translate-y-[6.5px] rotate-45" : ""}`} />
+  <span className={`block w-4 h-[1.5px] bg-foundation-primary-normal rounded-full transition-opacity duration-300 ${isMobileMenuOpen ? "opacity-0" : ""}`} />
+  <span className={`block w-4 h-[1.5px] bg-foundation-primary-normal rounded-full transition-transform duration-300 origin-center ${isMobileMenuOpen ? "-translate-y-[6.5px] -rotate-45" : ""}`} />
+</button>
             </div>
           </nav>
-
           {/* Mobile menu dropdown */}
-          {isMobileMenuOpen && (
-            <div className="tailora-landing-menu-dropdown absolute top-full left-0 right-0 bg-white rounded-b-[60px] shadow-[0px_4px_20px_rgba(0,_0,_0,_0.1)] z-[98] flex flex-col items-center gap-4 py-6 px-4 mq960:flex mq800:flex hidden">
-              {["Home", "Features", "Pricing", "How It Works"].map((item) => (
-                <div key={item} className="flex items-center justify-center py-2 px-4 cursor-pointer w-full">
-                  <div className="relative text-base leading-6 font-medium">{item}</div>
-                </div>
-              ))}
-              <div className="flex items-center justify-center py-2 px-4 cursor-pointer w-full">
-                <div className="relative text-base leading-6 font-medium">Sign in</div>
-              </div>
-              <Button property1="Default" />
-            </div>
-          )}
+<div className={`w-full overflow-hidden transition-all duration-300 ease-in-out hidden mq960:block ${isMobileMenuOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"}`}>
+  <div className="pt-3 pb-2 px-1 flex flex-col gap-1">
+    {["Home", "Features", "Pricing", "How It Works"].map((item) => (
+      <a key={item} href="#" className="flex items-center px-4 py-3 rounded-xl text-sm font-medium font-[Satoshi] text-foundation-gray-darker hover:bg-foundation-gray-lightest transition-colors">
+        {item}
+      </a>
+    ))}
+    <div className="h-px bg-foundation-gray-light mx-2 my-1" />
+    <a href="/login" className="flex items-center px-4 py-3 rounded-xl text-sm font-medium font-[Satoshi] text-foundation-gray-dark hover:bg-foundation-gray-lightest transition-colors">
+      Sign in
+    </a>
+    <div className="px-2 pb-1 pt-1">
+      <Button property1="Default" className="w-full" />
+    </div>
+  </div>
+</div>
+
         </header>
       </div>
 
