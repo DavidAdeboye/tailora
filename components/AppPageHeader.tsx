@@ -181,14 +181,7 @@ export default function AppPageHeader({ title }: { title: string }) {
         </div>
       </header>
 
-      {/* Gradient spacing strip */}
-      <div
-        style={{
-          height: 40,
-          background:
-            "linear-gradient(180deg, #FDF6EC 80%, rgba(253, 246, 236, 0) 1000%)",
-        }}
-      />
+
 
       {showNotifications && (
         <NotificationsPanel onClose={() => setShowNotifications(false)} />

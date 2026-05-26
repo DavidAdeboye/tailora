@@ -10,6 +10,7 @@ import { ActionMenuButton, DeleteConfirmModal } from "./Actionmenu";
 type ClientStatusType = "collected" | "overdue" | "due";
 
 interface Client {
+  date: string;
   id: string;
   name: string;
   phone: string;
@@ -20,14 +21,38 @@ interface Client {
 }
 
 const initialClients: Client[] = [
-  { id: "#28373", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male",   outfit: "Wedding gown", status: "Collected",      statusType: "collected" },
-  { id: "#32876", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Suit",         status: "Collected",      statusType: "collected" },
-  { id: "#11394", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male",   outfit: "Wedding gown", status: "Overdue 2 days", statusType: "overdue"   },
-  { id: "#99822", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Senator",      status: "Due in 3 days",  statusType: "due"       },
-  { id: "#11873", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male",   outfit: "Senator",      status: "Due in 3 days",  statusType: "due"       },
-  { id: "#28374", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male",   outfit: "Wedding gown", status: "Collected",      statusType: "collected" },
-  { id: "#28375", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Suit",         status: "Overdue 2 days", statusType: "overdue"   },
-  { id: "#28376", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male",   outfit: "Senator",      status: "Due in 3 days",  statusType: "due"       },
+  {
+    id: "#28373", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Wedding gown", status: "Collected", statusType: "collected",
+    date: ""
+  },
+  {
+    id: "#32876", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Suit", status: "Collected", statusType: "collected",
+    date: ""
+  },
+  {
+    id: "#11394", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Wedding gown", status: "Overdue 2 days", statusType: "overdue",
+    date: ""
+  },
+  {
+    id: "#99822", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Senator", status: "Due in 3 days", statusType: "due",
+    date: ""
+  },
+  {
+    id: "#11873", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Senator", status: "Due in 3 days", statusType: "due",
+    date: ""
+  },
+  {
+    id: "#28374", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Wedding gown", status: "Collected", statusType: "collected",
+    date: ""
+  },
+  {
+    id: "#28375", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Suit", status: "Overdue 2 days", statusType: "overdue",
+    date: ""
+  },
+  {
+    id: "#28376", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Senator", status: "Due in 3 days", statusType: "due",
+    date: ""
+  },
 ];
 
 const statusStyles: Record<ClientStatusType, { bg: string; color: string }> = {
@@ -131,6 +156,13 @@ function ClientMobileCard({ client, onEdit, onDelete }: { client: Client; onEdit
 }
 
 export default function ClientManagementPage() {
+  const [filterGender, setFilterGender] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterOutfit, setFilterOutfit] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [datePanelOpen, setDatePanelOpen] = useState(false);
   const { openAddClient } = useAppModals();
   const [clients, setClients] = useState<Client[]>(initialClients);
   const [currentPage, setCurrentPage] = useState(3);
@@ -141,16 +173,16 @@ export default function ClientManagementPage() {
 
   const filteredClients = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return clients;
-    return clients.filter(c =>
-      c.name.toLowerCase().includes(q) ||
-      c.id.toLowerCase().includes(q) ||
-      c.phone.toLowerCase().includes(q) ||
-      c.gender.toLowerCase().includes(q) ||
-      c.outfit.toLowerCase().includes(q) ||
-      c.status.toLowerCase().includes(q)
-    );
-  }, [searchQuery, clients]);
+    return clients.filter(c => {
+      const matchSearch = !q || [c.name, c.id, c.phone, c.gender, c.outfit, c.status].some(v => v.toLowerCase().includes(q));
+      const matchGender = !filterGender || c.gender === filterGender;
+      const matchStatus = !filterStatus || c.statusType === filterStatus;
+      const matchOutfit = !filterOutfit || c.outfit === filterOutfit;
+      const matchFrom = !filterDateFrom || (c.date ?? "") >= filterDateFrom;
+      const matchTo = !filterDateTo || (c.date ?? "") <= filterDateTo;
+      return matchSearch && matchGender && matchStatus && matchOutfit && matchFrom && matchTo;
+    });
+  }, [searchQuery, filterGender, filterStatus, filterOutfit, filterDateFrom, filterDateTo, clients]);
 
   const handleEdit = (client: Client) => {
     // TODO: wire to your edit flow
@@ -197,16 +229,56 @@ export default function ClientManagementPage() {
               />
             </label>
             <div className="tailora-clients-toolbar-actions">
-              <button type="button" className="tailora-table-filter-btn tailora-clients-filter-btn">
-                <FilterIcon />
-                Filter
-              </button>
-              <button type="button" className="tailora-clients-date-btn">
-                <CalendarIcon />
-                <span className="tailora-clients-date-label">Select dates</span>
-                <ChevronDownIcon />
-              </button>
+            <button type="button" className="tailora-table-filter-btn tailora-clients-filter-btn" onClick={() => { setFilterPanelOpen(o => !o); setDatePanelOpen(false); }}>
+  <FilterIcon />
+  Filter
+  {(filterGender || filterStatus || filterOutfit) && (
+    <span style={{ background: "#EB5017", color: "#fff", borderRadius: 10, padding: "0 6px", fontSize: 11, fontWeight: 700, marginLeft: 4 }}>
+      {[filterGender, filterStatus, filterOutfit].filter(Boolean).length}
+    </span>
+  )}
+</button>
+<button type="button" className="tailora-clients-date-btn" onClick={() => { setDatePanelOpen(o => !o); setFilterPanelOpen(false); }}>
+  <CalendarIcon />
+  <span className="tailora-clients-date-label">Select dates</span>
+  <ChevronDownIcon />
+</button>
             </div>
+            {datePanelOpen && (
+  <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "12px 16px", borderTop: "1px solid #F0F0F0", flexWrap: "wrap" }}>
+    <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#344054" }} />
+    <span style={{ color: "#667185", fontSize: 13 }}>to</span>
+    <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#344054" }} />
+    <button onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); }} style={{ padding: "8px 12px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#344054" }}>Clear</button>
+  </div>
+)}
+{filterPanelOpen && (
+  <div style={{ background: "#fff", border: "1px solid #E4E7EC", borderRadius: 10, padding: 16, margin: "0 16px 12px", boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
+    <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+      <select value={filterGender} onChange={e => setFilterGender(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
+        <option value="">All Genders</option>
+        <option>Male</option>
+        <option>Female</option>
+      </select>
+      <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
+        <option value="">All Status</option>
+        <option value="collected">Collected</option>
+        <option value="overdue">Overdue</option>
+        <option value="due">Due</option>
+      </select>
+      <select value={filterOutfit} onChange={e => setFilterOutfit(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
+        <option value="">All Outfits</option>
+        <option>Wedding gown</option>
+        <option>Suit</option>
+        <option>Senator</option>
+      </select>
+    </div>
+    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid #F0F0F0", paddingTop: 12 }}>
+      <button onClick={() => { setFilterGender(""); setFilterStatus(""); setFilterOutfit(""); }} style={{ padding: "8px 14px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 8, fontSize: 13, color: "#344054", cursor: "pointer" }}>Reset</button>
+      <button onClick={() => setFilterPanelOpen(false)} style={{ padding: "8px 18px", background: "#EB5017", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Done</button>
+    </div>
+  </div>
+)}
           </div>
 
           <p className="tailora-clients-results-count" aria-live="polite">

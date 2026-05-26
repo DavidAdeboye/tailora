@@ -1,6 +1,5 @@
 "use client";
-
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAppModals } from "./AppModalsContext";
 import PrimaryButton from "./PrimaryButton";
 import NotificationsPanel from "./NotificationsPanel";
@@ -136,6 +135,24 @@ export default function TailoraDashboard() {
   const { openAddClient } = useAppModals();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [currentPage, setCurrentPage] = useState(3);
+  const [filterGender, setFilterGender] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterOutfit, setFilterOutfit] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [datePanelOpen, setDatePanelOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredOrders = useMemo(() => {
+    return orders.filter(item => {
+      const q = searchQuery.trim().toLowerCase();
+      const matchSearch = !q || [item.id, item.client, item.phone, item.gender, item.outfit, item.status].some(v => v.toLowerCase().includes(q));
+      const matchGender = !filterGender || item.gender === filterGender;
+      const matchStatus = !filterStatus || item.statusType === filterStatus;
+      const matchOutfit = !filterOutfit || item.outfit === filterOutfit;
+      return matchSearch && matchGender && matchStatus && matchOutfit;
+    });
+  }, [searchQuery, filterGender, filterStatus, filterOutfit]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
   const totalPages = 30;
@@ -150,6 +167,8 @@ export default function TailoraDashboard() {
     setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
     setDeleteTarget(null);
   };
+
+
 
   return (
     <div className="tailora-dashboard" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, width: "100%" }}>
@@ -192,26 +211,72 @@ export default function TailoraDashboard() {
             </div>
 
             <div className="tailora-data-panel tailora-orders-card" style={{ background: "#FFFFFF", border: "1px solid #E4E7EC", borderRadius: 10, boxShadow: "0px 4px 4px -2px rgba(0,0,0,0.04)", overflow: "hidden", maxWidth: "100%" }}>
-              <div className="tailora-table-toolbar" style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #E4E7EC" }}>
-                <div className="tailora-table-toolbar-left" style={{ display: "flex", gap: 8 }}>
-                  <div className="tailora-table-search" style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", width: 291, boxShadow: "0px 2px 4px -2px rgba(0,0,0,0.04)" }}>
-                    <SearchIcon />
-                    <span style={{ color: "#667185", fontSize: 14 }}>Search here...</span>
-                  </div>
-                  <button type="button" className="tailora-table-filter-btn" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#FFFFFF", border: "1px solid #D0D5DD", borderRadius: 8, cursor: "pointer", boxShadow: "0px 3px 2px -2px rgba(0,0,0,0.06)", fontSize: 14, fontWeight: 700, color: "#344054" }}>
-                    <FilterIcon />Filter
-                  </button>
-                </div>
-                <div className="tailora-table-toolbar-right">
-                  <button type="button" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#FFFFFF", border: "1px solid #D0D5DD", borderRadius: 6, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#344054" }}>
-                    <CalendarIcon />Select dates<ChevronDownIcon />
-                  </button>
-                </div>
-              </div>
+            <div className="tailora-table-toolbar" style={{ padding: 16, borderBottom: "1px solid #E4E7EC" }}>
+  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+    <div className="tailora-table-search" style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", width: 291, boxShadow: "0px 2px 4px -2px rgba(0,0,0,0.04)" }}>
+      <SearchIcon />
+      <input
+        type="search"
+        placeholder="Search here..."
+        value={searchQuery}
+        onChange={e => setSearchQuery(e.target.value)}
+        style={{ border: "none", outline: "none", fontSize: 14, color: "#1A1A1A", background: "transparent", flex: 1 }}
+      />
+    </div>
+    <button type="button" className="tailora-table-filter-btn" onClick={() => { setFilterPanelOpen(o => !o); setDatePanelOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#FFFFFF", border: "1px solid #D0D5DD", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#344054" }}>
+      <FilterIcon />Filter
+      {(filterGender || filterStatus || filterOutfit) && (
+        <span style={{ background: "#EB5017", color: "#fff", borderRadius: 10, padding: "0 6px", fontSize: 11, fontWeight: 700 }}>
+          {[filterGender, filterStatus, filterOutfit].filter(Boolean).length}
+        </span>
+      )}
+    </button>
+    <button type="button" onClick={() => { setDatePanelOpen(o => !o); setFilterPanelOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#FFFFFF", border: "1px solid #D0D5DD", borderRadius: 6, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#344054" }}>
+      <CalendarIcon /><span>Select dates</span><ChevronDownIcon />
+    </button>
+  </div>
+
+  {datePanelOpen && (
+    <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "12px 0 4px", flexWrap: "wrap" }}>
+      <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#344054" }} />
+      <span style={{ color: "#667185", fontSize: 13 }}>to</span>
+      <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#344054" }} />
+      <button onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); }} style={{ padding: "8px 12px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#344054" }}>Clear</button>
+    </div>
+  )}
+
+  {filterPanelOpen && (
+    <div style={{ background: "#fff", border: "1px solid #E4E7EC", borderRadius: 10, padding: 16, marginTop: 8, boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+        <select value={filterGender} onChange={e => setFilterGender(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
+          <option value="">All Genders</option>
+          <option>Male</option>
+          <option>Female</option>
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
+          <option value="">All Status</option>
+          <option value="collected">Collected</option>
+          <option value="overdue">Overdue</option>
+          <option value="due">Due</option>
+        </select>
+        <select value={filterOutfit} onChange={e => setFilterOutfit(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
+          <option value="">All Outfits</option>
+          <option>Wedding gown</option>
+          <option>Suit</option>
+          <option>Senator</option>
+        </select>
+      </div>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid #F0F0F0", paddingTop: 12 }}>
+        <button onClick={() => { setFilterGender(""); setFilterStatus(""); setFilterOutfit(""); }} style={{ padding: "8px 14px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 8, fontSize: 13, color: "#344054", cursor: "pointer" }}>Reset</button>
+        <button onClick={() => setFilterPanelOpen(false)} style={{ padding: "8px 18px", background: "#EB5017", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Done</button>
+      </div>
+    </div>
+  )}
+</div>
 
               {/* Mobile cards */}
               <div className="tailora-m-cards tailora-orders-cards-mobile">
-                {orders.map((order) => {
+              {filteredOrders.map((order) => {
                   const st = statusStyles[order.statusType];
                   return (
                     <div key={order.id} className="tailora-m-card" style={{ position: "relative" }}>
@@ -247,7 +312,7 @@ export default function TailoraDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {orders.map((order) => {
+                  {filteredOrders.map((order) => {
                       const st = statusStyles[order.statusType];
                       return (
                         <tr key={order.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
