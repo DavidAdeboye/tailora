@@ -20,12 +20,12 @@ interface FormData {
 
 const slides: Slide[] = [
   {
-    img: "/slide1.png",
+    img: "/Slide1.png",
     title: "Accurate Measurement Recording",
     desc: "Organize and manage client measurements in a secure workspace built for accuracy, efficiency, and seamless collaboration.",
   },
   {
-    img: "/slide2.png",
+    img: "/Slide2.png",
     title: "Track Collection & Delivery Dates",
     desc: "Set clear fabric deadlines to stay organized, manage tasks efficiently, and always deliver orders on time.",
   },

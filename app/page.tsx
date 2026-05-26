@@ -160,8 +160,8 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const heroCards = [
-    { name: "Ajoke Sandra",   role: "Tailor",          img: "/slide1.png" },
-    { name: "Olabisi & Ella", role: "CEO & Assistant", img: "/slide2.png" },
+    { name: "Ajoke Sandra",   role: "Tailor",          img: "/Slide1.png" },
+    { name: "Olabisi & Ella", role: "CEO & Assistant", img: "/Slide2.png" },
     { name: "Joshua Neo",     role: "Tailor",          img: "/slide3.png" },
     { name: "Folashade Babs", role: "CEO",             img: "/slide4.jpg" },
   ];
