@@ -125,9 +125,7 @@
 }
 
 @media (max-width: 768px) {
-  .tailora-header-bell-btn {
-    display: none !important;
-  }
+ 
 
   .tailora-header-actions .tailora-header-avatar-btn svg {
     display: none;

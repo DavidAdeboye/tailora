@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useAppModals } from "./AppModalsContext";
 import MobileMenuButton from "./MobileMenuButton";
 import PrimaryButton from "./PrimaryButton";
+import NotificationsPanel from "./NotificationsPanel";
+import AppPageHeader from "./AppPageHeader";
 
 const orders = [
   { id: "#28373", client: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Wedding gown", status: "Collected", statusType: "collected" as const },
@@ -152,47 +154,15 @@ export default function TailoraDashboard() {
   const { openAddClient } = useAppModals();
   const [currentPage, setCurrentPage] = useState(3);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const totalPages = 30;
 
   const pageNumbers = [1, 2, 3, 4, 10, 11, 12];
 
   return (
     <div className="tailora-dashboard" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, width: "100%" }}>
-        <header className="tailora-dashboard-header" style={{ background: "#FFFFFF", borderBottom: "1px solid #F0F2F5", padding: "0 36px", height: 83, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0, gap: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-            <MobileMenuButton />
-            <span className="tailora-header-title" style={{ fontFamily: "var(--font-sora)", fontWeight: 700, fontSize: 18, color: "#28292D" }}>Dashboard</span>
-          </div>
-          <div className="tailora-header-actions" style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
-            <button type="button" className="tailora-header-bell-btn" style={{ width: 40, height: 40, borderRadius: "50%", background: "#FEFCF9", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0px 0px 1px rgba(78,78,78,0.16)" }}>
-              <BellIcon />
-            </button>
-            <div style={{ position: "relative" }}>
-              <button
-                type="button"
-                className="tailora-header-avatar-btn"
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "1px solid #F1F1F2", borderRadius: 100, padding: "8px 12px", cursor: "pointer" }}
-              >
-                <img src="/Ellipse2481.png" alt="" style={{ width: 24, height: 24, borderRadius: "50%" }} />
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path opacity="0.4" d="M15.48 13.2302L11.69 8.18018H6.07999C5.11999 8.18018 4.63999 9.34018 5.31999 10.0202L10.5 15.2002C11.33 16.0302 12.68 16.0302 13.51 15.2002L15.48 13.2302Z" fill="#121212" />
-                  <path d="M17.9199 8.18018H11.6899L15.4799 13.2302L18.6899 10.0202C19.3599 9.34018 18.8799 8.18018 17.9199 8.18018Z" fill="#121212" />
-                </svg>
-              </button>
-              {showUserMenu && (
-                <div style={{ position: "absolute", right: 0, top: "calc(100% + 8px)", background: "#FFFFFF", borderRadius: 10, boxShadow: "0px 0px 4px rgba(0,0,0,0.08)", padding: 10, width: 184, zIndex: 100 }}>
-                  <button style={{ width: "100%", padding: "8px 12px", borderRadius: 10, background: "#FDF6EC", border: "none", cursor: "pointer", textAlign: "left", fontSize: 14, fontWeight: 500, color: "#28292D", marginBottom: 8 }}>
-                    Profile
-                  </button>
-                  <button style={{ width: "100%", padding: "8px 12px", borderRadius: 10, background: "transparent", border: "none", cursor: "pointer", textAlign: "left", fontSize: 14, fontWeight: 500, color: "#FF4D6D" }}>
-                    Log out
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </header>
+        <AppPageHeader title="Dashboard" />
+
 
         <div className="tailora-dashboard-scroll" style={{ flex: 1, overflowY: "auto", overflowX: "hidden", background: "#FDFDFD", position: "relative", WebkitOverflowScrolling: "touch" }}>
           <div className="tailora-page-gradient tailora-dashboard-gradient" />
@@ -358,7 +328,13 @@ export default function TailoraDashboard() {
               </div>
             </div>
           </div>
-        </div>
-    </div>
-  );
+          </div>
+
+{showNotifications && (
+  <NotificationsPanel
+    onClose={() => setShowNotifications(false)}
+  />
+)}
+</div>
+);
 }
