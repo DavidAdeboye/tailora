@@ -192,17 +192,21 @@ export default function TailoraDashboard() {
             </PrimaryButton>
           </div>
 
-          <div className="tailora-stats-grid tailora-dashboard-stats">
-            {stats.map((s, i) => (
-              <div key={i} className="tailora-stat-card">
-                <div className="tailora-stat-card-top">
-                  <div className="tailora-stat-card-icon">{s.icon}</div>
-                  <span className="tailora-stat-card-label">{s.label}</span>
-                </div>
-                <div className="tailora-stat-value">{s.value}</div>
-              </div>
-            ))}
-          </div>
+          <div className="tailora-stats-grid tailora-dashboard-stats grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-0 md:block">
+  {stats.map((s, i) => (
+    <div key={i} className="tailora-stat-card bg-white border border-[#E4E7EC] rounded-xl p-4 shadow-sm flex flex-col gap-2 md:rounded-none md:border-0 md:shadow-none md:p-0 md:flex-row md:gap-0">
+      <div className="tailora-stat-card-top flex items-center gap-2 md:block">
+        <div className="w-9 h-9 bg-[#FFF5F2] rounded-lg flex items-center justify-center shrink-0 md:hidden">
+          {s.icon}
+        </div>
+        <span className="tailora-stat-card-label text-xs text-[#667185] leading-tight md:text-inherit">{s.label}</span>
+      </div>
+      <div className="tailora-stat-value text-[22px] font-bold text-[#121212] leading-tight md:text-inherit md:font-inherit">
+        {s.value}
+      </div>
+    </div>
+  ))}
+</div>
 
           <div className="tailora-orders-section">
             <div className="tailora-recent-orders-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 15, gap: 12 }}>
