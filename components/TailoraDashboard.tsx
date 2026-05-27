@@ -192,16 +192,27 @@ export default function TailoraDashboard() {
             </PrimaryButton>
           </div>
 
-          <div className="tailora-stats-grid tailora-dashboard-stats grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-0 md:block">
+          <div className="tailora-stats-grid tailora-dashboard-stats grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-8">
   {stats.map((s, i) => (
-    <div key={i} className="tailora-stat-card bg-white border border-[#E4E7EC] rounded-xl p-4 shadow-sm flex flex-col gap-2 md:rounded-none md:border-0 md:shadow-none md:p-0 md:flex-row md:gap-0">
-      <div className="tailora-stat-card-top flex items-center gap-2 md:block">
-        <div className="w-9 h-9 bg-[#FFF5F2] rounded-lg flex items-center justify-center shrink-0 md:hidden">
-          {s.icon}
-        </div>
-        <span className="tailora-stat-card-label text-xs text-[#667185] leading-tight md:text-inherit">{s.label}</span>
+    <div
+      key={i}
+      className="tailora-stat-card flex flex-col gap-5"
+      style={{
+        background: "#FFFFFF",
+        border: "1px solid #F1F1F2",
+        borderRadius: 16,
+        padding: "24px 21px",
+      }}
+    >
+      {/* Icon + Label row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {s.icon}
+        <span style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 400, fontSize: 14, color: "#696969", lineHeight: "22px" }}>
+          {s.label}
+        </span>
       </div>
-      <div className="tailora-stat-value text-[22px] font-bold text-[#121212] leading-tight md:text-inherit md:font-inherit">
+      {/* Value */}
+      <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 18, color: "#121212", lineHeight: "20px" }}>
         {s.value}
       </div>
     </div>
