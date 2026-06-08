@@ -658,166 +658,221 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
       className={`w-full bg-foundation-secondary-light-active overflow-hidden flex flex-col items-start py-[100px] px-[113px] box-border max-w-full text-center text-xs text-foundation-primary-normal font-[Satoshi] mq800:py-[60px] mq800:px-10 mq450:px-4 mq450:py-[48px] mq1350:pt-[65px] mq1350:pb-[65px] mq1350:box-border ${className}`}
     >
       <div className="self-stretch flex flex-col items-center gap-[62px] max-w-full mq800:gap-8 mq450:gap-6">
-        {/* Section header */}
+
+        {/* ── Section header ── */}
         <div className="w-[700px] max-w-full flex flex-col items-center gap-4">
           <div className="rounded-[10px] bg-foundation-secondary-normal border-[#ffa82b] border-solid border-[0.5px] flex items-center justify-center py-0 px-[7px]">
             <div className="flex items-center gap-1">
-              <div className="h-1.5 w-1.5 relative rounded-[50%] bg-[#E57301]" />
+              <div className="h-1.5 w-1.5 rounded-[50%] bg-[#E57301]" />
               <div className="relative leading-5 font-medium">How It Works</div>
             </div>
           </div>
-          <h2 className="m-0 self-stretch relative text-[40px] leading-[48px] font-bold font-[Sora] mq800:text-[32px] mq800:leading-[38px] mq450:text-2xl mq450:leading-[29px]">
-            <span>{`Your Workflow, `}</span>
+          <h2 className="m-0 self-stretch text-[40px] leading-[48px] font-bold font-[Sora] mq800:text-[32px] mq800:leading-[38px] mq450:text-2xl mq450:leading-[29px]">
+            <span>Your Workflow, </span>
             <span className="text-[#E57301]">Reimagined</span>
           </h2>
         </div>
 
-        <div className="w-full max-w-[1214px] mx-auto flex flex-col gap-10 mq800:gap-5 mq800:items-center">
-          {/* Step 1 — orange card (desktop) */}
-          <section className="w-full rounded-[40px] bg-[#e57301] overflow-hidden shrink-0 flex items-center pt-7 px-10 pb-7 box-border relative gap-[109px] text-left text-[32px] text-[#fff] font-[Sora] mq800:hidden mq1350:gap-[54px]">
-            <div className="flex flex-col items-start gap-6 shrink-0">
-              <h2 className="m-0 w-[489px] max-w-full relative text-[length:inherit] leading-8 font-bold font-[inherit]">{`Add Clients & Measurements`}</h2>
-              <div className="w-[540px] max-w-full relative text-lg leading-6 font-[Satoshi] text-foundation-secondary-light">
+        <div className="w-full max-w-[1214px] mx-auto flex flex-col gap-10 mq800:gap-5 items-stretch">
+
+          {/* ════════════════════════════════════════════
+              STEP 1 — orange card
+              Desktop  : flex-row, image right, full width
+              Tablet   : flex-row, image right, full width (just smaller)
+              Mobile   : flex-col, image bottom
+          ════════════════════════════════════════════ */}
+          <section
+            className="
+              w-full rounded-[40px] bg-[#e57301] overflow-hidden
+              flex flex-row items-center
+              gap-[109px] pt-7 px-10 pb-7
+              text-left text-[#fff] font-[Sora]
+              mq1350:gap-[54px]
+              mq800:flex-col mq800:items-start
+              mq800:gap-6 mq800:pt-8 mq800:px-6 mq800:pb-0
+            "
+          >
+            {/* Text */}
+            <div className="flex flex-col items-start gap-6 shrink-0 mq800:gap-3 mq800:shrink-unset mq800:w-full">
+              <h2
+                className="
+                  m-0 text-[32px] leading-8 font-bold font-[Sora]
+                  w-[489px] max-w-full
+                  mq800:w-full mq800:text-xl mq800:leading-7
+                "
+              >
+                Add Clients &amp; Measurements
+              </h2>
+              <p
+                className="
+                  m-0 text-lg leading-6 font-[Satoshi] text-[#fffefd]
+                  w-[540px] max-w-full
+                  mq800:w-full mq800:text-sm mq800:leading-[22px]
+                "
+              >
                 Create digital profiles for your clients. Record over 30+ body
                 points with visual guides ensuring your team gets the
                 measurements right every single time.
-              </div>
+              </p>
             </div>
-            <div className="h-[292px] w-[463px] max-w-full relative shrink-0">
-              <img src="/image32.png" alt="" className="h-full w-full object-contain" />
-            </div>
-          </section>
 
-          {/* Step 1 — orange card (mobile) */}
-          <section className="relative hidden h-[512px] w-[357px] max-w-full shrink-0 overflow-hidden rounded-[40px] bg-[#e57301] text-left text-[#fff] font-[Sora] mq800:block">
+            {/* Image — on desktop/tablet it sits right; on mobile it sits below */}
             <div
-              className="pointer-events-none absolute left-[47px] top-[369px] h-[267.34px] w-[365px]"
-              aria-hidden
+              className="
+                relative shrink-0 self-end
+                h-[292px] w-[463px] max-w-full
+                mq800:w-full mq800:h-[240px] mq800:self-center
+                mq450:h-[200px]
+              "
             >
-              <div
-                className="absolute left-0 top-[18.47px] box-border h-[222.82px] w-[170.58px] rounded-[50%] border-[12px] border-[rgba(255,227,179,0.6)]"
-                style={{ transform: "matrix(0.98, -0.2, 0.26, 0.97, 0, 0)" }}
+              {/* Desktop image */}
+              <img
+                src="/image32.png"
+                alt=""
+                className="h-full w-full object-contain object-bottom mq800:hidden"
               />
-              <div
-                className="absolute left-[70.25px] top-[9.24px] box-border h-[222.82px] w-[170.58px] rounded-[50%] border-[12px] border-[rgba(255,227,179,0.6)]"
-                style={{ transform: "matrix(0.98, -0.2, 0.26, 0.97, 0, 0)" }}
-              />
-              <div
-                className="absolute left-[140.49px] top-0 box-border h-[222.82px] w-[170.58px] rounded-[50%] border-[12px] border-[rgba(255,227,179,0.6)]"
-                style={{ transform: "matrix(0.98, -0.2, 0.26, 0.97, 0, 0)" }}
+              {/* Mobile image — full-width crop, sits flush at bottom */}
+              <img
+                src="/mobile-image32.png"
+                alt=""
+                className="hidden h-full w-full object-contain object-left-bottom mq800:block"
               />
             </div>
-            <h2 className="absolute left-6 top-8 m-0 flex h-7 w-[305px] items-center text-xl font-bold leading-7">
-              {`Add Clients & Measurements`}
-            </h2>
-            <p className="absolute left-6 top-[72px] m-0 flex w-[309px] items-center text-sm leading-[22px] font-[Satoshi] text-[#fffefd]">
-              Create digital profiles for your clients. Record over 30+ body
-              points with visual guides ensuring your team gets the
-              measurements right every single time.
-            </p>
-            <img
-              src="/mobile-image32.png"
-              alt=""
-              className="absolute left-6 top-[188px] h-[276px] w-[298.32px] max-w-[calc(100%-48px)] object-contain object-left-top"
-            />
           </section>
 
-          {/* Steps 2 & 3 — 588×636 per Figma; 38px gap = 1214px row */}
-          <div className="flex w-full flex-row gap-[38px] mq960:flex-col mq960:items-center mq960:gap-5">
-            {/* Step 2 — purple card (desktop) */}
-            <section className="relative box-border h-[636px] w-[588px] max-w-full shrink-0 flex-none overflow-hidden rounded-3xl bg-[#7e015c] text-left text-[32px] text-[#fff] font-[Sora] mq960:hidden">
+          {/* ════════════════════════════════════════════
+              STEPS 2 & 3 row
+              Desktop (≥960px) : side by side, equal flex, fixed 636px height
+              Tablet  (<960px) : STILL side by side but fluid height
+              Mobile  (<600px) : stack vertically
+          ════════════════════════════════════════════ */}
+          <div
+            className="
+              flex w-full flex-row gap-[38px]
+              mq450:flex-col mq450:items-center mq450:gap-5
+            "
+          >
+
+            {/* ── STEP 2 — purple card ── */}
+            <section
+              className="
+                relative overflow-hidden rounded-3xl bg-[#7e015c]
+                text-left text-[#fff] font-[Sora]
+                flex-1 min-w-0
+                flex flex-col
+              "
+            >
+              {/* Decorative star SVGs — only shown when card is wide enough */}
               <Image
-                className="absolute left-[-86px] top-[506px] h-[200px] w-[200px] rounded-lg"
+                className="absolute left-[-86px] top-[506px] h-[200px] w-[200px] rounded-lg mq960:hidden"
                 loading="lazy"
                 width={200}
                 height={200}
-                sizes="100vw"
                 alt=""
                 src="/First-Star-Pair.svg"
               />
               <Image
-                className="absolute left-[504px] top-[-84px] h-[200px] w-[200px] rounded-lg"
+                className="absolute right-[-96px] top-[-84px] h-[200px] w-[200px] rounded-lg mq960:hidden"
                 width={200}
                 height={200}
-                sizes="100vw"
                 alt=""
                 src="/First-Star-Pair.svg"
               />
-              <div className="absolute left-10 top-[41px] z-[1] h-[377px] w-[492px] overflow-hidden rounded-2xl">
+
+              {/* Image block */}
+              <div
+                className="
+                  relative z-[1] mx-10 mt-[41px]
+                  h-[377px] overflow-hidden rounded-2xl
+                  mq960:mx-6 mq960:mt-6 mq960:h-[240px]
+                  mq450:h-[200px]
+                "
+              >
                 <img
                   src="/image30.png"
                   alt=""
                   className="h-full w-full object-cover object-center"
                 />
               </div>
-              <h2 className="absolute left-10 top-[474px] z-[1] m-0 flex h-8 w-[508px] items-center text-[32px] font-bold leading-8">
-                {`Create & Track Orders`}
-              </h2>
-              <p className="absolute left-10 top-[530px] z-[1] m-0 flex w-[508px] items-center text-lg leading-6 font-[Satoshi] text-[#fffefd]">
-                Convert measurements into orders instantly. Monitor fabric
-                procurement, cutting progress, and embroidery stages through a
-                visual Kanban board.
-              </p>
+
+              {/* Text block */}
+              <div className="relative z-[1] px-10 pt-[34px] pb-10 mq960:px-6 mq960:pt-5 mq960:pb-8">
+                <h2
+                  className="
+                    m-0 mb-2 text-[32px] leading-8 font-bold
+                    mq960:text-xl mq960:leading-7
+                  "
+                >
+                  Create &amp; Track Orders
+                </h2>
+                <p
+                  className="
+                    m-0 text-lg leading-6 font-[Satoshi] text-[#fffefd]
+                    mq960:text-sm mq960:leading-[22px]
+                  "
+                >
+                  Convert measurements into orders instantly. Monitor fabric
+                  procurement, cutting progress, and embroidery stages through a
+                  visual Kanban board.
+                </p>
+              </div>
             </section>
 
-            {/* Step 2 — purple card (mobile) */}
-            <section className="relative hidden h-[512px] w-[357px] max-w-full shrink-0 overflow-hidden rounded-[40px] bg-[#7e015c] text-left text-[#fff] font-[Sora] mq960:block">
-              <h2 className="absolute left-6 top-8 m-0 flex h-7 w-[305px] items-center text-xl font-bold leading-7">
-                {`Create & Track Orders`}
-              </h2>
-              <p className="absolute left-6 top-[72px] m-0 flex w-[309px] items-center text-sm leading-[22px] font-[Satoshi] text-[#fffefd]">
-                Convert measurements into orders instantly. Monitor fabric
-                procurement, cutting progress, and embroidery stages through a
-                visual Kanban board.
-              </p>
-              <img
-                src="/mobile-image30.png"
-                alt=""
-                className="absolute left-6 top-[188px] h-[276px] w-[298.32px] max-w-[calc(100%-48px)] object-contain object-left-top"
-              />
-            </section>
-
-            {/* Step 3 — green card (desktop) */}
-            <section className="relative box-border h-[636px] w-[588px] max-w-full shrink-0 flex-none overflow-hidden rounded-3xl bg-[#007f61] text-left text-[32px] text-[#fff] font-[Sora] mq960:hidden">
-              <div className="absolute left-10 top-[41px] z-[1] h-[377px] w-[492px] overflow-hidden rounded-2xl">
+            {/* ── STEP 3 — green card ── */}
+            <section
+              className="
+                relative overflow-hidden rounded-3xl bg-[#007f61]
+                text-left text-[#fff] font-[Sora]
+                flex-1 min-w-0
+                flex flex-col
+              "
+            >
+              {/* Image block */}
+              <div
+                className="
+                  relative z-[1] mx-10 mt-[41px]
+                  h-[377px] overflow-hidden rounded-2xl
+                  mq960:mx-6 mq960:mt-6 mq960:h-[240px]
+                  mq450:h-[200px]
+                "
+              >
                 <img
                   src="/image31.png"
                   alt=""
                   className="h-full w-full object-cover object-center"
                 />
               </div>
-              <h2 className="absolute left-10 top-[474px] z-[1] m-0 flex h-8 w-[508px] items-center text-[32px] font-bold leading-8">
-                Deliver On Time
-              </h2>
-              <p className="absolute left-10 top-[530px] z-[1] m-0 flex w-[508px] items-center text-lg leading-6 font-[Satoshi] text-[#fffefd]">
-                Automated notifications alert clients for final fittings.
-                Secure their satisfaction with consistent fit quality and
-                professional documentation.
-              </p>
+
+              {/* Text block */}
+              <div className="relative z-[1] px-10 pt-[34px] pb-10 mq960:px-6 mq960:pt-5 mq960:pb-8">
+                <h2
+                  className="
+                    m-0 mb-2 text-[32px] leading-8 font-bold
+                    mq960:text-xl mq960:leading-7
+                  "
+                >
+                  Deliver On Time
+                </h2>
+                <p
+                  className="
+                    m-0 text-lg leading-6 font-[Satoshi] text-[#fffefd]
+                    mq960:text-sm mq960:leading-[22px]
+                  "
+                >
+                  Automated notifications alert clients for final fittings.
+                  Secure their satisfaction with consistent fit quality and
+                  professional documentation.
+                </p>
+              </div>
             </section>
 
-            {/* Step 3 — green card (mobile) */}
-            <section className="relative hidden h-[512px] w-[357px] max-w-full shrink-0 overflow-hidden rounded-[40px] bg-[#007f61] text-left text-[#fff] font-[Sora] mq960:block">
-              <h2 className="absolute left-6 top-8 m-0 flex h-7 w-[305px] items-center text-xl font-bold leading-7">
-                Deliver On Time
-              </h2>
-              <p className="absolute left-6 top-[72px] m-0 flex w-[309px] items-center text-sm leading-[22px] font-[Satoshi] text-[#fffefd]">
-                Automated notifications alert clients for final fittings. Secure
-                their satisfaction with consistent fit quality and professional
-                documentation.
-              </p>
-              <img
-                src="/mobile-image31.png"
-                alt=""
-                className="absolute left-6 top-[188px] h-[276px] w-[298.32px] max-w-[calc(100%-48px)] object-contain object-left-top"
-              />
-            </section>
           </div>
         </div>
       </div>
     </main>
   );
 };
+
 
 // Desktop - Pricing Section
 const Desktop = ({ className = "" }: { className?: string }) => {
