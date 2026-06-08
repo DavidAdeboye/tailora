@@ -75,7 +75,7 @@ const FrameComponent = ({
         <div className="w-full flex flex-col items-center gap-2 max-w-full">
           <h2 className="m-0 self-stretch relative text-[length:inherit] leading-[48px] font-bold font-[inherit] mq800:text-[32px] mq800:leading-[38px] mq450:text-2xl mq450:leading-[30px]">
             <span>{baseHeading}</span>
-            {highlight && <span className="text-[#ffa82b]">{highlight}</span>}
+            {highlight && <span className="text-[#E57301]">{highlight}</span>}
           </h2>
           <div className="self-stretch relative text-base leading-6 font-[Satoshi] text-[#696969] flex items-center justify-center mq450:text-sm">
             {everythingYouNeedToMoveFrom}
@@ -131,31 +131,48 @@ const MeasurementRows = ({
 }) => {
   return (
     <div
-      className={`tailora-landing-card h-[349px] w-[516px] mq960:w-full mq800:w-full mq800:max-w-full mq450:h-auto mq450:min-h-[320px] shadow-[0px_0px_4.7px_rgba(0,_0,_0,_0.08)] rounded-3xl bg-foundation-secondary-light-active border-[#ffa82b] border-solid border-[1px] box-border overflow-hidden flex flex-col items-start relative isolate max-w-full text-left text-lg text-foundation-primary-normal font-[Sora] ${className}`}
+      className={`tailora-landing-card relative overflow-hidden rounded-[24px] bg-[#FEFCF9] border border-[rgba(229,115,1,0.4)] shadow-[0px_0px_4.7px_rgba(0,0,0,0.08)] box-border text-left text-foundation-primary-normal font-[Sora] ${className}`}
+      style={{ height: "349px", flexShrink: 0 }}
     >
-      <div className="w-full h-[480.8px] mq450:h-[320px] absolute m-0 top-[99.6px] left-[50%] -translate-x-1/2 rounded-[200px] overflow-hidden flex items-center justify-center z-[0]">
-        <Image
-          className="w-full h-full object-cover"
-          width={480}
-          height={480}
-          sizes="100vw"
-          alt=""
-          src={scheduleContainers}
-        />
-      </div>
-      <div className="w-full [backdrop-filter:blur(167.9px)] [background:linear-gradient(180deg,_#ffdfb3,_rgba(255,_223,_179,_0))] overflow-hidden shrink-0 flex items-start p-6 box-border max-w-full z-[1]">
-        <div className="w-full flex flex-col items-start gap-[7px]">
-          <h3 className="m-0 self-stretch relative text-[length:inherit] leading-[26px] font-semibold font-[inherit] mq450:text-base">
-            {measurementManagement}
-          </h3>
-          <div className="self-stretch relative text-base leading-6 font-[Satoshi] text-[#696969] mq450:text-sm">
-            {storeUnlimitedClientMeasurements}
-          </div>
+      {/* Gradient header */}
+      <div
+        className="absolute inset-x-0 top-0 h-[159px]"
+        style={{
+          background: "linear-gradient(180deg, #FFDFB3 -214.78%, rgba(255,223,179,0) 100%)",
+        }}
+      />
+
+      {/* Text block */}
+      <div
+        className="absolute z-10 flex flex-col"
+        style={{ left: 24, top: 24, right: 24, gap: 7 }}
+      >
+        <h3 style={{ margin: 0, fontFamily: "Sora", fontWeight: 600, fontSize: 18, lineHeight: "26px", color: "#121212" }}>
+          {measurementManagement}
+        </h3>
+        <div style={{ fontFamily: "Satoshi", fontWeight: 400, fontSize: 14, lineHeight: "24px", color: "#696969" }}>
+          {storeUnlimitedClientMeasurements}
         </div>
+      </div>
+
+      {/* Illustration */}
+      <div
+        className="absolute pointer-events-none"
+        style={{ bottom: 0, right: -20, width: 299, height: 299, opacity: 0.85 }}
+      >
+        <Image
+          src={scheduleContainers}
+          alt={measurementManagement || "Feature illustration"}
+          width={299}
+          height={299}
+          style={{ width: 299, height: 299, objectFit: "contain", objectPosition: "right bottom" }}
+        />
       </div>
     </div>
   );
 };
+
+
 
 // Desktop4 - Hero/Navbar Section
 const Desktop4 = ({ className = "" }: { className?: string }) => {
@@ -568,44 +585,66 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
 
 // Desktop3 - Features Section
 const Desktop3 = ({ className = "" }: { className?: string }) => {
+  const cards = [
+    {
+      img: "/Group1.svg",
+      title: "Measurement Management",
+      body: "Store unlimited client measurements with high precision. Add photos, posture notes, and custom fields for every garment type.",
+    },
+    {
+      img: "/Group2.svg",
+      title: "Order Tracking",
+      body: "Track garment status from cutting table to final fitting. Real-time production visibility for you and your team.",
+    },
+    {
+      img: "/Group3.svg",
+      title: "Smart Scheduling",
+      body: "Automated fitting reminders and production deadlines. Sync your calendar to manage boutique appointments seamlessly.",
+    },
+    {
+      img: "/Group4.svg",
+      title: "Team Collaboration",
+      body: "Assign tasks to tailors, cutters, and finishers. Share measurement sheets instantly across your workshop.",
+    },
+  ];
+
   return (
     <section
-      className={`bg-foundation-secondary-light-active overflow-hidden flex flex-col items-center py-[100px] px-[184px] box-border max-w-full text-center text-xs text-foundation-primary-normal font-[Satoshi] mq800:py-[60px] mq800:px-[40px] mq450:px-4 mq450:py-[48px] mq1125:pt-[65px] mq1125:pb-[65px] mq1125:box-border ${className}`}
+      className={`bg-foundation-secondary-light-active overflow-hidden flex flex-col items-center py-[100px] px-[184px] box-border max-w-full text-center text-xs text-foundation-primary-normal font-[Satoshi] mq1125:px-[80px] mq1125:pt-[65px] mq1125:pb-[65px] mq960:px-10 mq800:py-[60px] mq450:px-4 mq450:py-[48px] ${className}`}
     >
-      <div className="w-[1072px] max-w-full flex flex-col items-center gap-10 mq800:gap-6 mq450:gap-5">
+      <div className="w-full max-w-[1072px] flex flex-col items-center gap-10 mq800:gap-6 mq450:gap-5">
         <FrameComponent
           productFeatures="Product Features"
           heading="Why Tailora Is "
           headingHighlight="Right for You"
           everythingYouNeedToMoveFrom="Everything you need to move from messy paper notebooks to a digital-first tailoring atelier."
         />
-        <div className="self-stretch flex flex-col items-center gap-10 max-w-full mq800:gap-5">
-          {/* Row 1 */}
-          <section className="self-stretch flex items-center gap-10 max-w-full text-left text-lg text-foundation-primary-normal font-[Sora] mq960:flex-col mq960:gap-4 mq800:gap-5 mq800:flex-col mq450:gap-4">
+
+        {/* CSS grid — fluid, no breakpoint hacks needed */}
+        <style>{`
+          .tailora-features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            width: 100%;
+          }
+          @media (max-width: 680px) {
+            .tailora-features-grid {
+              grid-template-columns: 1fr;
+              gap: 20px;
+            }
+          }
+        `}</style>
+
+        <div className="tailora-features-grid">
+          {cards.map((card) => (
             <MeasurementRows
-              scheduleContainers="/Schedule-Containers@2x.png"
-              measurementManagement="Measurement Management"
-              storeUnlimitedClientMeasurements="Store unlimited client measurements with high precision. Add photos, posture notes, and custom fields for every garment type."
+              key={card.title}
+              scheduleContainers={card.img}
+              measurementManagement={card.title}
+              storeUnlimitedClientMeasurements={card.body}
             />
-            <MeasurementRows
-              scheduleContainers="/Frame-2147224771@2x.png"
-              measurementManagement="Order Tracking"
-              storeUnlimitedClientMeasurements="Track garment status from cutting table to final fitting. Real-time production visibility for you and your team."
-            />
-          </section>
-          {/* Row 2 */}
-          <section className="self-stretch flex items-center gap-10 max-w-full mq960:flex-col mq960:gap-4 mq800:gap-5 mq800:flex-col mq450:gap-4">
-            <MeasurementRows
-              scheduleContainers="/Frame-21472247712@2x.png"
-              measurementManagement="Smart Scheduling"
-              storeUnlimitedClientMeasurements="Automated fitting reminders and production deadlines. Sync your calendar to manage boutique appointments seamlessly."
-            />
-            <MeasurementRows
-              scheduleContainers="/Frame-21472247711@2x.png"
-              measurementManagement="Team Collaboration"
-              storeUnlimitedClientMeasurements="Assign tasks to tailors, cutters, and finishers. Share measurement sheets instantly across your workshop."
-            />
-          </section>
+          ))}
         </div>
       </div>
     </section>
@@ -623,13 +662,13 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
         <div className="w-[700px] max-w-full flex flex-col items-center gap-4">
           <div className="rounded-[10px] bg-foundation-secondary-normal border-[#ffa82b] border-solid border-[0.5px] flex items-center justify-center py-0 px-[7px]">
             <div className="flex items-center gap-1">
-              <div className="h-1.5 w-1.5 relative rounded-[50%] bg-[#ffa82b]" />
+              <div className="h-1.5 w-1.5 relative rounded-[50%] bg-[#E57301]" />
               <div className="relative leading-5 font-medium">How It Works</div>
             </div>
           </div>
           <h2 className="m-0 self-stretch relative text-[40px] leading-[48px] font-bold font-[Sora] mq800:text-[32px] mq800:leading-[38px] mq450:text-2xl mq450:leading-[29px]">
             <span>{`Your Workflow, `}</span>
-            <span className="text-[#ffa82b]">Reimagined</span>
+            <span className="text-[#E57301]">Reimagined</span>
           </h2>
         </div>
 
