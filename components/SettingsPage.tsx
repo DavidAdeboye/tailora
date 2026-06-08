@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppPageHeader from "./AppPageHeader";
+import ChangePasswordModal from "./Changepasswordmodal";
+
 
 /* ── Types ── */
 type Tab = "Profile" | "Workspace" | "Notifications" | "Security";
@@ -122,7 +124,8 @@ function ProfileTab() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
       {/* Profile photo section */}
-      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 69, padding: "22px 24px" }}>
+      {/* CHANGED: added tailora-settings-row-photo class for mobile avatar layout */}
+      <div className="tailora-settings-row tailora-settings-row-photo" style={{ display: "flex", alignItems: "flex-start", gap: 69, padding: "22px 24px" }}>
         {/* Left: label + button */}
         <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 20, width: 305 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -198,7 +201,8 @@ function ProfileTab() {
         </div>
 
         {/* Right: form fields */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* CHANGED: added width:100% and minWidth:0 so it never overflows on mobile */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16, width: "100%", minWidth: 0 }}>
           <InputField label="Full Name" placeholder="Your First and Last name" value={fullName} onChange={setFullName} />
           <InputField label="Business Name" placeholder="Your Business Name" value={businessName} onChange={setBusinessName} />
           <InputField label="Email Address" placeholder="Your Email Address" value={email} onChange={setEmail} type="email" />
@@ -264,7 +268,8 @@ function WorkspaceTab() {
       </div>
 
       {/* Right */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* CHANGED: added width:100% and minWidth:0 */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16, width: "100%", minWidth: 0 }}>
         <InputField label="Standard order (days)" placeholder="14" value={standardDays} onChange={setStandardDays} type="number" />
         <InputField label="Express order (days)" placeholder="5" value={expressDays} onChange={setExpressDays} type="number" />
       </div>
@@ -293,7 +298,8 @@ function NotificationsTab() {
       </div>
 
       {/* Right: toggle rows */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
+      {/* CHANGED: added width:100% and minWidth:0 */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0, width: "100%", minWidth: 0 }}>
         {items.map((item, i) => (
           <div key={i}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0" }}>
@@ -314,41 +320,51 @@ function NotificationsTab() {
 /* ── SECURITY TAB ── */
 function SecurityTab() {
   const [twoFA, setTwoFA] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   return (
-    <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
-      {/* Left */}
-      <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
-        <span style={{ fontSize: 16, fontWeight: 700, color: "#101928", fontFamily: "Satoshi, sans-serif" }}>Security</span>
-        <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>Protect your account and data.</span>
-      </div>
+    <>
+      {showChangePassword && (
+        <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+      )}
 
-      {/* Right */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
-        {/* Change password row */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", cursor: "pointer" }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
-          onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
-        >
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 500, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Change password</div>
-            <div style={{ fontSize: 12, color: "#6C717D", fontFamily: "Satoshi, sans-serif", letterSpacing: 2 }}>••••••••••••</div>
-          </div>
-          <ChevronRightIcon />
+      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
+        {/* Left */}
+        <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#101928", fontFamily: "Satoshi, sans-serif" }}>Security</span>
+          <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>Protect your account and data.</span>
         </div>
 
-        <SectionDivider />
-
-        {/* 2FA row */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0" }}>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 500, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Two-Factor Authentication (2FA)</div>
-            <div style={{ fontSize: 12, color: "#6C717D", fontFamily: "Satoshi, sans-serif" }}>Show/hide</div>
+        {/* Right */}
+        {/* CHANGED: added width:100% and minWidth:0 */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0, width: "100%", minWidth: 0 }}>
+          {/* Change password row */}
+          <div
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", cursor: "pointer" }}
+            onClick={() => setShowChangePassword(true)}
+            onMouseEnter={e => (e.currentTarget.style.opacity = "0.7")}
+            onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+          >
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Change password</div>
+              <div style={{ fontSize: 12, color: "#6C717D", fontFamily: "Satoshi, sans-serif", letterSpacing: 2 }}>••••••••••••</div>
+            </div>
+            <ChevronRightIcon />
           </div>
-          <Toggle checked={twoFA} onChange={setTwoFA} />
+
+          <SectionDivider />
+
+          {/* 2FA row */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0" }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 500, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Two-Factor Authentication (2FA)</div>
+              <div style={{ fontSize: 12, color: "#6C717D", fontFamily: "Satoshi, sans-serif" }}>Show/hide</div>
+            </div>
+            <Toggle checked={twoFA} onChange={setTwoFA} />
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -380,7 +396,6 @@ function SettingsBadge() {
 <path d="M30.6565 8.77764C30.5647 8.44295 30.4555 8.11107 30.3282 7.78388C24.5178 11.9767 16.2341 11.1449 11.46 5.74004C11.3638 5.63113 11.2725 5.51895 11.1807 5.40723C10.9923 5.66588 10.819 5.93156 10.6563 6.20195C10.8753 6.49533 11.105 6.78402 11.3522 7.0638C16.2467 12.6053 24.8315 13.339 30.6565 8.77764Z" fill="#E60F3F"/>
 <path d="M30.3278 7.78434C30.2025 7.46091 30.0597 7.14265 29.9004 6.82908C24.2153 10.5403 16.4435 9.68219 11.7869 4.65332C11.5712 4.89836 11.3687 5.14951 11.1798 5.40769C11.2716 5.51941 11.3629 5.63159 11.4591 5.7405C16.2332 11.1454 24.5174 11.9772 30.3278 7.78434Z" fill="#740D23"/>
 </svg>
-
     </span>
   );
 }
@@ -415,11 +430,11 @@ export default function SettingsPage() {
   className="tailora-settings-tabs"
   style={{
     display: "inline-flex",
-    flexWrap: "wrap",           /* wraps on very small screens */
+    flexWrap: "wrap",
     marginBottom: 20,
     border: "1px solid #E4E7EC",
     borderRadius: 8,
-    overflow: "hidden",         /* clips child borders cleanly */
+    overflow: "hidden",
     background: "#fff",
   }}
 >
@@ -438,9 +453,7 @@ export default function SettingsPage() {
           height: 42,
           background: isActive ? "#F8F8F8" : "#FFFFFF",
           border: "none",
-          /* right border separator between segments */
           borderRight: isLast ? "none" : "1px solid #E4E7EC",
-          /* rounded corners only on first/last */
           borderRadius: isFirst ? "7px 0 0 7px" : isLast ? "0 7px 7px 0" : 0,
           cursor: "pointer",
           fontSize: 14,

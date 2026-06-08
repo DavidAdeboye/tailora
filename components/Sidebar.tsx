@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 /* ================================================================
@@ -289,6 +289,11 @@ export default function Sidebar({
 
   // Sidebar open/closed is now controlled by a click, not hover
   const [isOpen, setIsOpen] = useState(false);
+
+useEffect(() => {
+  const saved = localStorage.getItem("sidebar-open");
+  if (saved === "true") setIsOpen(true);
+}, []);
   const [sidebarHovered, setSidebarHovered] = useState(false);
 
   // Mobile always shows fully open; desktop uses the click-toggled state
@@ -334,7 +339,13 @@ export default function Sidebar({
         <ToggleButton
           collapsed={isCollapsed}
           sidebarHovered={sidebarHovered}
-          onClick={() => setIsOpen((prev) => !prev)}
+          onClick={() =>
+  setIsOpen((prev) => {
+    const next = !prev;
+    localStorage.setItem("sidebar-open", String(next));
+    return next;
+  })
+}
         />
       )}
 

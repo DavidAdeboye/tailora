@@ -181,7 +181,9 @@ export default function TailoraDashboard() {
           <div className="tailora-page-header-row tailora-dashboard-hero">
             <div className="tailora-dashboard-hero-text">
               <div className="tailora-welcome-title tailora-dashboard-welcome-title">
-                <h1 className="tailora-dashboard-welcome-heading">Welcome Joshua&apos;s Couture</h1>
+                <h1 className="tailora-dashboard-welcome-heading" style={{ fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 24 }}>
+  Welcome Joshua&apos;s Couture
+</h1>
                 <img src="/sewingmachine.svg" alt="" className="tailora-dashboard-welcome-icon" width={32} height={32} />
               </div>
               <p className="tailora-dashboard-welcome-subtitle">Your all-in-one tailoring business management hub</p>
@@ -192,29 +194,14 @@ export default function TailoraDashboard() {
             </PrimaryButton>
           </div>
 
-          <div className="tailora-stats-grid tailora-dashboard-stats grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-8">
+  <div className="tailora-stats-grid tailora-dashboard-stats">
   {stats.map((s, i) => (
-    <div
-      key={i}
-      className="tailora-stat-card flex flex-col gap-5"
-      style={{
-        background: "#FFFFFF",
-        border: "1px solid #F1F1F2",
-        borderRadius: 16,
-        padding: "24px 21px",
-      }}
-    >
-      {/* Icon + Label row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        {s.icon}
-        <span style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 400, fontSize: 14, color: "#696969", lineHeight: "22px" }}>
-          {s.label}
-        </span>
+    <div key={i} className="tailora-stat-card">
+      <div className="tailora-stat-card-top">
+        <div className="tailora-stat-card-icon">{s.icon}</div>
+        <span className="tailora-stat-card-label">{s.label}</span>
       </div>
-      {/* Value */}
-      <div style={{ fontFamily: "Satoshi, sans-serif", fontWeight: 700, fontSize: 18, color: "#121212", lineHeight: "20px" }}>
-        {s.value}
-      </div>
+      <div className="tailora-stat-value">{s.value}</div>
     </div>
   ))}
 </div>
