@@ -37,8 +37,8 @@ const slides: Slide[] = [
   },
 ];
 
-const slideMap: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 0 };
-const TOTAL_STEPS = 4;
+// Step 5 is now OTP verification
+const TOTAL_STEPS = 5;
 
 export default function SignupPage() {
   const router = useRouter();
@@ -61,9 +61,6 @@ export default function SignupPage() {
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const slideshowIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const slideIndex = slideMap[step] ?? 0;
-  const slide = slides[slideIndex];
-
   // Auto-play slideshow
   useEffect(() => {
     if (!isPaused) {
@@ -72,25 +69,18 @@ export default function SignupPage() {
       }, 5000);
     }
     return () => {
-      if (slideshowIntervalRef.current) {
-        clearInterval(slideshowIntervalRef.current);
-      }
+      if (slideshowIntervalRef.current) clearInterval(slideshowIntervalRef.current);
     };
   }, [isPaused]);
 
-  // Countdown timer effect
+  // Countdown timer for OTP resend
   useEffect(() => {
+    if (step !== 5) return;
     if (countdown > 0) {
-      const timer = setInterval(() => {
-        setCountdown((prev) => prev - 1);
-      }, 1000);
+      const timer = setInterval(() => setCountdown((prev) => prev - 1), 1000);
       return () => clearInterval(timer);
     }
-  }, [countdown]);
-
-  const goToSlide = (index: number): void => {
-    setCurrentSlide(index);
-  };
+  }, [countdown, step]);
 
   const handleFormChange =
     (field: keyof FormData) =>
@@ -104,8 +94,10 @@ export default function SignupPage() {
     next[i] = val;
     setOtp(next);
     if (val && i < 5) otpRefs.current[i + 1]?.focus();
-    if (val && i === 5 && otp.every(d => d !== "")) {
-      setDone(true);
+    // Auto-submit when all 6 digits filled
+    if (next.every((d) => d !== "") && (val !== "" || next[i] !== "")) {
+      // slight delay so state settles
+      setTimeout(() => handleVerifyOtp(next.join("")), 50);
     }
   };
 
@@ -113,27 +105,30 @@ export default function SignupPage() {
     if (e.key === "Backspace" && !otp[i] && i > 0) {
       otpRefs.current[i - 1]?.focus();
     }
-    if (e.key === "Enter" && otp.every(d => d !== "")) {
-      setDone(true);
+    if (e.key === "Enter" && otp.every((d) => d !== "")) {
+      handleVerifyOtp(otp.join(""));
     }
   };
 
   const goNext = (): void => {
-    if (step < 4) setStep((s) => s + 1);
-    else handleSignUp();
+    if (step < 4) {
+      setStep((s) => s + 1);
+    } else if (step === 4) {
+      handleSignUp();
+    }
   };
 
   const goBack = (): void => {
     if (step > 1) setStep((s) => s - 1);
   };
 
+  // Step 4 → Call signUp, which triggers Supabase to send a 6-digit OTP email
   const handleSignUp = async () => {
     setIsLoading(true);
     setAuthError(null);
 
     try {
-      // Sign up with Supabase
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
@@ -141,19 +136,62 @@ export default function SignupPage() {
             full_name: formData.fullName,
             business_name: formData.businessName,
           },
+          // Do NOT pass emailRedirectTo — we want OTP, not a magic link
         },
       });
 
-      if (authError) throw authError;
+      if (error) throw error;
 
-      // Successful signup (profile is created automatically via database trigger)
-      setDone(true);
+      // Move to OTP step
+      setStep(5);
+      setCountdown(58);
+      setIsLoading(false);
     } catch (error: any) {
-      setAuthError(error.message || 'Failed to sign up');
+      setAuthError(error.message || "Failed to sign up");
       setIsLoading(false);
     }
   };
 
+  // Step 5 → Verify the 6-digit OTP
+  const handleVerifyOtp = async (token?: string) => {
+    const code = token ?? otp.join("");
+    if (code.length < 6) return;
+
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: formData.email,
+        token: code,
+        type: "signup",
+      });
+
+      if (error) throw error;
+
+      setDone(true);
+    } catch (error: any) {
+      setAuthError(error.message || "Invalid or expired code. Please try again.");
+      setIsLoading(false);
+    }
+  };
+
+  // Resend OTP
+  const handleResend = async () => {
+    if (countdown > 0) return;
+    setAuthError(null);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: formData.email,
+      });
+      if (error) throw error;
+      setOtp(Array(6).fill(""));
+      setCountdown(58);
+    } catch (error: any) {
+      setAuthError(error.message || "Failed to resend code");
+    }
+  };
 
   if (done) {
     return (
@@ -179,7 +217,7 @@ export default function SignupPage() {
   return (
     <main className="flex min-h-screen bg-[#FDFDFD] font-['Satoshi'] text-[#121212] relative">
 
-      {/* ── CAROUSEL PANEL (Background on Mobile, Left Panel on Desktop) ── */}
+      {/* ── CAROUSEL PANEL ── */}
       <div className="absolute inset-0 z-0 lg:relative lg:flex lg:w-[589px] lg:flex-shrink-0 lg:py-2 lg:pl-2">
         <div
           className="relative w-full h-full lg:h-[100vh] overflow-hidden lg:rounded-[24px] lg:border-[6px] lg:border-white lg:shadow-[0_0_50px_rgba(0,0,0,0.25)] bg-[#1A1A1A]"
@@ -194,16 +232,9 @@ export default function SignupPage() {
             priority
             key={slides[currentSlide].img}
           />
-
-          {/* Mobile: bottom-only gradient — image stays bright at top */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent lg:hidden" />
-
-          {/* Exact Figma Gradient for Desktop */}
           <div className="absolute inset-0 hidden lg:block bg-gradient-to-t from-[#1A1A1A] via-[#1A1A1A]/80 to-transparent h-[652px] mt-auto" />
-
-          {/* Mobile: bottom | Desktop: bottom */}
           <div className="absolute bottom-0 left-0 right-0 px-6 pb-8 lg:px-10 lg:pb-10 lg:pt-16 flex flex-col gap-4 text-white z-10">
-            {/* Carousel indicators — centered on mobile, left on desktop */}
             <div className="bg-white/80 backdrop-blur-md shadow-[0px_0px_2px_rgba(0,0,0,0.04)] rounded-[4px] px-1.5 py-1 inline-flex gap-1 w-max mb-2 self-center lg:self-start">
               {slides.map((_, i) => (
                 <div
@@ -211,7 +242,7 @@ export default function SignupPage() {
                   className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
                     i === currentSlide ? "w-[43px] bg-[#121212]" : "w-4 bg-[#FDF6EC]"
                   }`}
-                  onClick={() => goToSlide(i)}
+                  onClick={() => setCurrentSlide(i)}
                 />
               ))}
             </div>
@@ -225,43 +256,24 @@ export default function SignupPage() {
         </div>
       </div>
 
-      {/* ── RIGHT PANEL (FORM CONTAINER) ── */}
+      {/* ── RIGHT PANEL ── */}
       <div className="flex flex-1 flex-col relative min-h-screen z-10 pointer-events-none">
 
-        {/* ── "Already have an account?" ──
-             Mobile: centered pill at top of panel
-             Desktop: absolute top-right text link
-        */}
         <div className="flex justify-center pt-[calc(env(safe-area-inset-top)+64px)] lg:absolute lg:top-[60px] lg:right-[100px] lg:pt-0 pointer-events-auto">
-          {/* Mobile pill */}
           <div className="flex lg:hidden items-center gap-2 bg-white/40 border border-white/60 backdrop-blur-[50px] rounded-full px-4 py-2.5">
             <span className="font-['Satoshi'] font-normal text-[14px] text-white tracking-[-0.006em]">
               Already have an account?
             </span>
-            <Link
-              href="/login"
-              className="font-['Satoshi'] font-bold text-[14px] text-white tracking-[-0.006em]"
-            >
-              Log in
-            </Link>
+            <Link href="/login" className="font-['Satoshi'] font-bold text-[14px] text-white tracking-[-0.006em]">Log in</Link>
           </div>
-          {/* Desktop text link */}
           <div className="hidden lg:flex gap-1.5 items-center">
-            <span className="font-['Satoshi'] font-normal text-[16px] text-[#6C717D]">
-              Already have an account ?
-            </span>
-            <Link
-              href="/login"
-              className="font-['Satoshi'] font-medium text-[14px] text-[#121212] tracking-[-0.006em] hover:underline"
-            >
-              Log in
-            </Link>
+            <span className="font-['Satoshi'] font-normal text-[16px] text-[#6C717D]">Already have an account?</span>
+            <Link href="/login" className="font-['Satoshi'] font-medium text-[14px] text-[#121212] tracking-[-0.006em] hover:underline">Log in</Link>
           </div>
         </div>
 
         {/* Form Wrapper */}
         <div className="flex flex-1 flex-col justify-start pt-6 pb-10 lg:justify-center lg:pt-0 lg:pb-0 px-5 lg:px-0 lg:items-start lg:pl-16 xl:pl-24">
-          {/* Mobile: solid white card | Desktop: transparent */}
           <div className="w-full max-w-[440px] mx-auto lg:mx-0 flex flex-col pointer-events-auto bg-white lg:bg-transparent py-6 px-4 lg:p-0 rounded-[24px] lg:rounded-none shadow-[0px_0px_4px_rgba(0,0,0,0.08)] lg:shadow-none border-0">
 
             {step > 1 && (
@@ -274,39 +286,125 @@ export default function SignupPage() {
               </button>
             )}
 
-            {step <= TOTAL_STEPS && (
-              <div className="flex flex-col gap-3 mb-6 w-full">
-                <span className="font-['Satoshi'] font-medium text-[14px] text-[#595653] text-right w-full">
-                  {step} of {TOTAL_STEPS}
-                </span>
-                {/* Progress bar */}
-                <div className="w-full h-1 bg-[#FDF6EC] rounded-full overflow-hidden flex">
-                  <div
-                    className="h-full bg-[#090909] rounded-full transition-all duration-300"
-                    style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
-                  />
-                </div>
+            {/* Progress bar */}
+            <div className="flex flex-col gap-3 mb-6 w-full">
+              <span className="font-['Satoshi'] font-medium text-[14px] text-[#595653] text-right w-full">
+                {step} of {TOTAL_STEPS}
+              </span>
+              <div className="w-full h-1 bg-[#FDF6EC] rounded-full overflow-hidden flex">
+                <div
+                  className="h-full bg-[#090909] rounded-full transition-all duration-300"
+                  style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
+                />
               </div>
-            )}
+            </div>
 
             <h1 className="font-['Sora'] font-bold text-[24px] lg:text-[32px] leading-[32px] lg:leading-[40px] text-[#121212] mb-6">
-              "Create An Account"
+              {step === 5 ? "Verification" : "Create An Account"}
             </h1>
 
-            <StepFields
-              step={step}
-              formData={formData}
-              otp={otp}
-              otpRefs={otpRefs}
-              handleFormChange={handleFormChange}
-              handleOtpChange={handleOtpChange}
-              handleOtpKeyDown={handleOtpKeyDown}
-              goNext={goNext}
-              countdown={countdown}
-              onResend={() => setCountdown(58)}
-              isLoading={isLoading}
-              authError={authError}
-            />
+            <div className="flex flex-col gap-6">
+              {/* Steps 1–4: regular form fields */}
+              {step === 1 && (
+                <>
+                  <div>
+                    <FieldLabel>Full Name</FieldLabel>
+                    <input type="text" placeholder="Your First and Last name" value={formData.fullName} onChange={handleFormChange("fullName")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
+                  </div>
+                  <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
+                  <TermsText />
+                </>
+              )}
+              {step === 2 && (
+                <>
+                  <div>
+                    <FieldLabel>Business Name</FieldLabel>
+                    <input type="text" placeholder="Your Business Name" value={formData.businessName} onChange={handleFormChange("businessName")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
+                  </div>
+                  <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
+                  <TermsText />
+                </>
+              )}
+              {step === 3 && (
+                <>
+                  <div>
+                    <FieldLabel>Email Address</FieldLabel>
+                    <input type="email" placeholder="Your Email Address" value={formData.email} onChange={handleFormChange("email")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
+                  </div>
+                  <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
+                  <TermsText />
+                </>
+              )}
+              {step === 4 && (
+                <>
+                  <div>
+                    <FieldLabel>Create Password</FieldLabel>
+                    <input type="password" placeholder="Enter Password" value={formData.password} onChange={handleFormChange("password")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
+                  </div>
+                  {authError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                      {authError}
+                    </div>
+                  )}
+                  <PrimaryButton onClick={goNext} disabled={isLoading}>
+                    {isLoading ? "Creating account..." : "Create Account"}
+                  </PrimaryButton>
+                  <TermsText />
+                </>
+              )}
+
+              {/* Step 5: OTP verification */}
+              {step === 5 && (
+                <>
+                  <p className="font-['Satoshi'] text-[15px] text-[#595653] leading-relaxed -mt-2">
+                    Enter the 6-digit code sent to{" "}
+                    <strong className="text-[#121212] font-semibold">{formData.email}</strong>
+                  </p>
+
+                  {/* OTP inputs */}
+                  <div className="grid grid-cols-6 gap-2">
+                    {otp.map((digit, i) => (
+                      <input
+                        key={i}
+                        ref={(el) => { otpRefs.current[i] = el; }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleOtpChange(e.target.value, i)}
+                        onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => handleOtpKeyDown(e, i)}
+                        className="w-full h-[48px] border rounded-[10px] text-center text-xl font-semibold outline-none transition-all focus:border-[#121212] bg-white"
+                        style={{ borderColor: digit ? "#121212" : "#E2E4E9" }}
+                      />
+                    ))}
+                  </div>
+
+                  <p className="font-['Satoshi'] text-[14px] text-[#595653]">
+                    Didn't receive it?{" "}
+                    <button
+                      type="button"
+                      onClick={handleResend}
+                      disabled={countdown > 0}
+                      className={`text-[#121212] font-semibold underline underline-offset-2 transition-opacity ${countdown > 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-70"}`}
+                    >
+                      Resend
+                    </button>
+                    {countdown > 0 && <span> ({countdown}s)</span>}
+                  </p>
+
+                  {authError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                      {authError}
+                    </div>
+                  )}
+
+                  <PrimaryButton onClick={() => handleVerifyOtp()} disabled={isLoading || otp.some((d) => d === "")}>
+                    {isLoading ? "Verifying..." : "Verify"}
+                  </PrimaryButton>
+                </>
+              )}
+            </div>
+
           </div>
         </div>
       </div>
@@ -314,81 +412,7 @@ export default function SignupPage() {
   );
 }
 
-// ── Step fields ─────────────
-
-interface StepFieldsProps {
-  step: number;
-  formData: FormData;
-  otp: string[];
-  otpRefs: React.MutableRefObject<(HTMLInputElement | null)[]>;
-  handleFormChange: (field: keyof FormData) => (e: ChangeEvent<HTMLInputElement>) => void;
-  handleOtpChange: (val: string, i: number) => void;
-  handleOtpKeyDown: (e: KeyboardEvent<HTMLInputElement>, i: number) => void;
-  goNext: () => void;
-  countdown: number;
-  onResend: () => void;
-  isLoading: boolean;
-  authError: string | null;
-}
-
-function StepFields({
-  step, formData, otp, otpRefs,
-  handleFormChange, handleOtpChange, handleOtpKeyDown, goNext, countdown, onResend, isLoading, authError,
-}: StepFieldsProps) {
-  return (
-    <div className="flex flex-col gap-6">
-      {step === 1 && (
-        <>
-          <div>
-            <FieldLabel>Full Name</FieldLabel>
-            <input type="text" placeholder="Your First and Last name" value={formData.fullName} onChange={handleFormChange("fullName")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
-          </div>
-          <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
-          <TermsText />
-        </>
-      )}
-      {step === 2 && (
-        <>
-          <div>
-            <FieldLabel>Business Name</FieldLabel>
-            <input type="text" placeholder="Your Business Name" value={formData.businessName} onChange={handleFormChange("businessName")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
-          </div>
-          <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
-          <TermsText />
-        </>
-      )}
-      {step === 3 && (
-        <>
-          <div>
-            <FieldLabel>Email Address</FieldLabel>
-            <input type="email" placeholder="Your Email Address" value={formData.email} onChange={handleFormChange("email")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
-          </div>
-          <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
-          <TermsText />
-        </>
-      )}
-      {step === 4 && (
-        <>
-          <div>
-            <FieldLabel>Create Password</FieldLabel>
-            <input type="password" placeholder="Enter Password" value={formData.password} onChange={handleFormChange("password")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
-          </div>
-          {authError && (
-            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-              {authError}
-            </div>
-          )}
-          <PrimaryButton onClick={goNext} disabled={isLoading}>
-            {isLoading ? "Creating account..." : "Create Account"}
-          </PrimaryButton>
-          <TermsText />
-        </>
-      )}
-    </div>
-  );
-}
-
-// ── Micro-components ──────────────────────────────────────────
+// ── Micro-components ──
 
 const inputCls =
   "w-full h-[40px] bg-[#FFFFFF] border border-[#E2E4E9] rounded-[10px] px-3 font-['Inter'] font-normal text-[14px] text-[#525866] tracking-[-0.006em] outline-none shadow-[0px_1px_2px_rgba(228,229,231,0.24)] focus:border-[#121212] transition-colors mt-1";
