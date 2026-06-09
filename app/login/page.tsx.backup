@@ -4,7 +4,7 @@ import { useState, useRef, KeyboardEvent, ChangeEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { supabase } from '../../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 interface Slide {
   img: string;
@@ -41,7 +41,7 @@ const slides: Slide[] = [
   },
 ];
 
-const SIGNIN_STEPS = 2;
+const SIGNIN_STEPS = 3;
 const FORGOT_STEPS = 3;
 
 // ── Carousel Panel (shared) ──────────────────────────────────
@@ -128,10 +128,6 @@ export default function SigninPage() {
   const [forgotOtp, setForgotOtp] = useState<string[]>(Array(6).fill(""));
   const [forgotDone, setForgotDone] = useState(false);
 
-  // Auth state
-  const [isLoading, setIsLoading] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [countdown, setCountdown] = useState(58);
 
@@ -172,28 +168,6 @@ export default function SigninPage() {
       else setForgotStep(3);
     }
   };
-
-
-  const handleSignIn = async () => {
-    setIsLoading(true);
-    setAuthError(null);
-
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: signinData.email,
-        password: signinData.password,
-      });
-
-      if (error) throw error;
-
-      // Successful sign in
-      setSigninDone(true);
-    } catch (error: any) {
-      setAuthError(error.message || "Failed to sign in");
-      setIsLoading(false);
-    }
-  };
-
 
   // ── Signin success screen ──
   if (signinDone) {
@@ -266,7 +240,7 @@ export default function SigninPage() {
 
   const pageTitle = isForgot
     ? (forgotStep === 1 ? "Forgot Password" : forgotStep === 2 ? "Verification" : "New Password")
-    : "Welcome Back";
+    : (signinStep === 3 ? "Verification" : "Welcome Back");
 
   return (
     <main className="flex min-h-screen bg-[#FDFDFD] font-['Satoshi'] text-[#121212] relative">
@@ -374,7 +348,7 @@ export default function SigninPage() {
                         placeholder="Enter Password"
                         value={signinData.password}
                         onChange={(e) => setSigninData((p) => ({ ...p, password: e.target.value }))}
-                        onKeyDown={(e) => { if (e.key === "Enter") handleSignIn(); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") setSigninStep(3); }}
                         className={inputCls}
                       />
                       <div className="mt-2 text-right">
@@ -386,15 +360,22 @@ export default function SigninPage() {
                         </button>
                       </div>
                     </div>
-                    {authError && (
-                      <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                        {authError}
-                      </div>
-                    )}
-                    <PrimaryButton onClick={() => handleSignIn()} disabled={isLoading}>
-                      {isLoading ? "Signing in..." : "Sign In"}
-                    </PrimaryButton>
+                    <PrimaryButton onClick={() => setSigninStep(3)}>Continue</PrimaryButton>
                   </>
+                )}
+
+                {signinStep === 3 && (
+                  <OtpStep
+                    otp={signinOtp}
+                    otpRefs={otpRefs}
+                    onChange={(val, i) => handleOtpChange(signinOtp, setSigninOtp, val, i)}
+                    onKeyDown={(e, i) => handleOtpKeyDown(signinOtp, e, i)}
+                    onSubmit={() => setSigninDone(true)}
+                    submitLabel="Verify"
+                    email={signinData.email}
+                    countdown={countdown}
+                    onResend={() => setCountdown(58)}
+                  />
                 )}
               </div>
             )}
@@ -539,12 +520,11 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PrimaryButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
+function PrimaryButton({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
-      className="w-full h-[46px] bg-[#121212] text-[#FFFFFF] rounded-full font-['Satoshi'] font-medium text-[14px] leading-[20px] hover:bg-black active:scale-[0.98] transition-all flex items-center justify-center mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full h-[46px] bg-[#121212] text-[#FFFFFF] rounded-full font-['Satoshi'] font-medium text-[14px] leading-[20px] hover:bg-black active:scale-[0.98] transition-all flex items-center justify-center mt-2"
     >
       {children}
     </button>

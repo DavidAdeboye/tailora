@@ -4,6 +4,7 @@ import { useState, useRef, KeyboardEvent, ChangeEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { supabase } from '../../lib/supabase';
 
 interface Slide {
   img: string;
@@ -36,7 +37,7 @@ const slides: Slide[] = [
   },
 ];
 
-const slideMap: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 0, 5: 2 };
+const slideMap: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 0 };
 const TOTAL_STEPS = 4;
 
 export default function SignupPage() {
@@ -50,6 +51,8 @@ export default function SignupPage() {
   });
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const [done, setDone] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [countdown, setCountdown] = useState(58);
 
@@ -116,13 +119,41 @@ export default function SignupPage() {
   };
 
   const goNext = (): void => {
-    if (step < 5) setStep((s) => s + 1);
-    else setDone(true);
+    if (step < 4) setStep((s) => s + 1);
+    else handleSignUp();
   };
 
   const goBack = (): void => {
     if (step > 1) setStep((s) => s - 1);
   };
+
+  const handleSignUp = async () => {
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      // Sign up with Supabase
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            full_name: formData.fullName,
+            business_name: formData.businessName,
+          },
+        },
+      });
+
+      if (authError) throw authError;
+
+      // Successful signup (profile is created automatically via database trigger)
+      setDone(true);
+    } catch (error: any) {
+      setAuthError(error.message || 'Failed to sign up');
+      setIsLoading(false);
+    }
+  };
+
 
   if (done) {
     return (
@@ -259,7 +290,7 @@ export default function SignupPage() {
             )}
 
             <h1 className="font-['Sora'] font-bold text-[24px] lg:text-[32px] leading-[32px] lg:leading-[40px] text-[#121212] mb-6">
-              {step === 5 ? "Verification" : "Create An Account"}
+              "Create An Account"
             </h1>
 
             <StepFields
@@ -273,6 +304,8 @@ export default function SignupPage() {
               goNext={goNext}
               countdown={countdown}
               onResend={() => setCountdown(58)}
+              isLoading={isLoading}
+              authError={authError}
             />
           </div>
         </div>
@@ -294,11 +327,13 @@ interface StepFieldsProps {
   goNext: () => void;
   countdown: number;
   onResend: () => void;
+  isLoading: boolean;
+  authError: string | null;
 }
 
 function StepFields({
   step, formData, otp, otpRefs,
-  handleFormChange, handleOtpChange, handleOtpKeyDown, goNext, countdown, onResend,
+  handleFormChange, handleOtpChange, handleOtpKeyDown, goNext, countdown, onResend, isLoading, authError,
 }: StepFieldsProps) {
   return (
     <div className="flex flex-col gap-6">
@@ -338,48 +373,16 @@ function StepFields({
             <FieldLabel>Create Password</FieldLabel>
             <input type="password" placeholder="Enter Password" value={formData.password} onChange={handleFormChange("password")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
           </div>
-          <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
+          {authError && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+              {authError}
+            </div>
+          )}
+          <PrimaryButton onClick={goNext} disabled={isLoading}>
+            {isLoading ? "Creating account..." : "Create Account"}
+          </PrimaryButton>
           <TermsText />
         </>
-      )}
-      {step === 5 && (
-        <div className="flex flex-col">
-          <p className="font-['Satoshi'] text-[15px] text-[#595653] leading-relaxed mb-5">
-            Enter the 6-digit code sent to your email address: <br className="hidden sm:block" />
-            <strong className="text-[#121212] font-semibold tracking-wide">{formData.email}</strong> via Email
-          </p>
-
-          <div className="grid grid-cols-6 gap-2 mb-5">
-            {otp.map((digit, i) => (
-              <input
-                key={i}
-                ref={(el) => { otpRefs.current[i] = el; }}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => handleOtpChange(e.target.value, i)}
-                onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => handleOtpKeyDown(e, i)}
-                className="w-full h-[48px] border rounded-[10px] text-center text-xl font-semibold outline-none transition-all focus:border-[#121212] bg-white"
-                style={{ borderColor: digit ? "#121212" : "#E2E4E9" }}
-              />
-            ))}
-          </div>
-
-          <p className="font-['Satoshi'] text-[14px] text-[#595653] mb-2">
-            Didn't receive it?{" "}
-            <button
-              onClick={onResend}
-              disabled={countdown > 0}
-              className={`text-[#121212] font-semibold underline underline-offset-2 transition-opacity ${countdown > 0 ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-70'}`}
-            >
-              Resend
-            </button>
-            {" "}{countdown > 0 ? `(${countdown}s)` : ''}
-          </p>
-
-          <PrimaryButton onClick={goNext}>Verify</PrimaryButton>
-        </div>
       )}
     </div>
   );
@@ -394,11 +397,12 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   return <label className="font-['Satoshi'] font-medium text-[14px] text-[#283145] leading-[20px] block">{children}</label>;
 }
 
-function PrimaryButton({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+function PrimaryButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
   return (
     <button
       onClick={onClick}
-      className="w-full h-[46px] bg-[#121212] text-[#FFFFFF] rounded-full font-['Satoshi'] font-medium text-[14px] leading-[20px] hover:bg-black active:scale-[0.98] transition-all flex items-center justify-center mt-2"
+      disabled={disabled}
+      className="w-full h-[46px] bg-[#121212] text-[#FFFFFF] rounded-full font-['Satoshi'] font-medium text-[14px] leading-[20px] hover:bg-black active:scale-[0.98] transition-all flex items-center justify-center mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {children}
     </button>
