@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 import { useAppModals } from "./AppModalsContext";
 import AppPageHeader from "./AppPageHeader";
 import { AppPageBody, PageSectionHeader } from "./AppPageBody";
@@ -20,40 +21,7 @@ interface Client {
   statusType: ClientStatusType;
 }
 
-const initialClients: Client[] = [
-  {
-    id: "#28373", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Wedding gown", status: "Collected", statusType: "collected",
-    date: ""
-  },
-  {
-    id: "#32876", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Suit", status: "Collected", statusType: "collected",
-    date: ""
-  },
-  {
-    id: "#11394", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Wedding gown", status: "Overdue 2 days", statusType: "overdue",
-    date: ""
-  },
-  {
-    id: "#99822", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Senator", status: "Due in 3 days", statusType: "due",
-    date: ""
-  },
-  {
-    id: "#11873", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Senator", status: "Due in 3 days", statusType: "due",
-    date: ""
-  },
-  {
-    id: "#28374", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Wedding gown", status: "Collected", statusType: "collected",
-    date: ""
-  },
-  {
-    id: "#28375", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Suit", status: "Overdue 2 days", statusType: "overdue",
-    date: ""
-  },
-  {
-    id: "#28376", name: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male", outfit: "Senator", status: "Due in 3 days", statusType: "due",
-    date: ""
-  },
-];
+// clients will be loaded from Supabase
 
 const statusStyles: Record<ClientStatusType, { bg: string; color: string }> = {
   collected: { bg: "#E7F6EC", color: "#036B26" },
@@ -164,7 +132,7 @@ export default function ClientManagementPage() {
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [datePanelOpen, setDatePanelOpen] = useState(false);
   const { openAddClient } = useAppModals();
-  const [clients, setClients] = useState<Client[]>(initialClients);
+  const [clients, setClients] = useState<Client[]>([]);
   const [currentPage, setCurrentPage] = useState(3);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
@@ -194,6 +162,34 @@ export default function ClientManagementPage() {
     setClients(prev => prev.filter(c => c.id !== deleteTarget.id));
     setDeleteTarget(null);
   };
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadClients() {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, name, phone, gender')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error fetching clients', error);
+        return;
+      }
+      if (mounted && data) {
+        setClients(data.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          phone: c.phone ?? '',
+          gender: c.gender ?? '',
+          outfit: c.outfit ?? '',
+          status: c.status ?? '',
+          statusType: (c.status_type ?? 'collected') as ClientStatusType,
+          date: (c.created_at ?? '').toString(),
+        })));
+      }
+    }
+    loadClients();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="tailora-page-view" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>

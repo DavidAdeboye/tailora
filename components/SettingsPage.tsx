@@ -1,5 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { supabase } from "../lib/supabase";
+import { uploadAvatar, getPublicUrl } from "../lib/supabaseStorage";
 import AppPageHeader from "./AppPageHeader";
 import ChangePasswordModal from "./Changepasswordmodal";
 
@@ -120,6 +122,92 @@ function ProfileTab() {
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("14 Adetokunbo Ademola Crescent, Wuse II, Abuja");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadProfile() {
+      try {
+        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        if (userErr) {
+          console.error('Error getting auth user', userErr);
+          return;
+        }
+        const user = (userData as any)?.user;
+        const userId = user?.id;
+        if (!userId) return;
+
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_path')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error loading profile', error);
+          return;
+        }
+
+        if (!data) return;
+        if (mounted) {
+          setFullName(data.full_name ?? '');
+          setEmail(user.email ?? '');
+          if (data.avatar_path) {
+            const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(data.avatar_path);
+            setAvatarUrl(urlData.publicUrl);
+          }
+        }
+      } catch (err) {
+        console.error('Unexpected error loading profile', err);
+      }
+    }
+    loadProfile();
+    return () => { mounted = false; };
+  }, []);
+
+  async function handleFile(file: File | null) {
+    if (!file) return;
+    const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+    if (!file.type || !ALLOWED_TYPES.includes(file.type)) {
+      alert('Only PNG, JPEG, WebP or AVIF images are allowed');
+      return;
+    }
+    if (file.size > MAX_BYTES) {
+      alert('File too large — maximum allowed size is 5 MB');
+      return;
+    }
+    setUploading(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = (userData as any)?.user;
+      const userId = user?.id;
+      if (!userId) throw new Error('Not authenticated');
+
+      const destPath = `${userId}/${Date.now()}-${file.name}`;
+      await uploadAvatar(file, destPath, 'avatars');
+
+      // update profiles table
+      const { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert({ user_id: userId, avatar_path: destPath }, { onConflict: 'user_id' });
+      if (upsertError) throw upsertError;
+
+      const url = await getPublicUrl('avatars', destPath);
+      setAvatarUrl(url);
+      try {
+        localStorage.setItem('tailora_avatar', url);
+      } catch (e) {
+        // ignore storage errors
+      }
+    } catch (err) {
+      console.error('Upload error', err);
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
@@ -132,29 +220,42 @@ function ProfileTab() {
             <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Profile photo</span>
             <span style={{ fontSize: 14, fontWeight: 400, color: "#667185", fontFamily: "Satoshi, sans-serif", lineHeight: "22px" }}>This image will be displayed on your profile</span>
           </div>
-          <button
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              width: 144,
-              height: 36,
-              background: "#fff",
-              border: "1px solid #121212",
-              borderRadius: 8,
-              cursor: "pointer",
-              fontSize: 14,
-              fontWeight: 500,
-              color: "#121212",
-              fontFamily: "Satoshi, sans-serif",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = "#F5F5F5")}
-            onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
-          >
-            <ImageAddIcon />
-            Change Photo
-          </button>
+          <div>
+            <input
+              ref={fileInputRef}
+              id="avatar-file"
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/avif"
+              style={{ display: 'none' }}
+              onChange={e => handleFile(e.target.files ? e.target.files[0] : null)}
+            />
+            <button
+              type="button"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                width: 144,
+                height: 36,
+                background: "#fff",
+                border: "1px solid #121212",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#121212",
+                fontFamily: "Satoshi, sans-serif",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#F5F5F5")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <ImageAddIcon />
+              {uploading ? 'Uploading...' : 'Change Photo'}
+            </button>
+          </div>
         </div>
 
         {/* Right: avatar */}
@@ -168,7 +269,7 @@ function ProfileTab() {
           background: "#E5E7EB",
           flexShrink: 0,
         }}>
-          <img src="/Ellipse2481.png" alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={avatarUrl ?? "/Ellipse2481.png"} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
       </div>
 

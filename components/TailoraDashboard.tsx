@@ -1,9 +1,10 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAppModals } from "./AppModalsContext";
 import PrimaryButton from "./PrimaryButton";
 import NotificationsPanel from "./NotificationsPanel";
 import AppPageHeader from "./AppPageHeader";
+import { supabase } from "../lib/supabase";
 import { ActionMenuButton, DeleteConfirmModal } from "./Actionmenu";
 
 type OrderStatusType = "collected" | "overdue" | "due";
@@ -18,13 +19,7 @@ interface Order {
   statusType: OrderStatusType;
 }
 
-const initialOrders: Order[] = [
-  { id: "#28373", client: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male",   outfit: "Wedding gown", status: "Collected",      statusType: "collected" },
-  { id: "#32876", client: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Suit",         status: "Collected",      statusType: "collected" },
-  { id: "#11394", client: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male",   outfit: "Wedding gown", status: "Overdue 2 days", statusType: "overdue"   },
-  { id: "#99822", client: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Female", outfit: "Senator",      status: "Due in 3 days",  statusType: "due"       },
-  { id: "#11873", client: "Olamide Akintan", phone: "+234 **** 2039 ****", gender: "Male",   outfit: "Senator",      status: "Due in 3 days",  statusType: "due"       },
-];
+// initialOrders removed: will load from Supabase at runtime
 
 const stats = [
   { label: "Total Clients",        value: "10,000,000", icon: <PeopleIcon /> },
@@ -133,7 +128,7 @@ const statusStyles = {
 
 export default function TailoraDashboard() {
   const { openAddClient } = useAppModals();
-  const [orders, setOrders] = useState<Order[]>(initialOrders);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [currentPage, setCurrentPage] = useState(3);
   const [filterGender, setFilterGender] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -167,6 +162,34 @@ export default function TailoraDashboard() {
     setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
     setDeleteTarget(null);
   };
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadOrders() {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, client_name, phone, gender, outfit, status, status_type')
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error fetching orders from Supabase', error);
+        return;
+      }
+      if (!data) return;
+      if (mounted) {
+        setOrders(data.map((o: any) => ({
+          id: o.id,
+          client: o.client_name ?? o.client,
+          phone: o.phone,
+          gender: o.gender,
+          outfit: o.outfit,
+          status: o.status,
+          statusType: (o.status_type ?? o.statusType) as OrderStatusType,
+        })));
+      }
+    }
+    loadOrders();
+    return () => { mounted = false; };
+  }, []);
 
 
 

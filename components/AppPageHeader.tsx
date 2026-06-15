@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../lib/supabase";
 import MobileMenuButton from "./MobileMenuButton";
 import NotificationsPanel from "./NotificationsPanel";
 import LogoutModal from "./LogoutModal";
@@ -19,6 +20,40 @@ export default function AppPageHeader({ title }: { title: string }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('tailora_avatar');
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    async function refreshAvatar() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const user = (userData as any)?.user;
+        const userId = user?.id;
+        if (!userId) return;
+        const { data: profile, error } = await supabase.from('profiles').select('avatar_path').eq('user_id', userId).maybeSingle();
+        if (error) return;
+        if (profile?.avatar_path) {
+          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(profile.avatar_path);
+          const publicUrl = urlData?.publicUrl ?? urlData?.public_url ?? null;
+          if (publicUrl && mounted) {
+            setAvatarUrl(publicUrl);
+            try { localStorage.setItem('tailora_avatar', publicUrl); } catch {}
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+    refreshAvatar();
+    return () => { mounted = false; };
+  }, []);
 
   const handleLogoutClick = () => {
     setShowUserMenu(false);       // close dropdown first
@@ -101,7 +136,7 @@ export default function AppPageHeader({ title }: { title: string }) {
               }}
             >
               <img
-                src="/Ellipse2481.png"
+                src={avatarUrl ?? "/Ellipse2481.png"}
                 alt="Avatar"
                 style={{ width: 24, height: 24, borderRadius: "50%" }}
               />
