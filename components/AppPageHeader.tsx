@@ -21,16 +21,16 @@ export default function AppPageHeader({ title }: { title: string }) {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem('tailora_avatar');
-    } catch {
-      return null;
-    }
-  });
+  // Start null so server and client render the same initial HTML.
+  // Read localStorage inside useEffect to avoid hydration mismatches.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
+    try {
+      const stored = localStorage.getItem('tailora_avatar');
+      if (stored) setAvatarUrl(stored);
+    } catch {}
     async function refreshAvatar() {
       try {
         const { data: userData } = await supabase.auth.getUser();
@@ -41,7 +41,7 @@ export default function AppPageHeader({ title }: { title: string }) {
         if (error) return;
         if (profile?.avatar_path) {
           const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(profile.avatar_path);
-          const publicUrl = urlData?.publicUrl ?? urlData?.public_url ?? null;
+          const publicUrl = urlData?.publicUrl ?? null;
           if (publicUrl && mounted) {
             setAvatarUrl(publicUrl);
             try { localStorage.setItem('tailora_avatar', publicUrl); } catch {}

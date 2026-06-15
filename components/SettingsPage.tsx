@@ -123,6 +123,7 @@ function ProfileTab() {
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("14 Adetokunbo Ademola Crescent, Wuse II, Abuja");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
@@ -154,6 +155,9 @@ function ProfileTab() {
         if (!data) return;
         if (mounted) {
           setFullName(data.full_name ?? '');
+          // keep businessName/address local — avoid selecting/upserting unknown columns
+          setBusinessName(businessName);
+          setAddress(address);
           setEmail(user.email ?? '');
           if (data.avatar_path) {
             const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(data.avatar_path);
@@ -206,6 +210,47 @@ function ProfileTab() {
       console.error('Upload error', err);
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function saveProfile() {
+    setSavingProfile(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = (userData as any)?.user;
+      const userId = user?.id;
+      if (!userId) throw new Error('Not authenticated');
+
+      // upsert profile fields (only known columns)
+      const { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert({ user_id: userId, full_name: fullName }, { onConflict: 'user_id' });
+      if (upsertError) throw upsertError;
+
+      // update auth email if changed — validate before sending to Supabase
+      if (email && email !== user.email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          throw new Error('Invalid email format');
+        }
+
+        const { error: updateErr } = await supabase.auth.updateUser({ email });
+        if (updateErr) {
+          console.error('Email update error', updateErr);
+          // surface Supabase error message to user for troubleshooting
+          const msg = (updateErr as any)?.message ?? JSON.stringify(updateErr);
+          try { alert(`Failed to update email: ${msg}`); } catch {}
+          // rethrow so saveProfile shows a failure state
+          throw updateErr;
+        }
+      }
+
+      try { alert('Profile saved'); } catch (e) { /* ignore */ }
+    } catch (err) {
+      console.error('Save profile error', err);
+      try { alert('Failed to save profile'); } catch (e) {}
+    } finally {
+      setSavingProfile(false);
     }
   }
 
@@ -296,8 +341,10 @@ function ProfileTab() {
               fontFamily: "Satoshi, sans-serif",
               cursor: "pointer",
             }}
+            onClick={saveProfile}
+            disabled={savingProfile}
           >
-            Save Changes
+            {savingProfile ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
 
@@ -341,6 +388,53 @@ function ProfileTab() {
 function WorkspaceTab() {
   const [standardDays, setStandardDays] = useState("14");
   const [expressDays, setExpressDays] = useState("5");
+  const [savingWorkspace, setSavingWorkspace] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadWorkspace() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const user = (userData as any)?.user;
+        const userId = user?.id;
+        if (!userId) return;
+        const { data, error } = await supabase.from('workspace_settings').select('standard_deadline_days, express_deadline_days').eq('user_id', userId).maybeSingle();
+        if (error) return;
+        if (!data) return;
+        if (mounted) {
+          setStandardDays(String(data.standard_deadline_days ?? standardDays));
+          setExpressDays(String(data.express_deadline_days ?? expressDays));
+        }
+      } catch (err) {
+        console.error('Error loading workspace defaults', err);
+      }
+    }
+    loadWorkspace();
+    return () => { mounted = false; };
+  }, []);
+
+  async function saveWorkspace() {
+    setSavingWorkspace(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = (userData as any)?.user;
+      const userId = user?.id;
+      if (!userId) throw new Error('Not authenticated');
+
+      const payload: any = { user_id: userId };
+      if (standardDays) payload.standard_deadline_days = Number(standardDays);
+      if (expressDays) payload.express_deadline_days = Number(expressDays);
+
+      const { error } = await supabase.from('workspace_settings').upsert(payload, { onConflict: 'user_id' });
+      if (error) throw error;
+      try { alert('Workspace defaults saved'); } catch (e) {}
+    } catch (err) {
+      console.error('Save workspace error', err);
+      try { alert('Failed to save workspace defaults'); } catch (e) {}
+    } finally {
+      setSavingWorkspace(false);
+    }
+  }
 
   return (
     <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
@@ -363,8 +457,10 @@ function WorkspaceTab() {
             fontFamily: "Satoshi, sans-serif",
             cursor: "pointer",
           }}
+          onClick={saveWorkspace}
+          disabled={savingWorkspace}
         >
-          Save Changes
+          {savingWorkspace ? 'Saving...' : 'Save Changes'}
         </button>
       </div>
 
