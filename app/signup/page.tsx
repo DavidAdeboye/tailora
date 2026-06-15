@@ -37,8 +37,8 @@ const slides: Slide[] = [
   },
 ];
 
-// Step 5 is now OTP verification
-const TOTAL_STEPS = 5;
+// OTP step removed — now just 4 steps
+const TOTAL_STEPS = 4;
 
 export default function SignupPage() {
   const router = useRouter();
@@ -49,12 +49,10 @@ export default function SignupPage() {
     email: "",
     password: "",
   });
-  const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const [done, setDone] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const [countdown, setCountdown] = useState(58);
 
   // Slideshow state
   const [currentSlide, setCurrentSlide] = useState<number>(0);
@@ -73,47 +71,16 @@ export default function SignupPage() {
     };
   }, [isPaused]);
 
-  // Countdown timer for OTP resend
-  useEffect(() => {
-    if (step !== 5) return;
-    if (countdown > 0) {
-      const timer = setInterval(() => setCountdown((prev) => prev - 1), 1000);
-      return () => clearInterval(timer);
-    }
-  }, [countdown, step]);
-
   const handleFormChange =
     (field: keyof FormData) =>
     (e: ChangeEvent<HTMLInputElement>): void => {
       setFormData((prev) => ({ ...prev, [field]: e.target.value }));
     };
 
-  const handleOtpChange = (val: string, i: number): void => {
-    if (!/^\d?$/.test(val)) return;
-    const next = [...otp];
-    next[i] = val;
-    setOtp(next);
-    if (val && i < 5) otpRefs.current[i + 1]?.focus();
-    // Auto-submit when all 6 digits filled
-    if (next.every((d) => d !== "") && (val !== "" || next[i] !== "")) {
-      // slight delay so state settles
-      setTimeout(() => handleVerifyOtp(next.join("")), 50);
-    }
-  };
-
-  const handleOtpKeyDown = (e: KeyboardEvent<HTMLInputElement>, i: number): void => {
-    if (e.key === "Backspace" && !otp[i] && i > 0) {
-      otpRefs.current[i - 1]?.focus();
-    }
-    if (e.key === "Enter" && otp.every((d) => d !== "")) {
-      handleVerifyOtp(otp.join(""));
-    }
-  };
-
   const goNext = (): void => {
-    if (step < 4) {
+    if (step < TOTAL_STEPS) {
       setStep((s) => s + 1);
-    } else if (step === 4) {
+    } else if (step === TOTAL_STEPS) {
       handleSignUp();
     }
   };
@@ -122,7 +89,7 @@ export default function SignupPage() {
     if (step > 1) setStep((s) => s - 1);
   };
 
-  // Step 4 → Call signUp, which triggers Supabase to send a 6-digit OTP email
+  // Final step → sign up, then sign in immediately (no email verification needed)
   const handleSignUp = async () => {
     setIsLoading(true);
     setAuthError(null);
@@ -136,15 +103,22 @@ export default function SignupPage() {
             full_name: formData.fullName,
             business_name: formData.businessName,
           },
-          // Do NOT pass emailRedirectTo — we want OTP, not a magic link
         },
       });
 
       if (error) throw error;
 
-      // Move to OTP step
-      setStep(5);
-      setCountdown(58);
+      // If email confirmations are disabled in Supabase, signUp already
+      // returns an active session. If not, sign in explicitly to get one.
+      if (!data.session) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password,
+        });
+        if (signInError) throw signInError;
+      }
+
+      setDone(true);
       setIsLoading(false);
     } catch (error: any) {
       setAuthError(error.message || "Failed to sign up");
@@ -152,44 +126,23 @@ export default function SignupPage() {
     }
   };
 
-  // Step 5 → Verify the 6-digit OTP
-  const handleVerifyOtp = async (token?: string) => {
-    const code = token ?? otp.join("");
-    if (code.length < 6) return;
-
-    setIsLoading(true);
+  const handleGoogleSignUp = async () => {
+    setIsGoogleLoading(true);
     setAuthError(null);
 
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: formData.email,
-        token: code,
-        type: "signup",
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
       });
 
       if (error) throw error;
-
-      setDone(true);
+      // On success, Supabase redirects to Google then back to redirectTo.
     } catch (error: any) {
-      setAuthError(error.message || "Invalid or expired code. Please try again.");
-      setIsLoading(false);
-    }
-  };
-
-  // Resend OTP
-  const handleResend = async () => {
-    if (countdown > 0) return;
-    setAuthError(null);
-    try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: formData.email,
-      });
-      if (error) throw error;
-      setOtp(Array(6).fill(""));
-      setCountdown(58);
-    } catch (error: any) {
-      setAuthError(error.message || "Failed to resend code");
+      setAuthError(error.message || "Failed to sign up with Google");
+      setIsGoogleLoading(false);
     }
   };
 
@@ -300,13 +253,24 @@ export default function SignupPage() {
             </div>
 
             <h1 className="font-['Sora'] font-bold text-[24px] lg:text-[32px] leading-[32px] lg:leading-[40px] text-[#121212] mb-6">
-              {step === 5 ? "Verification" : "Create An Account"}
+              Create An Account
             </h1>
 
             <div className="flex flex-col gap-6">
-              {/* Steps 1–4: regular form fields */}
               {step === 1 && (
                 <>
+                  <GoogleButton onClick={handleGoogleSignUp} disabled={isGoogleLoading}>
+                    {isGoogleLoading ? "Connecting..." : "Continue with Google"}
+                  </GoogleButton>
+
+                  <OrDivider />
+
+                  {authError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                      {authError}
+                    </div>
+                  )}
+
                   <div>
                     <FieldLabel>Full Name</FieldLabel>
                     <input type="text" placeholder="Your First and Last name" value={formData.fullName} onChange={handleFormChange("fullName")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
@@ -352,57 +316,6 @@ export default function SignupPage() {
                   <TermsText />
                 </>
               )}
-
-              {/* Step 5: OTP verification */}
-              {step === 5 && (
-                <>
-                  <p className="font-['Satoshi'] text-[15px] text-[#595653] leading-relaxed -mt-2">
-                    Enter the 6-digit code sent to{" "}
-                    <strong className="text-[#121212] font-semibold">{formData.email}</strong>
-                  </p>
-
-                  {/* OTP inputs */}
-                  <div className="grid grid-cols-6 gap-2">
-                    {otp.map((digit, i) => (
-                      <input
-                        key={i}
-                        ref={(el) => { otpRefs.current[i] = el; }}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleOtpChange(e.target.value, i)}
-                        onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => handleOtpKeyDown(e, i)}
-                        className="w-full h-[48px] border rounded-[10px] text-center text-xl font-semibold outline-none transition-all focus:border-[#121212] bg-white"
-                        style={{ borderColor: digit ? "#121212" : "#E2E4E9" }}
-                      />
-                    ))}
-                  </div>
-
-                  <p className="font-['Satoshi'] text-[14px] text-[#595653]">
-                    Didn't receive it?{" "}
-                    <button
-                      type="button"
-                      onClick={handleResend}
-                      disabled={countdown > 0}
-                      className={`text-[#121212] font-semibold underline underline-offset-2 transition-opacity ${countdown > 0 ? "opacity-50 cursor-not-allowed" : "hover:opacity-70"}`}
-                    >
-                      Resend
-                    </button>
-                    {countdown > 0 && <span> ({countdown}s)</span>}
-                  </p>
-
-                  {authError && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                      {authError}
-                    </div>
-                  )}
-
-                  <PrimaryButton onClick={() => handleVerifyOtp()} disabled={isLoading || otp.some((d) => d === "")}>
-                    {isLoading ? "Verifying..." : "Verify"}
-                  </PrimaryButton>
-                </>
-              )}
             </div>
 
           </div>
@@ -430,6 +343,35 @@ function PrimaryButton({ children, onClick, disabled }: { children: React.ReactN
     >
       {children}
     </button>
+  );
+}
+
+function GoogleButton({ children, onClick, disabled }: { children: React.ReactNode; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      type="button"
+      className="w-full h-[46px] bg-white text-[#121212] border border-[#E2E4E9] rounded-full font-['Satoshi'] font-medium text-[14px] leading-[20px] hover:bg-[#F9FAFB] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.616z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+        <path d="M3.964 10.706A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      {children}
+    </button>
+  );
+}
+
+function OrDivider() {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex-1 h-px bg-[#E2E4E9]" />
+      <span className="font-['Satoshi'] text-[13px] text-[#9CA3AF]">or</span>
+      <div className="flex-1 h-px bg-[#E2E4E9]" />
+    </div>
   );
 }
 
