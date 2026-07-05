@@ -128,6 +128,9 @@ function ProfileTab() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 
+  // Track initial (saved) values for dirty detection
+  const [initialValues, setInitialValues] = useState({ fullName: "", businessName: "", email: "" });
+  const isDirty = fullName !== initialValues.fullName || businessName !== initialValues.businessName || email !== initialValues.email;
   useEffect(() => {
     let mounted = true;
     async function loadProfile() {
@@ -143,7 +146,7 @@ function ProfileTab() {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('full_name, avatar_path')
+          .select('full_name, business_name, avatar_path')
           .eq('user_id', userId)
           .maybeSingle();
 
@@ -155,10 +158,18 @@ function ProfileTab() {
         if (!data) return;
         if (mounted) {
           setFullName(data.full_name ?? '');
-          // keep businessName/address local — avoid selecting/upserting unknown columns
-          setBusinessName(businessName);
-          setAddress(address);
+          setBusinessName(data.business_name ?? '');
           setEmail(user.email ?? '');
+          // Save initial values for dirty tracking
+          setInitialValues({
+            fullName: data.full_name ?? '',
+            businessName: data.business_name ?? '',
+            email: user.email ?? ''
+          });
+          try {
+            if (data.full_name) localStorage.setItem('tailora_fullname', data.full_name);
+            if (data.business_name) localStorage.setItem('tailora_businessname', data.business_name);
+          } catch (e) {}
           if (data.avatar_path) {
             const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(data.avatar_path);
             setAvatarUrl(urlData.publicUrl);
@@ -224,8 +235,19 @@ function ProfileTab() {
       // upsert profile fields (only known columns)
       const { error: upsertError } = await supabase
         .from('profiles')
-        .upsert({ user_id: userId, full_name: fullName }, { onConflict: 'user_id' });
+        .upsert({
+          user_id: userId,
+          full_name: fullName,
+          business_name: businessName
+        }, { onConflict: 'user_id' });
       if (upsertError) throw upsertError;
+
+      // Update local storage and dispatch custom event so Sidebar and Header update in real-time
+      try {
+        localStorage.setItem('tailora_fullname', fullName);
+        localStorage.setItem('tailora_businessname', businessName);
+        window.dispatchEvent(new Event('tailora_profile_updated'));
+      } catch (e) {}
 
       // update auth email if changed — validate before sending to Supabase
       if (email && email !== user.email) {
@@ -246,6 +268,8 @@ function ProfileTab() {
       }
 
       try { alert('Profile saved'); } catch (e) { /* ignore */ }
+      // Update initial values so button goes back to disabled
+      setInitialValues({ fullName, businessName, email });
     } catch (err) {
       console.error('Save profile error', err);
       try { alert('Failed to save profile'); } catch (e) {}
@@ -311,10 +335,19 @@ function ProfileTab() {
           border: "2.5px solid #F2F2F6",
           boxShadow: "0 0 1px rgba(0,0,0,0.25)",
           overflow: "hidden",
-          background: "#E5E7EB",
+          background: avatarUrl ? "#E5E7EB" : "#128C7E",
           flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}>
-          <img src={avatarUrl ?? "/Ellipse2481.png"} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="Profile" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          ) : (
+            <span style={{ color: "#fff", fontSize: 40, fontWeight: 700, fontFamily: "'Satoshi', sans-serif" }}>
+              {(email.charAt(0) || "?").toUpperCase()}
+            </span>
+          )}
         </div>
       </div>
 
@@ -332,17 +365,19 @@ function ProfileTab() {
             style={{
               width: 124,
               height: 38,
-              background: "#D0D5DD",
+              background: isDirty ? "#121212" : "#D0D5DD",
               border: "none",
               borderRadius: 8,
               fontSize: 14,
               fontWeight: 700,
               color: "#fff",
               fontFamily: "Satoshi, sans-serif",
-              cursor: "pointer",
+              cursor: isDirty ? "pointer" : "default",
+              opacity: isDirty ? 1 : 0.6,
+              transition: "background 0.2s, opacity 0.2s",
             }}
             onClick={saveProfile}
-            disabled={savingProfile}
+            disabled={!isDirty || savingProfile}
           >
             {savingProfile ? 'Saving...' : 'Save Changes'}
           </button>
@@ -390,6 +425,9 @@ function WorkspaceTab() {
   const [expressDays, setExpressDays] = useState("5");
   const [savingWorkspace, setSavingWorkspace] = useState(false);
 
+  // Track initial (saved) values for dirty detection
+  const [initialWs, setInitialWs] = useState({ standardDays: "14", expressDays: "5" });
+  const isWsDirty = standardDays !== initialWs.standardDays || expressDays !== initialWs.expressDays;
   useEffect(() => {
     let mounted = true;
     async function loadWorkspace() {
@@ -402,8 +440,11 @@ function WorkspaceTab() {
         if (error) return;
         if (!data) return;
         if (mounted) {
-          setStandardDays(String(data.standard_deadline_days ?? standardDays));
-          setExpressDays(String(data.express_deadline_days ?? expressDays));
+          const std = String(data.standard_deadline_days ?? standardDays);
+          const exp = String(data.express_deadline_days ?? expressDays);
+          setStandardDays(std);
+          setExpressDays(exp);
+          setInitialWs({ standardDays: std, expressDays: exp });
         }
       } catch (err) {
         console.error('Error loading workspace defaults', err);
@@ -427,6 +468,8 @@ function WorkspaceTab() {
 
       const { error } = await supabase.from('workspace_settings').upsert(payload, { onConflict: 'user_id' });
       if (error) throw error;
+      // Update initial values so button goes back to disabled
+      setInitialWs({ standardDays, expressDays });
       try { alert('Workspace defaults saved'); } catch (e) {}
     } catch (err) {
       console.error('Save workspace error', err);
@@ -448,17 +491,19 @@ function WorkspaceTab() {
           style={{
             width: 124,
             height: 38,
-            background: "#D0D5DD",
+            background: isWsDirty ? "#121212" : "#D0D5DD",
             border: "none",
             borderRadius: 8,
             fontSize: 14,
             fontWeight: 700,
             color: "#fff",
             fontFamily: "Satoshi, sans-serif",
-            cursor: "pointer",
+            cursor: isWsDirty ? "pointer" : "default",
+            opacity: isWsDirty ? 1 : 0.6,
+            transition: "background 0.2s, opacity 0.2s",
           }}
           onClick={saveWorkspace}
-          disabled={savingWorkspace}
+          disabled={!isWsDirty || savingWorkspace}
         >
           {savingWorkspace ? 'Saving...' : 'Save Changes'}
         </button>

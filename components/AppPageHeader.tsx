@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { useRouter } from "next/navigation";
 import MobileMenuButton from "./MobileMenuButton";
 import NotificationsPanel from "./NotificationsPanel";
 import LogoutModal from "./LogoutModal";
@@ -17,6 +18,7 @@ function BellIcon() {
 }
 
 export default function AppPageHeader({ title }: { title: string }) {
+  const router = useRouter();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -24,27 +26,46 @@ export default function AppPageHeader({ title }: { title: string }) {
   // Start null so server and client render the same initial HTML.
   // Read localStorage inside useEffect to avoid hydration mismatches.
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [businessName, setBusinessName] = useState("");
 
   useEffect(() => {
     let mounted = true;
     try {
-      const stored = localStorage.getItem('tailora_avatar');
-      if (stored) setAvatarUrl(stored);
+      const storedAvatar = localStorage.getItem('tailora_avatar');
+      if (storedAvatar) setAvatarUrl(storedAvatar);
+      const storedName = localStorage.getItem('tailora_fullname');
+      if (storedName) setFullName(storedName);
+      const storedBusiness = localStorage.getItem('tailora_businessname');
+      if (storedBusiness) setBusinessName(storedBusiness);
     } catch {}
+
     async function refreshAvatar() {
       try {
         const { data: userData } = await supabase.auth.getUser();
         const user = (userData as any)?.user;
         const userId = user?.id;
         if (!userId) return;
-        const { data: profile, error } = await supabase.from('profiles').select('avatar_path').eq('user_id', userId).maybeSingle();
+        if (mounted) setUserEmail(user.email ?? "");
+        const { data: profile, error } = await supabase.from('profiles').select('avatar_path, full_name, business_name').eq('user_id', userId).maybeSingle();
         if (error) return;
-        if (profile?.avatar_path) {
-          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(profile.avatar_path);
-          const publicUrl = urlData?.publicUrl ?? null;
-          if (publicUrl && mounted) {
-            setAvatarUrl(publicUrl);
-            try { localStorage.setItem('tailora_avatar', publicUrl); } catch {}
+        if (profile) {
+          if (profile.full_name && mounted) {
+            setFullName(profile.full_name);
+            try { localStorage.setItem('tailora_fullname', profile.full_name); } catch {}
+          }
+          if (profile.business_name && mounted) {
+            setBusinessName(profile.business_name);
+            try { localStorage.setItem('tailora_businessname', profile.business_name); } catch {}
+          }
+          if (profile.avatar_path) {
+            const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(profile.avatar_path);
+            const publicUrl = urlData?.publicUrl ?? null;
+            if (publicUrl && mounted) {
+              setAvatarUrl(publicUrl);
+              try { localStorage.setItem('tailora_avatar', publicUrl); } catch {}
+            }
           }
         }
       } catch (err) {
@@ -52,7 +73,25 @@ export default function AppPageHeader({ title }: { title: string }) {
       }
     }
     refreshAvatar();
-    return () => { mounted = false; };
+
+    function handleProfileUpdate() {
+      try {
+        const storedAvatar = localStorage.getItem('tailora_avatar');
+        if (storedAvatar) setAvatarUrl(storedAvatar);
+        const storedName = localStorage.getItem('tailora_fullname');
+        if (storedName) setFullName(storedName);
+        const storedBusiness = localStorage.getItem('tailora_businessname');
+        if (storedBusiness) setBusinessName(storedBusiness);
+      } catch {}
+    }
+    window.addEventListener('tailora_profile_updated', handleProfileUpdate);
+    window.addEventListener('storage', handleProfileUpdate);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('tailora_profile_updated', handleProfileUpdate);
+      window.removeEventListener('storage', handleProfileUpdate);
+    };
   }, []);
 
   const handleLogoutClick = () => {
@@ -60,11 +99,17 @@ export default function AppPageHeader({ title }: { title: string }) {
     setShowLogoutModal(true);     // then open modal
   };
 
-  const handleLogoutConfirm = () => {
+  const handleLogoutConfirm = async () => {
     setShowLogoutModal(false);
-    // TODO: add your actual logout logic here
-    // e.g. signOut(), router.push("/login"), etc.
-    console.log("User confirmed logout");
+    await supabase.auth.signOut();
+    // Clear cached user info
+    try {
+      localStorage.removeItem("tailora_avatar");
+      localStorage.removeItem("tailora_fullname");
+      localStorage.removeItem("tailora_businessname");
+    } catch {}
+    document.cookie = "sb-access-token=; path=/; max-age=0";
+    router.push("/login");
   };
 
   return (
@@ -98,7 +143,7 @@ export default function AppPageHeader({ title }: { title: string }) {
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="tailora-header-actions" style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {/* Bell */}
           <button
             type="button"
@@ -123,6 +168,7 @@ export default function AppPageHeader({ title }: { title: string }) {
           <div style={{ position: "relative", display: "inline-block" }}>
             <button
               type="button"
+              className="tailora-header-avatar-btn"
               onClick={() => setShowUserMenu((v) => !v)}
               style={{
                 display: "flex",
@@ -135,11 +181,49 @@ export default function AppPageHeader({ title }: { title: string }) {
                 cursor: "pointer",
               }}
             >
-              <img
-                src={avatarUrl ?? "/Ellipse2481.png"}
-                alt="Avatar"
-                style={{ width: 24, height: 24, borderRadius: "50%" }}
-              />
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt="Avatar"
+                  style={{ width: 24, height: 24, borderRadius: "50%", objectFit: "cover" }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: "50%",
+                    background: "#128C7E",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: "'Satoshi', sans-serif",
+                    flexShrink: 0,
+                  }}
+                >
+                  {((fullName || userEmail).charAt(0) || "?").toUpperCase()}
+                </div>
+              )}
+              {fullName && (
+                <span
+                  className="tailora-header-user-name"
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: "#28292D",
+                    fontFamily: "var(--font-satoshi)",
+                    maxWidth: 100,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {fullName}
+                </span>
+              )}
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                 <path opacity="0.4" d="M15.48 13.2302L11.69 8.18018H6.07999C5.11999 8.18018 4.63999 9.34018 5.31999 10.0202L10.5 15.2002C11.33 16.0302 12.68 16.0302 13.51 15.2002L15.48 13.2302Z" fill="#121212" />
                 <path d="M17.9199 8.18018H11.6899L15.4799 13.2302L18.6899 10.0202C19.3599 9.34018 18.8799 8.18018 17.9199 8.18018Z" fill="#121212" />
@@ -160,19 +244,71 @@ export default function AppPageHeader({ title }: { title: string }) {
                     position: "absolute",
                     right: 0,
                     top: "calc(100% + 8px)",
-                    width: 184,
+                    width: 220,
                     background: "#FFFFFF",
                     borderRadius: 12,
                     boxShadow: "0px 8px 24px rgba(0,0,0,0.12)",
-                    padding: 10,
+                    padding: "14px 12px",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 10,
+                    gap: 12,
                     zIndex: 9999,
+                    border: "1px solid #E5E7EB",
                   }}
                 >
+                  {/* Identity block */}
+                  <div style={{ padding: "0 4px 4px 4px", display: "flex", flexDirection: "column", gap: 3 }}>
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 700,
+                        color: "#121212",
+                        fontFamily: "var(--font-satoshi)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {fullName || "User"}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 500,
+                        color: "#6C717D",
+                        fontFamily: "var(--font-satoshi)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {businessName || "My Workspace"}
+                    </div>
+                    {userEmail && (
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 400,
+                          color: "#98A2B3",
+                          fontFamily: "var(--font-satoshi)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {userEmail}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ height: 1, background: "#F0F2F5", margin: "0 -12px" }} />
+
                   <button
                     type="button"
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      router.push("/settings");
+                    }}
                     style={{
                       width: "100%",
                       padding: "10px 12px",
@@ -181,13 +317,13 @@ export default function AppPageHeader({ title }: { title: string }) {
                       border: "none",
                       cursor: "pointer",
                       fontSize: 14,
-                      fontWeight: 500,
+                      fontWeight: 600,
                       fontFamily: "var(--font-satoshi)",
                       color: "#28292D",
                       textAlign: "center",
                     }}
                   >
-                    Profile
+                    Profile Settings
                   </button>
 
                   <button

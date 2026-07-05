@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "../lib/supabase";
 import AddClientModal, { type ClientFormData } from "./AddClientModal";
 import { AppModalsContext } from "./AppModalsContext";
 import InviteTeamMemberModal from "./InviteTeamMemberModal";
@@ -19,6 +20,7 @@ const PATH_TO_MENU: Record<string, string> = {
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
+  const router = useRouter();
   const activeMenu = PATH_TO_MENU[pathname] ?? "Dashboard";
 
   const [showAddClient, setShowAddClient] = useState(false);
@@ -27,6 +29,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [pendingClient, setPendingClient] = useState<ClientFormData | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   const openAddClient = () => setShowAddClient(true);
   const openInviteCoworker = () => setShowInvite(true);
@@ -47,6 +51,28 @@ export default function AppShell({ children }: { children: ReactNode }) {
       document.body.style.overflow = prev;
     };
   }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    async function checkAuth() {
+      const { data } = await supabase.auth.getUser();
+      const user = (data as any)?.user;
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+      setIsCheckingAuth(false);
+    }
+
+    checkAuth();
+  }, [router]);
+
+  if (isCheckingAuth) {
+    return (
+      <div className="tailora-auth-check" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div>Checking authentication…</div>
+      </div>
+    );
+  }
 
   // After client info is filled → open the full-page flow
   const handleContinueFromModal = (data: ClientFormData) => {

@@ -125,10 +125,9 @@
 }
 
 @media (max-width: 768px) {
- 
-
-  .tailora-header-actions .tailora-header-avatar-btn svg {
-    display: none;
+  .tailora-header-actions .tailora-header-avatar-btn svg,
+  .tailora-header-actions .tailora-header-avatar-btn .tailora-header-user-name {
+    display: none !important;
   }
 
   .tailora-header-actions .tailora-header-avatar-btn {

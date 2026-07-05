@@ -116,6 +116,21 @@ export default function SigninPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  useEffect(() => {
+    // In Supabase v2 the client auto-parses the OAuth hash fragment.
+    // We listen for the SIGNED_IN event, persist the cookie for middleware, and redirect.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        // Set the cookie so middleware allows protected routes
+        document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        window.history.replaceState(null, "", window.location.pathname);
+        router.replace("/dashboard");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [router]);
+
   const handleSignIn = async () => {
     setIsLoading(true);
     setAuthError(null);
@@ -127,6 +142,11 @@ export default function SigninPage() {
       });
 
       if (error) throw error;
+
+      // Set the cookie so middleware allows protected routes
+      if (data.session) {
+        document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+      }
 
       // Successful sign in
       setSigninDone(true);
@@ -145,7 +165,7 @@ export default function SigninPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${window.location.origin}/login`,
         },
       });
 

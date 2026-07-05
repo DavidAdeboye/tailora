@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "../lib/supabase";
+import LogoutModal from "./LogoutModal";
 
 /* ================================================================
    ICONS
@@ -296,6 +298,104 @@ useEffect(() => {
 }, []);
   const [sidebarHovered, setSidebarHovered] = useState(false);
 
+  // ── Profile data from Supabase ──
+  const [profileName, setProfileName] = useState<string>("");
+  const [profileEmail, setProfileEmail] = useState<string>("");
+  const [businessName, setBusinessName] = useState<string>("");
+  const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    try {
+      const storedName = localStorage.getItem('tailora_fullname');
+      if (storedName) setProfileName(storedName);
+      const storedBusiness = localStorage.getItem('tailora_businessname');
+      if (storedBusiness) setBusinessName(storedBusiness);
+      const storedAvatar = localStorage.getItem('tailora_avatar');
+      if (storedAvatar) setProfileAvatar(storedAvatar);
+    } catch {}
+
+    async function loadProfile() {
+      try {
+        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        if (userErr || !(userData as any)?.user) return;
+
+        const user = (userData as any).user;
+        if (mounted) {
+          setProfileEmail(user.email ?? "");
+        }
+
+        const { data: profile, error: profileErr } = await supabase
+          .from("profiles")
+          .select("full_name, business_name, avatar_path")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (profileErr || !profile) return;
+
+        if (mounted) {
+          setProfileName(profile.full_name ?? "");
+          setBusinessName((profile as any).business_name ?? "");
+          try {
+            if (profile.full_name) localStorage.setItem('tailora_fullname', profile.full_name);
+            if (profile.business_name) localStorage.setItem('tailora_businessname', profile.business_name);
+          } catch {}
+
+          if (profile.avatar_path) {
+            const { data: urlData } = supabase.storage
+              .from("avatars")
+              .getPublicUrl(profile.avatar_path);
+            setProfileAvatar(urlData.publicUrl);
+            try {
+              localStorage.setItem('tailora_avatar', urlData.publicUrl);
+            } catch {}
+          }
+        }
+      } catch (err) {
+        console.error("Sidebar: error loading profile", err);
+      }
+    }
+
+    loadProfile();
+
+    function handleProfileUpdate() {
+      try {
+        const storedAvatar = localStorage.getItem('tailora_avatar');
+        if (storedAvatar) setProfileAvatar(storedAvatar);
+        const storedName = localStorage.getItem('tailora_fullname');
+        if (storedName) setProfileName(storedName);
+        const storedBusiness = localStorage.getItem('tailora_businessname');
+        if (storedBusiness) setBusinessName(storedBusiness);
+      } catch {}
+    }
+    window.addEventListener("storage", handleProfileUpdate);
+    window.addEventListener("tailora_profile_updated", handleProfileUpdate);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener("storage", handleProfileUpdate);
+      window.removeEventListener("tailora_profile_updated", handleProfileUpdate);
+    };
+  }, []);
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    // Clear cached user info
+    try {
+      localStorage.removeItem("tailora_avatar");
+      localStorage.removeItem("tailora_fullname");
+      localStorage.removeItem("tailora_businessname");
+    } catch {}
+    // Clear the cookie so middleware redirects to login
+    document.cookie = "sb-access-token=; path=/; max-age=0";
+    router.push("/login");
+  }
+
+  const displayName = profileName || "My Workspace";
+  const initial = displayName.charAt(0).toUpperCase();
+
   // Mobile always shows fully open; desktop uses the click-toggled state
   const isCollapsed = mobileOpen ? false : !isOpen;
   const W = isCollapsed ? 72 : 272;
@@ -498,7 +598,7 @@ useEffect(() => {
           }}
         >
           {isCollapsed ? (
-            <Tooltip label="Joshua's Couture">
+            <Tooltip label={displayName}>
               <div
                 style={{
                   width: 36,
@@ -508,32 +608,97 @@ useEffect(() => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  overflow: "hidden",
                   fontWeight: 700,
                   color: "#fff",
                 }}
               >
-                J
+                {profileAvatar ? (
+                  <img
+                    src={profileAvatar}
+                    alt="profile"
+                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                  />
+                ) : (
+                  initial
+                )}
               </div>
             </Tooltip>
           ) : (
             <>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <img src="/Ellipse2481.png" alt="profile" />
-                <div>
-                  <div style={{ color: "#E7E7E7", fontSize: 13, fontWeight: 600 }}>
-                    Joshua's Couture
+              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "50%",
+                    background: "#3A3A3A",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                    fontWeight: 700,
+                    color: "#fff",
+                    fontSize: 14,
+                    flexShrink: 0,
+                  }}
+                >
+                  {profileAvatar ? (
+                    <img
+                      src={profileAvatar}
+                      alt="profile"
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
+                  ) : (
+                    initial
+                  )}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      color: "#E7E7E7",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {displayName}
                   </div>
-                  <div style={{ color: "#B6B6B6", fontSize: 12 }}>Atelier</div>
+                  <div
+                    style={{
+                      color: "#B6B6B6",
+                      fontSize: 12,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {businessName || profileEmail || "Atelier"}
+                  </div>
                 </div>
               </div>
 
-              <button style={{ background: "none", border: "none", cursor: "pointer" }}>
+              <button
+                onClick={() => setShowLogoutModal(true)}
+                style={{ background: "none", border: "none", cursor: "pointer" }}
+                title="Log out"
+              >
                 <LogoutIcon />
               </button>
             </>
           )}
         </div>
       </div>
+
+      {/* Logout confirmation modal */}
+      {showLogoutModal && (
+        <LogoutModal
+          onConfirm={handleLogout}
+          onCancel={() => setShowLogoutModal(false)}
+        />
+      )}
     </aside>
   );
 }
