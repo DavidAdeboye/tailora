@@ -16,36 +16,36 @@ The app still contains hardcoded placeholder data that should be replaced with r
 - Static sidebar avatar: `/Ellipse2481.png`
 - Profile area is not wired to the authenticated user/profile data -->
 
-### 1. `components/AppPageHeader.tsx` (Partially Unfixed)
+<!-- ### 1. `components/AppPageHeader.tsx` (Partially Unfixed)
 - No real display name or workspace name is loaded from the current user/profile record (the header does not display these yet)
-- *Note: Avatar path has been successfully integrated with Supabase storage and is loaded from the profile.*
+- *Note: Avatar path has been successfully integrated with Supabase storage and is loaded from the profile.* -->
 
-### 2. `components/TailoraDashboard.tsx` (Unfixed)
+<!-- ### 1. `components/TailoraDashboard.tsx` (Unfixed)
 - Static dashboard stat values: `10,000,000`
 - Welcome headline hardcoded to `Welcome Joshua's Couture`
 - Order list is loaded from Supabase, but the dashboard counts and hero text are demo placeholders
 - Pagination is hardcoded: `currentPage = 3`, `totalPages = 30`, static `pageNumbers`
-
-### 3. `components/TeamCollaborationPage.tsx` (Unfixed)
+` -->
+<!-- ### 1. `components/TeamCollaborationPage.tsx` (Unfixed)
 - Hardcoded `initialMembers` list with repeated dummy names, emails, statuses, and avatars
 - Team member data is local-only and not loaded from any backend
-- Delete/Edit actions are placeholders (`alert()` and local state only)
+- Delete/Edit actions are placeholders (`alert()` and local state only) -->
 
-### 4. `components/OrderCreationFlow.tsx` (Unfixed)
+<!-- ### 2. `components/OrderCreationFlow.tsx` (Unfixed)
 - Hardcoded team member roster in `teamMembers`
 - Static assigned staff options in the order details step
 - Fixed order ID text: `Order: #A-2041`
 - Static avatar fallback in the header and invite drawer
-- Invite drawer uses local dummy team data and does not persist or send real invitations
+- Invite drawer uses local dummy team data and does not persist or send real invitations -->
 
-### 5. `components/InviteTeamMemberModal.tsx` (Unfixed)
-- Invite form is local-only and not wired to backend invite/user creation functionality (clicks just call `onClose()`)
+<!-- ### 3. `components/InviteTeamMemberModal.tsx` (Unfixed)
+- Invite form is local-only and not wired to backend invite/user creation functionality (clicks just call `onClose()`) -->
 
-### 6. `components/SettingsPage.tsx` (Partially Unfixed)
+### 4. `components/SettingsPage.tsx` (Partially Unfixed)
 - Profile fields `businessName` and `address` are kept local-only in the form and not saved to or loaded from Supabase
 - *Note: Profile name, email, avatar, standardDays, and expressDays have been successfully integrated with Supabase.*
 
-### 7. `components/ClientManagementPage.tsx` (Unfixed)
+### 5. `components/ClientManagementPage.tsx` (Unfixed)
 - Pagination UI is still dummy/hardcoded and not connected to real page sizes or counts
 - Client list loading is partial; the database select query only retrieves `id`, `name`, `phone`, and `gender`, leaving `outfit` and `status` to rely on placeholder fallback values because they are not queried.
 

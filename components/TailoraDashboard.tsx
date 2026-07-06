@@ -21,12 +21,7 @@ interface Order {
 
 // initialOrders removed: will load from Supabase at runtime
 
-const stats = [
-  { label: "Total Clients",        value: "10,000,000", icon: <PeopleIcon /> },
-  { label: "Pending Deliveries",   value: "10,000,000", icon: <GraphIcon /> },
-  { label: "Orders in Progress",   value: "10,000,000", icon: <CoinIcon /> },
-  { label: "Team Members",         value: "10,000,000", icon: <TeamIcon /> },
-];
+
 
 function PeopleIcon() {
   return (
@@ -129,7 +124,7 @@ const statusStyles = {
 export default function TailoraDashboard() {
   const { openAddClient } = useAppModals();
   const [orders, setOrders] = useState<Order[]>([]);
-  const [currentPage, setCurrentPage] = useState(3);
+  const [currentPage, setCurrentPage] = useState(1);
   const [filterGender, setFilterGender] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterOutfit, setFilterOutfit] = useState("");
@@ -138,6 +133,11 @@ export default function TailoraDashboard() {
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [datePanelOpen, setDatePanelOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const [businessName, setBusinessName] = useState("");
+  const [clientsCount, setClientsCount] = useState(0);
+  const [teamCount, setTeamCount] = useState(1);
+
   const filteredOrders = useMemo(() => {
     return orders.filter(item => {
       const q = searchQuery.trim().toLowerCase();
@@ -147,11 +147,61 @@ export default function TailoraDashboard() {
       const matchOutfit = !filterOutfit || item.outfit === filterOutfit;
       return matchSearch && matchGender && matchStatus && matchOutfit;
     });
-  }, [searchQuery, filterGender, filterStatus, filterOutfit]);
+  }, [searchQuery, filterGender, filterStatus, filterOutfit, orders]);
+
   const [showNotifications, setShowNotifications] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
-  const totalPages = 30;
-  const pageNumbers = [1, 2, 3, 4, 10, 11, 12];
+
+  const ITEMS_PER_PAGE = 7;
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredOrders.length / ITEMS_PER_PAGE));
+  }, [filteredOrders]);
+
+  const pageNumbers = useMemo(() => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        pages.push(1, 2, 3, 4, "...", totalPages - 1, totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1, 2, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
+      }
+    }
+    return pages;
+  }, [totalPages, currentPage]);
+
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredOrders, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterGender, filterStatus, filterOutfit]);
+
+  const pendingCount = useMemo(() => {
+    return orders.filter(o => o.statusType === "due").length;
+  }, [orders]);
+
+  const progressCount = useMemo(() => {
+    return orders.filter(o => o.statusType === "due" || o.statusType === "overdue").length;
+  }, [orders]);
+
+  const stats = useMemo(() => [
+    { label: "Total Clients",        value: clientsCount.toLocaleString(), icon: <PeopleIcon /> },
+    { label: "Pending Deliveries",   value: pendingCount.toLocaleString(), icon: <GraphIcon /> },
+    { label: "Orders in Progress",   value: progressCount.toLocaleString(), icon: <CoinIcon /> },
+    { label: "Team Members",         value: teamCount.toLocaleString(), icon: <TeamIcon /> },
+  ], [clientsCount, pendingCount, progressCount, teamCount]);
 
   const handleEdit = (order: Order) => {
     alert(`Edit order ${order.id}`);
@@ -165,30 +215,96 @@ export default function TailoraDashboard() {
 
   useEffect(() => {
     let mounted = true;
-    async function loadOrders() {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id, client_name, phone, gender, outfit, status, status_type')
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.error('Error fetching orders from Supabase', error);
-        return;
+
+    try {
+      const storedBusiness = localStorage.getItem('tailora_businessname');
+      if (storedBusiness && mounted) setBusinessName(storedBusiness);
+    } catch {}
+
+    async function loadDashboardData() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData?.user;
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('business_name')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (profile?.business_name && mounted) {
+            setBusinessName(profile.business_name);
+            try {
+              localStorage.setItem('tailora_businessname', profile.business_name);
+            } catch {}
+          }
+        }
+      } catch (err) {
+        console.error('Error loading business name', err);
       }
-      if (!data) return;
-      if (mounted) {
-        setOrders(data.map((o: any) => ({
-          id: o.id,
-          client: o.client_name ?? o.client,
-          phone: o.phone,
-          gender: o.gender,
-          outfit: o.outfit,
-          status: o.status,
-          statusType: (o.status_type ?? o.statusType) as OrderStatusType,
-        })));
+
+      try {
+        const { count: cCount } = await supabase
+          .from('clients')
+          .select('*', { count: 'exact', head: true });
+        if (cCount !== null && mounted) {
+          setClientsCount(cCount);
+        }
+      } catch (err) {
+        console.error('Error fetching clients count', err);
+      }
+
+      try {
+        const { count: tCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+        if (tCount !== null && mounted) {
+          setTeamCount(tCount);
+        }
+      } catch (err) {
+        console.error('Error fetching team count', err);
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('id, client_name, phone, gender, outfit, status, status_type')
+          .order('created_at', { ascending: false });
+        if (error) {
+          console.error('Error fetching orders from Supabase', error);
+          return;
+        }
+        if (data && mounted) {
+          setOrders(data.map((o: any) => ({
+            id: o.id,
+            client: o.client_name ?? o.client,
+            phone: o.phone,
+            gender: o.gender,
+            outfit: o.outfit,
+            status: o.status,
+            statusType: (o.status_type ?? o.statusType) as OrderStatusType,
+          })));
+        }
+      } catch (err) {
+        console.error('Error fetching orders', err);
       }
     }
-    loadOrders();
-    return () => { mounted = false; };
+
+    loadDashboardData();
+
+    function handleProfileUpdate() {
+      try {
+        const storedBusiness = localStorage.getItem('tailora_businessname');
+        if (storedBusiness && mounted) setBusinessName(storedBusiness);
+      } catch {}
+    }
+    window.addEventListener('tailora_profile_updated', handleProfileUpdate);
+    window.addEventListener('storage', handleProfileUpdate);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('tailora_profile_updated', handleProfileUpdate);
+      window.removeEventListener('storage', handleProfileUpdate);
+    };
   }, []);
 
 
@@ -205,8 +321,8 @@ export default function TailoraDashboard() {
             <div className="tailora-dashboard-hero-text">
               <div className="tailora-welcome-title tailora-dashboard-welcome-title">
                 <h1 className="tailora-dashboard-welcome-heading" style={{ fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 24 }}>
-  Welcome Joshua&apos;s Couture
-</h1>
+                  Welcome {businessName || "Joshua's Couture"}
+                </h1>
                 <img src="/sewingmachine.svg" alt="" className="tailora-dashboard-welcome-icon" width={32} height={32} />
               </div>
               <p className="tailora-dashboard-welcome-subtitle">Your all-in-one tailoring business management hub</p>
@@ -301,7 +417,7 @@ export default function TailoraDashboard() {
 
               {/* Mobile cards */}
               <div className="tailora-m-cards tailora-orders-cards-mobile">
-              {filteredOrders.map((order) => {
+              {paginatedOrders.map((order) => {
                   const st = statusStyles[order.statusType];
                   return (
                     <div key={order.id} className="tailora-m-card" style={{ position: "relative" }}>
@@ -337,7 +453,7 @@ export default function TailoraDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                  {filteredOrders.map((order) => {
+                  {paginatedOrders.map((order) => {
                       const st = statusStyles[order.statusType];
                       return (
                         <tr key={order.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
@@ -366,22 +482,81 @@ export default function TailoraDashboard() {
               </div>
 
               <div className="tailora-pagination" style={{ padding: "0 16px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 68, background: "#FFFFFF" }}>
-                <span style={{ fontSize: 14, fontWeight: 600, color: "#667185", fontFamily: "Inter, sans-serif" }}>Page 1 of {totalPages}</span>
+                <span style={{ fontSize: 14, fontWeight: 600, color: "#667185", fontFamily: "Inter, sans-serif" }}>Page {currentPage} of {totalPages}</span>
                 <div className="tailora-pagination-pages" style={{ display: "flex", alignItems: "center", gap: 4 }}>
                   {pageNumbers.map((p, i) => {
-                    if (p === 4 && pageNumbers[i - 1] !== 3) return null;
-                    const isEllipsis = i === 3;
-                    if (isEllipsis) return <span key="ellipsis" style={{ width: 24, textAlign: "center", color: "#98A2B3", fontSize: 14 }}>...</span>;
+                    if (p === "...") {
+                      return (
+                        <span key={`ellipsis-${i}`} style={{ width: 24, textAlign: "center", color: "#98A2B3", fontSize: 14 }}>
+                          ...
+                        </span>
+                      );
+                    }
+                    const pageNum = p as number;
                     return (
-                      <button key={p} onClick={() => setCurrentPage(p)} style={{ width: 24, height: 24, borderRadius: 6, border: "none", cursor: "pointer", fontSize: 14, background: currentPage === p ? "#FFECE5" : "#FFFFFF", color: currentPage === p ? "#EB5017" : "#98A2B3", fontFamily: "Inter, sans-serif" }}>{p}</button>
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 6,
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: 14,
+                          background: currentPage === pageNum ? "#FFECE5" : "#FFFFFF",
+                          color: currentPage === pageNum ? "#EB5017" : "#98A2B3",
+                          fontFamily: "Inter, sans-serif",
+                        }}
+                      >
+                        {pageNum}
+                      </button>
                     );
                   })}
                 </div>
                 <div className="tailora-pagination-nav" style={{ display: "flex", gap: 16 }}>
-                  <button type="button" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#FFFFFF", border: "1px solid #D0D5DD", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "#344054", fontFamily: "Inter, sans-serif" }}>
+                  <button
+                    type="button"
+                    disabled={currentPage <= 1}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "8px 12px",
+                      background: "#FFFFFF",
+                      border: "1px solid #D0D5DD",
+                      borderRadius: 8,
+                      cursor: currentPage <= 1 ? "not-allowed" : "pointer",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: currentPage <= 1 ? "#98A2B3" : "#344054",
+                      fontFamily: "Inter, sans-serif",
+                      opacity: currentPage <= 1 ? 0.6 : 1,
+                    }}
+                  >
                     <ChevronLeftIcon />Previous
                   </button>
-                  <button type="button" style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#FFFFFF", border: "1px solid #D0D5DD", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 600, color: "#344054", fontFamily: "Inter, sans-serif" }}>
+                  <button
+                    type="button"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "8px 12px",
+                      background: "#FFFFFF",
+                      border: "1px solid #D0D5DD",
+                      borderRadius: 8,
+                      cursor: currentPage >= totalPages ? "not-allowed" : "pointer",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: currentPage >= totalPages ? "#98A2B3" : "#344054",
+                      fontFamily: "Inter, sans-serif",
+                      opacity: currentPage >= totalPages ? 0.6 : 1,
+                    }}
+                  >
                     Next<ChevronRightIcon />
                   </button>
                 </div>

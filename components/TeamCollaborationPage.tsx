@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppModals } from "./AppModalsContext";
 import AppPageHeader from "./AppPageHeader";
 import PrimaryButton from "./PrimaryButton";
 import { ActionMenuButton, DeleteConfirmModal } from "./Actionmenu";
+import { supabase } from "../lib/supabase";
+import EditTeamMemberModal from "./EditTeamMemberModal";
 
 type Role = "Admin" | "Tailor" | "Assistant";
 type Status = "Active" | "Pending";
@@ -18,18 +20,6 @@ interface Member {
   joined: string;
   avatar: string;
 }
-
-const initialMembers: Member[] = [
-  { id: "m1", name: "Olamide Akintan", email: "sara@atelier.co",    role: "Admin",     status: "Active",  joined: "Joined Jan 2024", avatar: "/Ellipse2481.png" },
-  { id: "m2", name: "Olamide Akintan", email: "sara@atelier.co",    role: "Tailor",    status: "Active",  joined: "Joined Jan 2024", avatar: "/Ellipse2481.png" },
-  { id: "m3", name: "Olamide Akintan", email: "sara@atelier.co",    role: "Assistant", status: "Active",  joined: "Joined Jan 2024", avatar: "/Ellipse2481.png" },
-  { id: "m4", name: "Olamide Akintan", email: "sara@atelier.co",    role: "Admin",     status: "Active",  joined: "Joined Jan 2024", avatar: "/Ellipse2481.png" },
-  { id: "m5", name: "Olamide Akintan", email: "sara@atelier.co",    role: "Tailor",    status: "Active",  joined: "Joined Jan 2024", avatar: "/Ellipse2481.png" },
-  { id: "m6", name: "Olamide Akintan", email: "sara@atelier.co",    role: "Assistant", status: "Active",  joined: "Joined Jan 2024", avatar: "/Ellipse2481.png" },
-  { id: "m7", name: "Olamide Akintan", email: "sara@atelier.co",    role: "Admin",     status: "Active",  joined: "Joined Jan 2024", avatar: "/Ellipse2481.png" },
-  { id: "m8", name: "Olamide Akintan", email: "sara@atelier.co",    role: "Tailor",    status: "Active",  joined: "Joined Jan 2024", avatar: "/Ellipse2481.png" },
-  { id: "m9", name: "Olamide Akintan", email: "sara@atelier.co",    role: "Assistant", status: "Pending", joined: "Joined Jan 2024", avatar: "/Ellipse2481.png" },
-];
 
 const roleBadge: Record<Role, { bg: string; color: string; border: string }> = {
   Admin:     { bg: "#E3EFFC", color: "#04326B", border: "none" },
@@ -64,7 +54,7 @@ function ActiveDot({ color = "#036B26" }: { color?: string }) {
 }
 
 function MemberCard({ member, onEdit, onDelete }: { member: Member; onEdit: () => void; onDelete: () => void }) {
-  const rb = roleBadge[member.role];
+  const rb = roleBadge[member.role] || roleBadge.Assistant;
   const isActive = member.status === "Active";
   const statusColor = isActive ? "#036B26" : "#865503";
 
@@ -103,11 +93,91 @@ function MemberCard({ member, onEdit, onDelete }: { member: Member; onEdit: () =
 
 export default function TeamCollaborationPage() {
   const { openInviteCoworker } = useAppModals();
-  const [members, setMembers] = useState<Member[]>(initialMembers);
+  const [members, setMembers] = useState<Member[]>([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("All Roles");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [deleteTarget, setDeleteTarget] = useState<Member | null>(null);
+  const [editTarget, setEditTarget] = useState<Member | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  async function loadTeamMembers(uid: string) {
+    try {
+      const { data, error: fetchErr } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('user_id', uid)
+        .order('name', { ascending: true });
+
+      if (fetchErr) throw fetchErr;
+
+      if (data) {
+        setMembers(data.map((m: any) => ({
+          id: m.id,
+          name: m.name,
+          email: m.email,
+          role: m.role as Role,
+          status: m.status as Status,
+          joined: m.joined_date || "Joined Jan 2024",
+          avatar: m.avatar_url || "/Ellipse2481.png"
+        })));
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to load team members.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    async function init() {
+      try {
+        const { data: userData, error: userErr } = await supabase.auth.getUser();
+        if (userErr || !userData?.user) {
+          setError("No authenticated user session found.");
+          setLoading(false);
+          return;
+        }
+        setUserId(userData.user.id);
+        await loadTeamMembers(userData.user.id);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message || "Failed to retrieve user session.");
+        setLoading(false);
+      }
+    }
+    init();
+  }, []);
+
+  // Real-time synchronization
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel('team_members_realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'team_members'
+        },
+        (payload) => {
+          const row = payload.new || payload.old;
+          if (row && (row as any).user_id === userId) {
+            loadTeamMembers(userId);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   const filtered = members.filter(m => {
     const q = search.toLowerCase();
@@ -117,14 +187,41 @@ export default function TeamCollaborationPage() {
     return matchSearch && matchRole && matchStatus;
   });
 
-  const handleEdit = (member: Member) => {
-    alert(`Edit ${member.name}`);
+  const handleEditSave = async (updated: Member) => {
+    if (!userId) return;
+    const { error: updateErr } = await supabase
+      .from('team_members')
+      .update({
+        name: updated.name,
+        email: updated.email,
+        role: updated.role,
+        status: updated.status
+      })
+      .eq('id', updated.id);
+
+    if (updateErr) {
+      throw updateErr;
+    }
+
+    setMembers(prev => prev.map(m => m.id === updated.id ? updated : m));
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    setMembers(prev => prev.filter(m => m.id !== deleteTarget.id));
-    setDeleteTarget(null);
+    try {
+      const { error: deleteErr } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('id', deleteTarget.id);
+
+      if (deleteErr) throw deleteErr;
+
+      setMembers(prev => prev.filter(m => m.id !== deleteTarget.id));
+      setDeleteTarget(null);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to delete team member.");
+    }
   };
 
   return (
@@ -190,7 +287,15 @@ export default function TeamCollaborationPage() {
               </div>
             </div>
 
-            {filtered.length === 0 ? (
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "48px 20px", color: "#98A2B3", fontFamily: "var(--font-satoshi)", fontSize: 14 }}>
+                Loading team members...
+              </div>
+            ) : error ? (
+              <div style={{ textAlign: "center", padding: "48px 20px", color: "#9E0A05", fontFamily: "var(--font-satoshi)", fontSize: 14 }}>
+                Error: {error}
+              </div>
+            ) : filtered.length === 0 ? (
               <div style={{ textAlign: "center", padding: "48px 20px", color: "#98A2B3", fontFamily: "var(--font-satoshi)", fontSize: 14 }}>
                 No team members match your filters.
               </div>
@@ -200,7 +305,7 @@ export default function TeamCollaborationPage() {
                   <MemberCard
                     key={m.id}
                     member={m}
-                    onEdit={() => handleEdit(m)}
+                    onEdit={() => setEditTarget(m)}
                     onDelete={() => setDeleteTarget(m)}
                   />
                 ))}
@@ -215,6 +320,13 @@ export default function TeamCollaborationPage() {
         itemName={deleteTarget?.name}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <EditTeamMemberModal
+        isOpen={!!editTarget}
+        member={editTarget}
+        onClose={() => setEditTarget(null)}
+        onSave={handleEditSave}
       />
     </>
   );
