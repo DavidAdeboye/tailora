@@ -135,24 +135,9 @@ export default function ClientManagementPage() {
   const [datePanelOpen, setDatePanelOpen] = useState(false);
   const { openAddClient } = useAppModals();
   const [clients, setClients] = useState<Client[]>([]);
-  const [currentPage, setCurrentPage] = useState(3);
+  const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
-  const totalPages = 30;
-  const pageNumbers = [1, 2, 3, 4, 10, 11, 12];
-
-  type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
-  const [userRole, setUserRole] = useState<UserRole>(() => {
-    try {
-      const cachedRole = localStorage.getItem('tailora_role');
-      if (cachedRole && ['Owner', 'Admin', 'Tailor', 'Assistant'].includes(cachedRole)) {
-        return cachedRole as UserRole;
-      }
-    } catch {}
-    return 'Owner';
-  });
-
-  const isOwnerOrAdmin = userRole === 'Owner' || userRole === 'Admin';
 
   const filteredClients = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -166,6 +151,55 @@ export default function ClientManagementPage() {
       return matchSearch && matchGender && matchStatus && matchOutfit && matchFrom && matchTo;
     });
   }, [searchQuery, filterGender, filterStatus, filterOutfit, filterDateFrom, filterDateTo, clients]);
+
+  const ITEMS_PER_PAGE = 7;
+  const totalPages = useMemo(() => {
+    return Math.max(1, Math.ceil(filteredClients.length / ITEMS_PER_PAGE));
+  }, [filteredClients]);
+
+  const pageNumbers = useMemo(() => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        pages.push(1, 2, 3, 4, "...", totalPages - 1, totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1, 2, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages);
+      }
+    }
+    return pages;
+  }, [totalPages, currentPage]);
+
+  const paginatedClients = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredClients.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredClients, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterGender, filterStatus, filterOutfit, filterDateFrom, filterDateTo]);
+
+  type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    try {
+      const cachedRole = localStorage.getItem('tailora_role');
+      if (cachedRole && ['Owner', 'Admin', 'Tailor', 'Assistant'].includes(cachedRole)) {
+        return cachedRole as UserRole;
+      }
+    } catch {}
+    return 'Owner';
+  });
+
+  const isOwnerOrAdmin = userRole === 'Owner' || userRole === 'Admin';
 
   const handleEdit = (client: Client) => {
     // TODO: wire to your edit flow
@@ -189,23 +223,34 @@ export default function ClientManagementPage() {
 
       const { data, error } = await supabase
         .from('clients')
-        .select('id, name, phone, gender')
+        .select('id, name, phone, gender, outfit_type, status, created_at')
         .order('created_at', { ascending: false });
       if (error) {
         console.error('Error fetching clients', error);
         return;
       }
       if (mounted && data) {
-        setClients(data.map((c: any) => ({
-          id: c.id,
-          name: c.name,
-          phone: c.phone ?? '',
-          gender: c.gender ?? '',
-          outfit: c.outfit ?? '',
-          status: c.status ?? '',
-          statusType: (c.status_type ?? 'collected') as ClientStatusType,
-          date: (c.created_at ?? '').toString(),
-        })));
+        setClients(data.map((c: any) => {
+          const rawStatus = c.status ?? 'Collected';
+          let statusTypeVal: ClientStatusType = 'collected';
+          const normalized = rawStatus.toLowerCase();
+          if (normalized.includes('overdue')) {
+            statusTypeVal = 'overdue';
+          } else if (normalized.includes('due')) {
+            statusTypeVal = 'due';
+          }
+
+          return {
+            id: c.id,
+            name: c.name,
+            phone: c.phone ?? '',
+            gender: c.gender ?? '',
+            outfit: c.outfit_type ?? '',
+            status: rawStatus,
+            statusType: statusTypeVal,
+            date: (c.created_at ?? '').toString(),
+          };
+        }));
       }
     }
     loadClients();
@@ -324,7 +369,7 @@ export default function ClientManagementPage() {
                 </PrimaryButton>
               </div>
             ) : (
-              filteredClients.map(c => (
+              paginatedClients.map(c => (
                 <ClientMobileCard
                   key={c.id}
                   client={c}
@@ -349,7 +394,7 @@ export default function ClientManagementPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredClients.map(c => {
+                {paginatedClients.map(c => {
                   const st = statusStyles[c.statusType];
                   return (
                     <tr key={c.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
@@ -386,22 +431,54 @@ export default function ClientManagementPage() {
             <span className="tailora-pagination-indicator">Page {currentPage} of {totalPages}</span>
             <div className="tailora-pagination-pages" style={{ display: "flex", alignItems: "center", gap: 4 }}>
               {pageNumbers.map((p, i) => {
-                if (p === 4 && pageNumbers[i - 1] !== 3) return null;
-                const isEllipsis = i === 3;
-                if (isEllipsis) return <span key="ellipsis" style={{ width: 24, textAlign: "center", color: "#98A2B3", fontSize: 14 }}>...</span>;
+                if (p === "...") {
+                  return (
+                    <span key={`ellipsis-${i}`} style={{ width: 24, textAlign: "center", color: "#98A2B3", fontSize: 14 }}>
+                      ...
+                    </span>
+                  );
+                }
+                const pageNum = p as number;
                 return (
-                  <button key={p} type="button" onClick={() => setCurrentPage(p)} style={{ width: 24, height: 24, borderRadius: 6, border: "none", cursor: "pointer", fontSize: 14, background: currentPage === p ? "#FFECE5" : "#FFFFFF", color: currentPage === p ? "#EB5017" : "#98A2B3", fontFamily: "Inter, sans-serif" }}>
-                    {p}
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => setCurrentPage(pageNum)}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 6,
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: 14,
+                      background: currentPage === pageNum ? "#FFECE5" : "#FFFFFF",
+                      color: currentPage === pageNum ? "#EB5017" : "#98A2B3",
+                      fontFamily: "Inter, sans-serif",
+                    }}
+                  >
+                    {pageNum}
                   </button>
                 );
               })}
             </div>
             <div className="tailora-pagination-nav">
-              <button type="button" className="tailora-pagination-btn" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>
-                <ChevronLeftIcon /><span className="tailora-pagination-btn-label">Previous</span>
+              <button
+                type="button"
+                className="tailora-pagination-btn"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              >
+                <ChevronLeftIcon />
+                <span className="tailora-pagination-btn-label">Previous</span>
               </button>
-              <button type="button" className="tailora-pagination-btn" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>
-                <span className="tailora-pagination-btn-label">Next</span><ChevronRightIcon />
+              <button
+                type="button"
+                className="tailora-pagination-btn"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              >
+                <span className="tailora-pagination-btn-label">Next</span>
+                <ChevronRightIcon />
               </button>
             </div>
           </div>

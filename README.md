@@ -45,9 +45,9 @@ The app still contains hardcoded placeholder data that should be replaced with r
 - Profile fields `businessName` and `address` are kept local-only in the form and not saved to or loaded from Supabase
 - *Note: Profile name, email, avatar, standardDays, and expressDays have been successfully integrated with Supabase.* -->
 
-### 5. `components/ClientManagementPage.tsx` (Unfixed)
+<!-- ### 5. `components/ClientManagementPage.tsx` (Unfixed)
 - Pagination UI is still dummy/hardcoded and not connected to real page sizes or counts
-- Client list loading is partial; the database select query only retrieves `id`, `name`, `phone`, and `gender`, leaving `outfit` and `status` to rely on placeholder fallback values because they are not queried.
+- Client list loading is partial; the database select query only retrieves `id`, `name`, `phone`, and `gender`, leaving `outfit` and `status` to rely on placeholder fallback values because they are not queried. -->
 
 ## Recommended Fix Order
 1. **Sync missing Profile Settings (`components/SettingsPage.tsx`)**: Ensure `businessName` and `address` fields are properly stored in and loaded from the `profiles` table in Supabase.

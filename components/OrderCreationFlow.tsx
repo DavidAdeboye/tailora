@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { ClientFormData } from "./AddClientModal";
+import { supabase } from "../lib/supabase";
 
 interface Props {
   client: ClientFormData;
@@ -17,6 +18,7 @@ type Role = "Admin" | "Tailor" | "Assistant";
 type MemberStatus = "Active" | "Pending";
 
 interface Member {
+  id?: string;
   name: string;
   email: string;
   role: Role;
@@ -24,14 +26,6 @@ interface Member {
   joined: string;
   avatar: string;
 }
-
-const teamMembers: Member[] = [
-  { name: "Ayo Adebusola",  email: "ayo@atelier.co",    role: "Admin",     status: "Active",  joined: "Joined Jan 2024", avatar: "/Ellipse2481.png" },
-  { name: "Joshua Adeyemi", email: "joshua@atelier.co", role: "Tailor",    status: "Active",  joined: "Joined Mar 2024", avatar: "/Ellipse2481.png" },
-  { name: "Amara Okonkwo",  email: "amara@atelier.co",  role: "Assistant", status: "Active",  joined: "Joined Jun 2024", avatar: "/Ellipse2481.png" },
-  { name: "Olamide Akintan",email: "olamide@atelier.co",role: "Tailor",    status: "Active",  joined: "Joined Jan 2024", avatar: "/Ellipse2481.png" },
-  { name: "Sade Bello",     email: "sade@atelier.co",   role: "Assistant", status: "Pending", joined: "Joined Feb 2025", avatar: "/Ellipse2481.png" },
-];
 
 const roleBadge: Record<Role, { bg: string; color: string }> = {
   Admin:     { bg: "#E3EFFC", color: "#04326B" },
@@ -137,9 +131,11 @@ function CloseIcon() {
 function InviteTeamDrawer({
   onClose,
   onInvite,
+  teamMembers,
 }: {
   onClose: () => void;
   onInvite: (members: Member[]) => void;
+  teamMembers: Member[];
 }) {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -759,11 +755,13 @@ function OrderDetailsStep({
   setOrderDetails,
   invitedMembers,
   onOpenInviteDrawer,
+  teamMembers,
 }: {
   orderDetails: { dateReceived: string; collectionDate: string; price: string; paymentStatus: string; assignedStaff: string };
   setOrderDetails: (d: typeof orderDetails) => void;
   invitedMembers: Member[];
   onOpenInviteDrawer: () => void;
+  teamMembers: Member[];
 }) {
   const w = useWindowWidth();
   const isMobile = w < 480;
@@ -822,9 +820,13 @@ function OrderDetailsStep({
           <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Assigned Staff</label>
           <div style={{ position: "relative" }}>
             <select value={orderDetails.assignedStaff} onChange={(e) => set("assignedStaff", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={selectStyle}>
-              <option value="Ayo Adebusola">Ayo Adebusola</option>
-              <option value="Joshua Adeyemi">Joshua Adeyemi</option>
-              <option value="Amara Okonkwo">Amara Okonkwo</option>
+              {teamMembers.length > 0 ? (
+                teamMembers.map(m => (
+                  <option key={m.id || m.email} value={m.name}>{m.name}</option>
+                ))
+              ) : (
+                <option value="">No staff members</option>
+              )}
             </select>
             <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><ChevronDownIcon /></div>
           </div>
@@ -973,10 +975,15 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
   const [notes, setNotes] = useState("");
   const [referenceImages, setReferenceImages] = useState<File[]>([]);
   const [orderDetails, setOrderDetails] = useState({
-    dateReceived: "", collectionDate: "", price: "", paymentStatus: "Paid", assignedStaff: "Ayo Adebusola",
+    dateReceived: "", collectionDate: "", price: "", paymentStatus: "Paid", assignedStaff: "",
   });
   const [showInviteDrawer, setShowInviteDrawer] = useState(false);
   const [invitedMembers, setInvitedMembers] = useState<Member[]>([]);
+
+  const [teamList, setTeamList] = useState<Member[]>([]);
+  const [friendlyOrderId] = useState(() => `#A-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const w = useWindowWidth();
   const isMobile = w < 480;
@@ -985,6 +992,174 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
 
   const handleInvite = (members: Member[]) => {
     setInvitedMembers(members);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadTeam() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) return;
+        let ownerId = userData.user.id;
+
+        // Resolve workspace owner
+        const { data: rpcResult } = await supabase.rpc('get_my_team_role');
+        if (rpcResult && rpcResult.length > 0) {
+          ownerId = rpcResult[0].owner_id;
+        }
+
+        const { data, error } = await supabase
+          .from('team_members')
+          .select('*')
+          .eq('user_id', ownerId)
+          .order('name', { ascending: true });
+
+        if (error) throw error;
+        if (mounted && data) {
+          const membersList = data.map((m: any) => ({
+            id: m.id,
+            name: m.name,
+            email: m.email,
+            role: m.role as Role,
+            status: m.status as MemberStatus,
+            joined: m.joined_date || "Joined Jan 2024",
+            avatar: m.avatar_url || "/Ellipse2481.png"
+          }));
+          setTeamList(membersList);
+          if (membersList.length > 0) {
+            setOrderDetails(prev => ({
+              ...prev,
+              assignedStaff: prev.assignedStaff || membersList[0].name
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Error loading team members:', err);
+      }
+    }
+    loadTeam();
+    return () => { mounted = false; };
+  }, []);
+
+  const saveOrderAndClient = async (isDraft: boolean) => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) {
+        throw new Error("You must be logged in to save orders.");
+      }
+
+      let ownerId = userData.user.id;
+
+      // Resolve workspace owner
+      const { data: rpcResult } = await supabase.rpc('get_my_team_role');
+      if (rpcResult && rpcResult.length > 0) {
+        ownerId = rpcResult[0].owner_id;
+      }
+
+      // 1. Insert Client
+      const { data: newClient, error: clientErr } = await supabase
+        .from('clients')
+        .insert({
+          user_id: ownerId,
+          name: client.name,
+          phone: client.phone,
+          email: client.email,
+          gender: client.gender,
+          outfit_type: client.outfitType,
+          status: isDraft ? 'Pending' : 'Due'
+        })
+        .select()
+        .single();
+
+      if (clientErr) throw clientErr;
+      const clientId = newClient.id;
+
+      // 2. Upload Reference Images
+      const imageUrls: string[] = [];
+      for (const file of referenceImages) {
+        try {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${clientId}-${Date.now()}-${Math.floor(Math.random() * 1000)}.${fileExt}`;
+          const { error: uploadErr } = await supabase.storage
+            .from('reference-images')
+            .upload(fileName, file);
+
+          if (uploadErr) throw uploadErr;
+
+          const { data: urlData } = supabase.storage
+            .from('reference-images')
+            .getPublicUrl(fileName);
+
+          if (urlData?.publicUrl) {
+            imageUrls.push(urlData.publicUrl);
+          }
+        } catch (uploadError) {
+          console.error("Failed to upload reference image:", uploadError);
+        }
+      }
+
+      // 3. Insert Order
+      const measurementsJson = {
+        unit,
+        neck: measurements.neck || '',
+        chestBust: measurements.chestBust || '',
+        waist: measurements.waist || '',
+        hip: measurements.hip || '',
+        shoulder: measurements.shoulder || '',
+        sleeve: measurements.sleeve || '',
+        trouserLength: measurements.trouserLength || '',
+        customFields: customFields.map(f => ({ name: f.fieldName, value: f.value })),
+        dateReceived: orderDetails.dateReceived,
+        collectionDate: orderDetails.collectionDate,
+        price: orderDetails.price,
+        paymentStatus: orderDetails.paymentStatus,
+        friendlyOrderId
+      };
+
+      const teamAssigned = Array.from(new Set([
+        orderDetails.assignedStaff,
+        ...invitedMembers.map(m => m.name)
+      ])).filter(Boolean);
+
+      const { error: orderErr } = await supabase
+        .from('orders')
+        .insert({
+          user_id: ownerId,
+          client_id: clientId,
+          client_name: client.name,
+          phone: client.phone,
+          gender: client.gender,
+          outfit: client.outfitType,
+          status: isDraft ? 'Due' : (orderDetails.paymentStatus === 'Paid' ? 'Collected' : 'Due'),
+          status_type: isDraft ? 'due' : (orderDetails.paymentStatus === 'Paid' ? 'collected' : 'due'),
+          measurements: measurementsJson,
+          assigned_team: teamAssigned,
+          reference_images: imageUrls,
+          notes: notes || '',
+        });
+
+      if (orderErr) throw orderErr;
+
+      if (isDraft) {
+        onSaveDraft();
+      } else {
+        onComplete();
+      }
+    } catch (err: any) {
+      console.error("Failed to save order error object:", err);
+      if (err) {
+        console.error("Error message:", err.message);
+        console.error("Error details:", err.details);
+        console.error("Error hint:", err.hint);
+        console.error("Error code:", err.code);
+        console.error("Error status:", err.status);
+      }
+      setSaveError(err.message || "Failed to save order.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -1030,7 +1205,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
             </button>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
               <Stepper step={step}/>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Order: #A-2041</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Order: {friendlyOrderId}</span>
             </div>
           </div>
 
@@ -1050,6 +1225,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
               setOrderDetails={setOrderDetails}
               invitedMembers={invitedMembers}
               onOpenInviteDrawer={() => setShowInviteDrawer(true)}
+              teamMembers={teamList}
             />
           )}
 
@@ -1061,21 +1237,28 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
             gap: 12, marginTop: 48, paddingTop: 24,
             borderTop: "1px solid #F0F2F5",
           }}>
+            {saveError && (
+              <p style={{ margin: "0 auto 0 0", fontSize: 13, color: "#9E0A05" }}>
+                {saveError}
+              </p>
+            )}
             <button
-              type="button" onClick={onSaveDraft}
-              style={{ padding: "13px 28px", background: "transparent", border: "1px solid #121212", borderRadius: 100, fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", cursor: "pointer", width: isMobile ? "100%" : "auto" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#F5F5F5")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              type="button" onClick={() => saveOrderAndClient(true)}
+              disabled={isSaving}
+              style={{ padding: "13px 28px", background: "transparent", border: "1px solid #121212", borderRadius: 100, fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", cursor: isSaving ? "not-allowed" : "pointer", width: isMobile ? "100%" : "auto", opacity: isSaving ? 0.6 : 1 }}
+              onMouseEnter={(e) => !isSaving && (e.currentTarget.style.background = "#F5F5F5")}
+              onMouseLeave={(e) => !isSaving && (e.currentTarget.style.background = "transparent")}
             >
               Save Draft
             </button>
             <button
-              type="button" onClick={() => { if (step === 1) setStep(2); else onComplete(); }}
-              style={{ padding: "13px 28px", background: "#121212", border: "none", borderRadius: 100, fontSize: 14, fontWeight: 500, color: "#fff", fontFamily: "Satoshi, sans-serif", cursor: "pointer", width: isMobile ? "100%" : "auto" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#333")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#121212")}
+              type="button" onClick={() => { if (step === 1) setStep(2); else saveOrderAndClient(false); }}
+              disabled={isSaving}
+              style={{ padding: "13px 28px", background: "#121212", border: "none", borderRadius: 100, fontSize: 14, fontWeight: 500, color: "#fff", fontFamily: "Satoshi, sans-serif", cursor: isSaving ? "not-allowed" : "pointer", width: isMobile ? "100%" : "auto", opacity: isSaving ? 0.6 : 1 }}
+              onMouseEnter={(e) => !isSaving && (e.currentTarget.style.background = "#333")}
+              onMouseLeave={(e) => !isSaving && (e.currentTarget.style.background = "#121212")}
             >
-              {step === 1 ? "Continue" : "Save"}
+              {isSaving ? "Saving..." : (step === 1 ? "Continue" : "Save")}
             </button>
           </div>
         </div>
@@ -1086,6 +1269,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
         <InviteTeamDrawer
           onClose={() => setShowInviteDrawer(false)}
           onInvite={handleInvite}
+          teamMembers={teamList}
         />
       )}
     </div>
