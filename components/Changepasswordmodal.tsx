@@ -1,6 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { supabase } from "../lib/supabase";
 
 /* ── Eye Icon ── */
 function EyeIcon({ visible }: { visible: boolean }) {
@@ -121,10 +122,92 @@ export default function ChangePasswordModal({
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isOAuth, setIsOAuth] = useState(false);
 
-  const handleSubmit = () => {
-    // Validation + submit logic goes here
-    onClose();
+  useEffect(() => {
+    let mounted = true;
+    async function checkProvider() {
+      try {
+        const { data } = await supabase.auth.getUser();
+        const user = data?.user;
+        if (user && mounted) {
+          const identities = user.identities || [];
+          const hasEmailIdentity = identities.some(id => id.provider === 'email');
+          setIsOAuth(!hasEmailIdentity);
+        }
+      } catch (err) {
+        console.error("Error checking auth identities", err);
+      }
+    }
+    checkProvider();
+    return () => { mounted = false; };
+  }, []);
+
+  const handleSubmit = async () => {
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    if ((!isOAuth && !currentPassword) || !newPassword || !confirmPassword) {
+      setErrorMsg("All fields are required.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setErrorMsg("New password must be at least 6 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setErrorMsg("New passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData?.user) {
+        throw new Error("Failed to authenticate user.");
+      }
+
+      const email = userData.user.email;
+      if (!email) {
+        throw new Error("User email not found.");
+      }
+
+      // 1. Verify current password by signing in (only for email/password users)
+      if (!isOAuth) {
+        const { error: signInErr } = await supabase.auth.signInWithPassword({
+          email,
+          password: currentPassword,
+        });
+
+        if (signInErr) {
+          throw new Error("Incorrect current password.");
+        }
+      }
+
+      // 2. Update to new password
+      const { error: updateErr } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (updateErr) {
+        throw updateErr;
+      }
+
+      setSuccessMsg("Password updated successfully!");
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } catch (err: any) {
+      console.error("Change password error", err);
+      setErrorMsg(err.message || "Failed to change password. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -225,12 +308,28 @@ export default function ChangePasswordModal({
 
           {/* Fields */}
           <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-            <PasswordField
-              label="Current Password"
-              placeholder="Enter current password"
-              value={currentPassword}
-              onChange={setCurrentPassword}
-            />
+            {!isOAuth && (
+              <PasswordField
+                label="Current Password"
+                placeholder="Enter current password"
+                value={currentPassword}
+                onChange={setCurrentPassword}
+              />
+            )}
+            {isOAuth && (
+              <div style={{
+                background: "#F2F4F7",
+                padding: "12px 16px",
+                borderRadius: 10,
+                fontSize: 13,
+                color: "#475467",
+                lineHeight: "20px",
+                fontFamily: "Satoshi, sans-serif",
+                border: "1px solid #D0D5DD"
+              }}>
+                You signed up using Google. You can set a password for your account by entering a new password below.
+              </div>
+            )}
             <PasswordField
               label="New Password"
               placeholder="Enter new password"
@@ -243,6 +342,16 @@ export default function ChangePasswordModal({
               value={confirmPassword}
               onChange={setConfirmPassword}
             />
+            {errorMsg && (
+              <div style={{ color: "#D92D20", fontSize: 14, fontFamily: "Satoshi, sans-serif", fontWeight: 500 }}>
+                {errorMsg}
+              </div>
+            )}
+            {successMsg && (
+              <div style={{ color: "#036B26", fontSize: 14, fontFamily: "Satoshi, sans-serif", fontWeight: 500 }}>
+                {successMsg}
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -280,25 +389,31 @@ export default function ChangePasswordModal({
             <button
               type="button"
               onClick={handleSubmit}
+              disabled={loading}
               style={{
                 flex: "1 1 auto",
                 minWidth: 100,
                 height: 46,
                 padding: "13px 24px",
-                background: "#121212",
+                background: loading ? "#D0D5DD" : "#121212",
                 border: "none",
                 borderRadius: 999,
                 fontSize: 14,
                 fontWeight: 500,
                 color: "#fff",
                 fontFamily: "Satoshi, sans-serif",
-                cursor: "pointer",
+                cursor: loading ? "default" : "pointer",
                 transition: "background 0.15s",
+                opacity: loading ? 0.7 : 1,
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "#2C2C2C")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "#121212")}
+              onMouseEnter={(e) => {
+                if (!loading) e.currentTarget.style.background = "#2C2C2C";
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) e.currentTarget.style.background = "#121212";
+              }}
             >
-              Save Changes
+              {loading ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>

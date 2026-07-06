@@ -137,6 +137,17 @@ export default function TailoraDashboard() {
   const [businessName, setBusinessName] = useState("");
   const [clientsCount, setClientsCount] = useState(0);
   const [teamCount, setTeamCount] = useState(1);
+  type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    try {
+      const cachedRole = localStorage.getItem('tailora_role');
+      if (cachedRole && ['Owner', 'Admin', 'Tailor', 'Assistant'].includes(cachedRole)) {
+        return cachedRole as UserRole;
+      }
+    } catch {}
+    return 'Owner';
+  });
+  const [memberDisplayName, setMemberDisplayName] = useState('');
 
   const filteredOrders = useMemo(() => {
     return orders.filter(item => {
@@ -196,12 +207,29 @@ export default function TailoraDashboard() {
     return orders.filter(o => o.statusType === "due" || o.statusType === "overdue").length;
   }, [orders]);
 
-  const stats = useMemo(() => [
-    { label: "Total Clients",        value: clientsCount.toLocaleString(), icon: <PeopleIcon /> },
-    { label: "Pending Deliveries",   value: pendingCount.toLocaleString(), icon: <GraphIcon /> },
-    { label: "Orders in Progress",   value: progressCount.toLocaleString(), icon: <CoinIcon /> },
-    { label: "Team Members",         value: teamCount.toLocaleString(), icon: <TeamIcon /> },
-  ], [clientsCount, pendingCount, progressCount, teamCount]);
+  const isOwnerOrAdmin = userRole === 'Owner' || userRole === 'Admin';
+
+  const stats = useMemo(() => {
+    if (isOwnerOrAdmin) {
+      return [
+        { label: "Total Clients",        value: clientsCount.toLocaleString(), icon: <PeopleIcon /> },
+        { label: "Pending Deliveries",   value: pendingCount.toLocaleString(), icon: <GraphIcon /> },
+        { label: "Orders in Progress",   value: progressCount.toLocaleString(), icon: <CoinIcon /> },
+        { label: "Team Members",         value: teamCount.toLocaleString(), icon: <TeamIcon /> },
+      ];
+    }
+    // Tailor / Assistant stats
+    const myTotal = orders.length;
+    const myCompleted = orders.filter(o => o.statusType === 'collected').length;
+    const myOverdue = orders.filter(o => o.statusType === 'overdue').length;
+    const myInProgress = orders.filter(o => o.statusType === 'due').length;
+    return [
+      { label: "My Tasks",      value: myTotal.toLocaleString(),      icon: <GraphIcon /> },
+      { label: "Completed",     value: myCompleted.toLocaleString(),  icon: <CoinIcon /> },
+      { label: "In Progress",   value: myInProgress.toLocaleString(), icon: <PeopleIcon /> },
+      { label: "Overdue",       value: myOverdue.toLocaleString(),    icon: <TeamIcon /> },
+    ];
+  }, [isOwnerOrAdmin, clientsCount, pendingCount, progressCount, teamCount, orders]);
 
   const handleEdit = (order: Order) => {
     alert(`Edit order ${order.id}`);
@@ -222,15 +250,39 @@ export default function TailoraDashboard() {
     } catch {}
 
     async function loadDashboardData() {
+      let workspaceOwnerId = "";
+      let memberName = "";
+      let memberRole = "";
+
       try {
         const { data: userData } = await supabase.auth.getUser();
         const user = userData?.user;
-        if (user) {
+        if (user && mounted) {
+          workspaceOwnerId = user.id;
+
+           // Check if the current user is a team member using RPC (bypasses RLS)
+           const { data: rpcResult, error: rpcErr } = await supabase.rpc('get_my_team_role');
+           if (!rpcErr && rpcResult && rpcResult.length > 0) {
+             const member = rpcResult[0];
+             workspaceOwnerId = member.owner_id;
+             memberName = member.name;
+             memberRole = member.role;
+           }
+
+           const resolvedRole: UserRole = memberRole ? (memberRole as UserRole) : 'Owner';
+           if (mounted) {
+             setUserRole(resolvedRole);
+             setMemberDisplayName(memberName);
+             try { localStorage.setItem('tailora_role', resolvedRole); } catch {}
+           }
+
+          // Load business name from workspace owner profile
           const { data: profile } = await supabase
             .from('profiles')
             .select('business_name')
-            .eq('user_id', user.id)
+            .eq('user_id', workspaceOwnerId)
             .maybeSingle();
+            
           if (profile?.business_name && mounted) {
             setBusinessName(profile.business_name);
             try {
@@ -242,6 +294,8 @@ export default function TailoraDashboard() {
         console.error('Error loading business name', err);
       }
 
+      if (!workspaceOwnerId) return;
+
       try {
         const { count: cCount } = await supabase
           .from('clients')
@@ -249,32 +303,53 @@ export default function TailoraDashboard() {
         if (cCount !== null && mounted) {
           setClientsCount(cCount);
         }
-      } catch (err) {
-        console.error('Error fetching clients count', err);
+      } catch (err: any) {
+        console.error('Error fetching clients count:', {
+          message: err.message,
+          details: err.details,
+          hint: err.hint,
+          code: err.code,
+          error: err
+        });
       }
 
       try {
         const { count: tCount } = await supabase
-          .from('profiles')
-          .select('*', { count: 'exact', head: true });
+          .from('team_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', workspaceOwnerId);
         if (tCount !== null && mounted) {
           setTeamCount(tCount);
         }
-      } catch (err) {
-        console.error('Error fetching team count', err);
+      } catch (err: any) {
+        console.error('Error fetching team count:', {
+          message: err.message,
+          details: err.details,
+          hint: err.hint,
+          code: err.code,
+          error: err
+        });
       }
 
       try {
         const { data, error } = await supabase
           .from('orders')
-          .select('id, client_name, phone, gender, outfit, status, status_type')
+          .select('id, client_name, phone, gender, outfit, status, status_type, assigned_team')
           .order('created_at', { ascending: false });
+          
         if (error) {
-          console.error('Error fetching orders from Supabase', error);
+          console.error('Error fetching orders from Supabase:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            error
+          });
           return;
         }
+        
         if (data && mounted) {
-          setOrders(data.map((o: any) => ({
+          let ordersList = data.map((o: any) => ({
             id: o.id,
             client: o.client_name ?? o.client,
             phone: o.phone,
@@ -282,10 +357,35 @@ export default function TailoraDashboard() {
             outfit: o.outfit,
             status: o.status,
             statusType: (o.status_type ?? o.statusType) as OrderStatusType,
-          })));
+            assignedTeam: o.assigned_team
+          }));
+
+          // Filter by assigned staff if user is a Tailor or Assistant
+          if (memberRole === 'Tailor' || memberRole === 'Assistant') {
+            ordersList = ordersList.filter((o: any) => {
+              if (!o.assignedTeam) return false;
+              
+              if (Array.isArray(o.assignedTeam)) {
+                return o.assignedTeam.some((name: any) => 
+                  typeof name === 'string' && name.toLowerCase() === memberName.toLowerCase()
+                );
+              }
+              
+              const assignedStr = JSON.stringify(o.assignedTeam).toLowerCase();
+              return assignedStr.includes(memberName.toLowerCase());
+            });
+          }
+
+          setOrders(ordersList);
         }
-      } catch (err) {
-        console.error('Error fetching orders', err);
+      } catch (err: any) {
+        console.error('Error fetching orders:', {
+          message: err.message,
+          details: err.details,
+          hint: err.hint,
+          code: err.code,
+          error: err
+        });
       }
     }
 
@@ -321,16 +421,26 @@ export default function TailoraDashboard() {
             <div className="tailora-dashboard-hero-text">
               <div className="tailora-welcome-title tailora-dashboard-welcome-title">
                 <h1 className="tailora-dashboard-welcome-heading" style={{ fontFamily: "Sora, sans-serif", fontWeight: 600, fontSize: 24 }}>
-                  Welcome {businessName || "Joshua's Couture"}
+                  {isOwnerOrAdmin
+                    ? `Welcome ${businessName || "Workspace Member"}`
+                    : `Welcome ${memberDisplayName || "Team Member"} 👋`
+                  }
                 </h1>
                 <img src="/sewingmachine.svg" alt="" className="tailora-dashboard-welcome-icon" width={32} height={32} />
               </div>
-              <p className="tailora-dashboard-welcome-subtitle">Your all-in-one tailoring business management hub</p>
+              <p className="tailora-dashboard-welcome-subtitle">
+                {isOwnerOrAdmin
+                  ? "Your all-in-one tailoring business management hub"
+                  : "Here are your assigned tasks"
+                }
+              </p>
             </div>
-            <PrimaryButton className="tailora-dashboard-add-btn" onClick={() => openAddClient()}>
-              <AddIcon />
-              Add Client
-            </PrimaryButton>
+            {isOwnerOrAdmin && (
+              <PrimaryButton className="tailora-dashboard-add-btn" onClick={() => openAddClient()}>
+                <AddIcon />
+                Add Client
+              </PrimaryButton>
+            )}
           </div>
 
   <div className="tailora-stats-grid tailora-dashboard-stats">
@@ -347,7 +457,9 @@ export default function TailoraDashboard() {
 
           <div className="tailora-orders-section">
             <div className="tailora-recent-orders-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 15, gap: 12 }}>
-              <h2 style={{ margin: 0, fontFamily: "Sora, sans-serif", fontWeight: 400, fontSize: 18, color: "#121212" }}>Recent Orders</h2>
+              <h2 style={{ margin: 0, fontFamily: "Sora, sans-serif", fontWeight: 400, fontSize: 18, color: "#121212" }}>
+                {isOwnerOrAdmin ? "Recent Orders" : "My Assigned Tasks"}
+              </h2>
               <a href="/clients" style={{ fontSize: 14, color: "#121212", textDecoration: "underline", flexShrink: 0 }}>See all</a>
             </div>
 
@@ -430,13 +542,15 @@ export default function TailoraDashboard() {
                         <span>{order.phone}</span>
                         <span>{order.gender} · {order.outfit}</span>
                       </div>
-                      <div style={{ position: "absolute", top: 12, right: 12 }}>
-                        <ActionMenuButton
-                          onEdit={() => handleEdit(order)}
-                          onDelete={() => setDeleteTarget(order)}
-                          label={`Actions for order ${order.id}`}
-                        />
-                      </div>
+                      {isOwnerOrAdmin && (
+                        <div style={{ position: "absolute", top: 12, right: 12 }}>
+                          <ActionMenuButton
+                            onEdit={() => handleEdit(order)}
+                            onDelete={() => setDeleteTarget(order)}
+                            label={`Actions for order ${order.id}`}
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -447,8 +561,8 @@ export default function TailoraDashboard() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#F8F8F8" }}>
-                      {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Status", ""].map((h, i) => (
-                        <th key={i} style={{ padding: "12px 24px", textAlign: i === 6 ? "center" : "left", fontSize: 12, fontWeight: 500, color: "#344054", borderBottom: "1px solid #E4E7EC", whiteSpace: "nowrap" }}>{h}</th>
+                      {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Status", ...(isOwnerOrAdmin ? [""] : [])].map((h, i) => (
+                        <th key={i} style={{ padding: "12px 24px", textAlign: h === "" ? "center" : "left", fontSize: 12, fontWeight: 500, color: "#344054", borderBottom: "1px solid #E4E7EC", whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -465,15 +579,17 @@ export default function TailoraDashboard() {
                           <td style={{ padding: "16px 24px" }}>
                             <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, background: st.bg, color: st.color }}>{order.status}</span>
                           </td>
-                          <td style={{ padding: "16px 24px", textAlign: "center" }}>
-                            <div style={{ display: "flex", justifyContent: "center" }}>
-                              <ActionMenuButton
-                                onEdit={() => handleEdit(order)}
-                                onDelete={() => setDeleteTarget(order)}
-                                label={`Actions for ${order.id}`}
-                              />
-                            </div>
-                          </td>
+                          {isOwnerOrAdmin && (
+                            <td style={{ padding: "16px 24px", textAlign: "center" }}>
+                              <div style={{ display: "flex", justifyContent: "center" }}>
+                                <ActionMenuButton
+                                  onEdit={() => handleEdit(order)}
+                                  onDelete={() => setDeleteTarget(order)}
+                                  label={`Actions for ${order.id}`}
+                                />
+                              </div>
+                            </td>
+                          )}
                         </tr>
                       );
                     })}

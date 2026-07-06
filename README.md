@@ -41,9 +41,9 @@ The app still contains hardcoded placeholder data that should be replaced with r
 <!-- ### 3. `components/InviteTeamMemberModal.tsx` (Unfixed)
 - Invite form is local-only and not wired to backend invite/user creation functionality (clicks just call `onClose()`) -->
 
-### 4. `components/SettingsPage.tsx` (Partially Unfixed)
+<!-- ### 4. `components/SettingsPage.tsx` (Partially Unfixed)
 - Profile fields `businessName` and `address` are kept local-only in the form and not saved to or loaded from Supabase
-- *Note: Profile name, email, avatar, standardDays, and expressDays have been successfully integrated with Supabase.*
+- *Note: Profile name, email, avatar, standardDays, and expressDays have been successfully integrated with Supabase.* -->
 
 ### 5. `components/ClientManagementPage.tsx` (Unfixed)
 - Pagination UI is still dummy/hardcoded and not connected to real page sizes or counts
@@ -61,3 +61,10 @@ The app still contains hardcoded placeholder data that should be replaced with r
 ## Notes
 - Some placeholder content also exists in marketing pages (`app/page.tsx`, `app/help/page.tsx`), but the priority is the authenticated app workspace flows above.
 - The Supabase integration is already present in several files, so the remaining work is mostly replacing static UI values with real backend data and persistence.
+
+
+
+
+
+
+## In the end, we'd need verified SMTP/Resend API keys

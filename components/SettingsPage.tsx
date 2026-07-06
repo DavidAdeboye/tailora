@@ -121,7 +121,7 @@ function ProfileTab() {
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
-  const [address, setAddress] = useState("14 Adetokunbo Ademola Crescent, Wuse II, Abuja");
+  const [address, setAddress] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -129,8 +129,8 @@ function ProfileTab() {
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 
   // Track initial (saved) values for dirty detection
-  const [initialValues, setInitialValues] = useState({ fullName: "", businessName: "", email: "" });
-  const isDirty = fullName !== initialValues.fullName || businessName !== initialValues.businessName || email !== initialValues.email;
+  const [initialValues, setInitialValues] = useState({ fullName: "", businessName: "", email: "", address: "" });
+  const isDirty = fullName !== initialValues.fullName || businessName !== initialValues.businessName || email !== initialValues.email || address !== initialValues.address;
   useEffect(() => {
     let mounted = true;
     async function loadProfile() {
@@ -146,12 +146,12 @@ function ProfileTab() {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('full_name, business_name, avatar_path')
+          .select('full_name, business_name, address, avatar_path')
           .eq('user_id', userId)
           .maybeSingle();
 
         if (error) {
-          console.error('Error loading profile', error);
+          console.error('Error loading profile:', error.message);
           return;
         }
 
@@ -159,12 +159,14 @@ function ProfileTab() {
         if (mounted) {
           setFullName(data.full_name ?? '');
           setBusinessName(data.business_name ?? '');
+          setAddress(data.address ?? '');
           setEmail(user.email ?? '');
           // Save initial values for dirty tracking
           setInitialValues({
             fullName: data.full_name ?? '',
             businessName: data.business_name ?? '',
-            email: user.email ?? ''
+            email: user.email ?? '',
+            address: data.address ?? ''
           });
           try {
             if (data.full_name) localStorage.setItem('tailora_fullname', data.full_name);
@@ -238,7 +240,8 @@ function ProfileTab() {
         .upsert({
           user_id: userId,
           full_name: fullName,
-          business_name: businessName
+          business_name: businessName,
+          address: address
         }, { onConflict: 'user_id' });
       if (upsertError) throw upsertError;
 
@@ -269,7 +272,7 @@ function ProfileTab() {
 
       try { alert('Profile saved'); } catch (e) { /* ignore */ }
       // Update initial values so button goes back to disabled
-      setInitialValues({ fullName, businessName, email });
+      setInitialValues({ fullName, businessName, email, address });
     } catch (err) {
       console.error('Save profile error', err);
       try { alert('Failed to save profile'); } catch (e) {}
@@ -524,6 +527,77 @@ function NotificationsTab() {
   const [deliveryReminders, setDeliveryReminders] = useState(true);
   const [deadlineAlerts, setDeadlineAlerts] = useState(false);
   const [teamActivity, setTeamActivity] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Track initial values for dirty detection
+  const [initialPrefs, setInitialPrefs] = useState({
+    deliveryReminders: true,
+    deadlineAlerts: false,
+    teamActivity: false
+  });
+
+  const isDirty = deliveryReminders !== initialPrefs.deliveryReminders ||
+                  deadlineAlerts !== initialPrefs.deadlineAlerts ||
+                  teamActivity !== initialPrefs.teamActivity;
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadNotifications() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData?.user?.id;
+        if (!userId) return;
+
+        const { data, error } = await supabase
+          .from('workspace_settings')
+          .select('notification_preferences')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (error) return;
+        if (data && data.notification_preferences && mounted) {
+          const prefs = data.notification_preferences as any;
+          const dr = prefs.deliveryReminders !== false;
+          const da = !!prefs.deadlineAlerts;
+          const ta = !!prefs.teamActivity;
+          setDeliveryReminders(dr);
+          setDeadlineAlerts(da);
+          setTeamActivity(ta);
+          setInitialPrefs({ deliveryReminders: dr, deadlineAlerts: da, teamActivity: ta });
+        }
+      } catch (err) {
+        console.error('Error loading notifications', err);
+      }
+    }
+    loadNotifications();
+    return () => { mounted = false; };
+  }, []);
+
+  async function saveNotifications() {
+    setSaving(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) throw new Error('Not authenticated');
+
+      const prefs = { deliveryReminders, deadlineAlerts, teamActivity };
+      const { error } = await supabase
+        .from('workspace_settings')
+        .upsert({
+          user_id: userId,
+          notification_preferences: prefs
+        }, { onConflict: 'user_id' });
+
+      if (error) throw error;
+      setInitialPrefs(prefs);
+      try { alert('Notification preferences saved'); } catch {}
+    } catch (err) {
+      console.error('Error saving notifications', err);
+      try { alert('Failed to save notification preferences'); } catch {}
+    } finally {
+      setSaving(false);
+    }
+  }
 
   const items = [
     { label: "Delivery reminders", sub: "Show/hide", checked: deliveryReminders, onChange: setDeliveryReminders },
@@ -534,13 +608,34 @@ function NotificationsTab() {
   return (
     <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
       {/* Left */}
-      <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
-        <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Notifications</span>
-        <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif", lineHeight: "22px" }}>Manage how and when you receive updates.</span>
+      <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 20, width: 305, flexShrink: 0 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Notifications</span>
+          <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif", lineHeight: "22px" }}>Manage how and when you receive updates.</span>
+        </div>
+        <button
+          style={{
+            width: 124,
+            height: 38,
+            background: isDirty ? "#121212" : "#D0D5DD",
+            border: "none",
+            borderRadius: 8,
+            fontSize: 14,
+            fontWeight: 700,
+            color: "#fff",
+            fontFamily: "Satoshi, sans-serif",
+            cursor: isDirty ? "pointer" : "default",
+            opacity: isDirty ? 1 : 0.6,
+            transition: "background 0.2s, opacity 0.2s",
+          }}
+          onClick={saveNotifications}
+          disabled={!isDirty || saving}
+        >
+          {saving ? 'Saving...' : 'Save Changes'}
+        </button>
       </div>
 
       {/* Right: toggle rows */}
-      {/* CHANGED: added width:100% and minWidth:0 */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0, width: "100%", minWidth: 0 }}>
         {items.map((item, i) => (
           <div key={i}>
@@ -564,6 +659,54 @@ function SecurityTab() {
   const [twoFA, setTwoFA] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
 
+  useEffect(() => {
+    let mounted = true;
+    async function loadSecurity() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const userId = userData?.user?.id;
+        if (!userId) return;
+
+        const { data, error } = await supabase
+          .from('workspace_settings')
+          .select('two_factor_enabled')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (error) return;
+        if (data && mounted) {
+          setTwoFA(!!data.two_factor_enabled);
+        }
+      } catch (err) {
+        console.error('Error loading security settings', err);
+      }
+    }
+    loadSecurity();
+    return () => { mounted = false; };
+  }, []);
+
+  async function handleToggle2FA(checked: boolean) {
+    setTwoFA(checked);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) return;
+
+      const { error } = await supabase
+        .from('workspace_settings')
+        .upsert({
+          user_id: userId,
+          two_factor_enabled: checked
+        }, { onConflict: 'user_id' });
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error saving 2FA setting', err);
+      setTwoFA(!checked);
+      try { alert('Failed to update 2FA setting'); } catch {}
+    }
+  }
+
   return (
     <>
       {showChangePassword && (
@@ -578,7 +721,6 @@ function SecurityTab() {
         </div>
 
         {/* Right */}
-        {/* CHANGED: added width:100% and minWidth:0 */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 0, width: "100%", minWidth: 0 }}>
           {/* Change password row */}
           <div
@@ -602,7 +744,7 @@ function SecurityTab() {
               <div style={{ fontSize: 15, fontWeight: 500, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Two-Factor Authentication (2FA)</div>
               <div style={{ fontSize: 12, color: "#6C717D", fontFamily: "Satoshi, sans-serif" }}>Show/hide</div>
             </div>
-            <Toggle checked={twoFA} onChange={setTwoFA} />
+            <Toggle checked={twoFA} onChange={handleToggle2FA} />
           </div>
         </div>
       </div>
@@ -645,6 +787,38 @@ function SettingsBadge() {
 /* ── MAIN SETTINGS PAGE ── */
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("Profile");
+
+  type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    try {
+      const cachedRole = localStorage.getItem('tailora_role');
+      if (cachedRole && ['Owner', 'Admin', 'Tailor', 'Assistant'].includes(cachedRole)) {
+        return cachedRole as UserRole;
+      }
+    } catch {}
+    return 'Owner';
+  });
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadRole() {
+      const { data: rpcResult, error: rpcErr } = await supabase.rpc('get_my_team_role');
+      if (!rpcErr && rpcResult && rpcResult.length > 0 && mounted) {
+        setUserRole(rpcResult[0].role as UserRole);
+      }
+    }
+    loadRole();
+    return () => { mounted = false; };
+  }, []);
+
+  if (userRole !== 'Owner') {
+    return (
+      <div className="tailora-page-view" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+        <h2 style={{ fontFamily: "Sora, sans-serif" }}>Access Denied</h2>
+        <p style={{ color: "#667185" }}>You do not have permission to access Settings.</p>
+      </div>
+    );
+  }
 
   const tabs: Tab[] = ["Profile", "Workspace", "Notifications", "Security"];
 

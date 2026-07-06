@@ -53,16 +53,43 @@ function ActiveDot({ color = "#036B26" }: { color?: string }) {
   return <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: color, flexShrink: 0 }} />;
 }
 
+const initials = (name: string) => {
+  if (!name) return "?";
+  return name.trim().split(/\s+/).map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+};
+
 function MemberCard({ member, onEdit, onDelete }: { member: Member; onEdit: () => void; onDelete: () => void }) {
   const rb = roleBadge[member.role] || roleBadge.Assistant;
   const isActive = member.status === "Active";
   const statusColor = isActive ? "#036B26" : "#865503";
+  const isDefaultAvatar = !member.avatar || member.avatar === "/Ellipse2481.png";
 
   return (
     <div style={{ background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 10, padding: "16px 26px", display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-          <img src={member.avatar} alt={member.name} style={{ width: 40, height: 40, borderRadius: "50%", border: "2.5px solid #F2F2F6", boxShadow: "0px 0px 1px rgba(0,0,0,0.25)", flexShrink: 0, objectFit: "cover" }}/>
+          {isDefaultAvatar ? (
+            <div style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: rb.bg,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 14,
+              fontWeight: 700,
+              color: rb.color,
+              fontFamily: "var(--font-satoshi), sans-serif",
+              flexShrink: 0,
+              border: "2.5px solid #F2F2F6",
+              boxShadow: "0px 0px 1px rgba(0,0,0,0.25)"
+            }}>
+              {initials(member.name)}
+            </div>
+          ) : (
+            <img src={member.avatar} alt={member.name} style={{ width: 40, height: 40, borderRadius: "50%", border: "2.5px solid #F2F2F6", boxShadow: "0px 0px 1px rgba(0,0,0,0.25)", flexShrink: 0, objectFit: "cover" }}/>
+          )}
           <div style={{ minWidth: 0 }}>
             <div style={{ fontFamily: "var(--font-inter)", fontWeight: 600, fontSize: 14, color: "#121212", lineHeight: "145%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.name}</div>
             <div style={{ fontFamily: "var(--font-inter)", fontWeight: 400, fontSize: 14, color: "#555960", lineHeight: "145%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{member.email}</div>
@@ -103,6 +130,17 @@ export default function TeamCollaborationPage() {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
+  type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    try {
+      const cachedRole = localStorage.getItem('tailora_role');
+      if (cachedRole && ['Owner', 'Admin', 'Tailor', 'Assistant'].includes(cachedRole)) {
+        return cachedRole as UserRole;
+      }
+    } catch {}
+    return 'Owner';
+  });
+
   async function loadTeamMembers(uid: string) {
     try {
       const { data, error: fetchErr } = await supabase
@@ -141,8 +179,20 @@ export default function TeamCollaborationPage() {
           setLoading(false);
           return;
         }
+
+        let workspaceOwnerId = userData.user.id;
+
+        const { data: rpcResult, error: rpcErr } = await supabase.rpc('get_my_team_role');
+        if (!rpcErr && rpcResult && rpcResult.length > 0) {
+          const member = rpcResult[0];
+          workspaceOwnerId = member.owner_id;
+          setUserRole(member.role as UserRole);
+        } else {
+          setUserRole('Owner');
+        }
+
         setUserId(userData.user.id);
-        await loadTeamMembers(userData.user.id);
+        await loadTeamMembers(workspaceOwnerId);
       } catch (err: any) {
         console.error(err);
         setError(err.message || "Failed to retrieve user session.");
@@ -165,11 +215,14 @@ export default function TeamCollaborationPage() {
           schema: 'public',
           table: 'team_members'
         },
-        (payload) => {
-          const row = payload.new || payload.old;
-          if (row && (row as any).user_id === userId) {
-            loadTeamMembers(userId);
+        async (payload) => {
+          // Determine workspaceOwnerId again
+          let workspaceOwnerId = userId;
+          const { data: rpcResult } = await supabase.rpc('get_my_team_role');
+          if (rpcResult && rpcResult.length > 0) {
+            workspaceOwnerId = rpcResult[0].owner_id;
           }
+          loadTeamMembers(workspaceOwnerId);
         }
       )
       .subscribe();
@@ -224,6 +277,15 @@ export default function TeamCollaborationPage() {
     }
   };
 
+  if (userRole === 'Tailor' || userRole === 'Assistant') {
+    return (
+      <div className="tailora-page-view" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+        <h2 style={{ fontFamily: "Sora, sans-serif" }}>Access Denied</h2>
+        <p style={{ color: "#667185" }}>You do not have permission to access Team Collaboration.</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <style>{`
@@ -255,10 +317,12 @@ export default function TeamCollaborationPage() {
                   Manage your atelier's team and control who can access, edit, and assign work across your workspace.
                 </p>
               </div>
-              <PrimaryButton className="tailora-btn-primary tc-invite-btn" onClick={() => openInviteCoworker()}>
-                <ExportIcon />
-                Invite Member
-              </PrimaryButton>
+              {userRole === 'Owner' && (
+                <PrimaryButton className="tailora-btn-primary tc-invite-btn" onClick={() => openInviteCoworker()}>
+                  <ExportIcon />
+                  Invite Member
+                </PrimaryButton>
+              )}
             </div>
 
             <div style={{ background: "#FFFFFF", border: "1px solid #E4E7EC", borderRadius: 10, boxShadow: "0px 4px 4px -2px rgba(0,0,0,0.04)", marginBottom: 24, overflow: "hidden" }}>

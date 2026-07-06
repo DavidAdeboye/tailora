@@ -2,10 +2,13 @@
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
+    "@types/uuid": "^10.0.0",
     "next": "^15.3.1",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-router-dom": "^7.5.0"
+    "react-router-dom": "^7.5.0",
+    "resend": "^6.17.1",
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.3",

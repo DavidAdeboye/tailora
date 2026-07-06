@@ -93,7 +93,7 @@ function getInitials(name: string) {
   return name.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase();
 }
 
-function ClientMobileCard({ client, onEdit, onDelete }: { client: Client; onEdit: () => void; onDelete: () => void }) {
+function ClientMobileCard({ client, onEdit, onDelete, showActions = true }: { client: Client; onEdit: () => void; onDelete: () => void; showActions?: boolean }) {
   const st = statusStyles[client.statusType];
   return (
     <article className="tailora-client-card">
@@ -114,11 +114,13 @@ function ClientMobileCard({ client, onEdit, onDelete }: { client: Client; onEdit
           </div>
         </div>
       </div>
-      <ActionMenuButton
-        onEdit={onEdit}
-        onDelete={onDelete}
-        label={`Actions for ${client.name}`}
-      />
+      {showActions && (
+        <ActionMenuButton
+          onEdit={onEdit}
+          onDelete={onDelete}
+          label={`Actions for ${client.name}`}
+        />
+      )}
     </article>
   );
 }
@@ -138,6 +140,19 @@ export default function ClientManagementPage() {
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
   const totalPages = 30;
   const pageNumbers = [1, 2, 3, 4, 10, 11, 12];
+
+  type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    try {
+      const cachedRole = localStorage.getItem('tailora_role');
+      if (cachedRole && ['Owner', 'Admin', 'Tailor', 'Assistant'].includes(cachedRole)) {
+        return cachedRole as UserRole;
+      }
+    } catch {}
+    return 'Owner';
+  });
+
+  const isOwnerOrAdmin = userRole === 'Owner' || userRole === 'Admin';
 
   const filteredClients = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -166,6 +181,12 @@ export default function ClientManagementPage() {
   useEffect(() => {
     let mounted = true;
     async function loadClients() {
+      // Load role first
+      const { data: rpcResult, error: rpcErr } = await supabase.rpc('get_my_team_role');
+      if (!rpcErr && rpcResult && rpcResult.length > 0 && mounted) {
+        setUserRole(rpcResult[0].role as UserRole);
+      }
+
       const { data, error } = await supabase
         .from('clients')
         .select('id, name, phone, gender')
@@ -190,6 +211,15 @@ export default function ClientManagementPage() {
     loadClients();
     return () => { mounted = false; };
   }, []);
+
+  if (userRole === 'Tailor') {
+    return (
+      <div className="tailora-page-view" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+        <h2 style={{ fontFamily: "Sora, sans-serif" }}>Access Denied</h2>
+        <p style={{ color: "#667185" }}>You do not have permission to access Client Management.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="tailora-page-view" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
@@ -300,6 +330,7 @@ export default function ClientManagementPage() {
                   client={c}
                   onEdit={() => handleEdit(c)}
                   onDelete={() => setDeleteTarget(c)}
+                  showActions={isOwnerOrAdmin}
                 />
               ))
             )}
@@ -310,8 +341,8 @@ export default function ClientManagementPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#F8F8F8" }}>
-                  {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Status", ""].map((h, i) => (
-                    <th key={h || "actions"} style={{ padding: "12px 24px", textAlign: i === 6 ? "center" : "left", fontSize: 12, fontWeight: 500, color: "#344054", borderBottom: "1px solid #E4E7EC", whiteSpace: "nowrap", fontFamily: i === 0 ? "Inter, sans-serif" : "Satoshi, var(--font-satoshi), sans-serif" }}>
+                  {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Status", ...(isOwnerOrAdmin ? [""] : [])].map((h, i) => (
+                    <th key={h || "actions"} style={{ padding: "12px 24px", textAlign: h === "" ? "center" : "left", fontSize: 12, fontWeight: 500, color: "#344054", borderBottom: "1px solid #E4E7EC", whiteSpace: "nowrap", fontFamily: i === 0 ? "Inter, sans-serif" : "Satoshi, var(--font-satoshi), sans-serif" }}>
                       {h}
                     </th>
                   ))}
@@ -332,15 +363,17 @@ export default function ClientManagementPage() {
                           {c.status}
                         </span>
                       </td>
-                      <td style={{ padding: "16px 24px", textAlign: "center" }}>
-                        <div style={{ display: "flex", justifyContent: "center" }}>
-                          <ActionMenuButton
-                            onEdit={() => handleEdit(c)}
-                            onDelete={() => setDeleteTarget(c)}
-                            label={`Actions for ${c.name}`}
-                          />
-                        </div>
-                      </td>
+                      {isOwnerOrAdmin && (
+                        <td style={{ padding: "16px 24px", textAlign: "center" }}>
+                          <div style={{ display: "flex", justifyContent: "center" }}>
+                            <ActionMenuButton
+                              onEdit={() => handleEdit(c)}
+                              onDelete={() => setDeleteTarget(c)}
+                              label={`Actions for ${c.name}`}
+                            />
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}

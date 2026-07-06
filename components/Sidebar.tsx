@@ -304,6 +304,24 @@ useEffect(() => {
   const [businessName, setBusinessName] = useState<string>("");
   const [profileAvatar, setProfileAvatar] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  // Initialize userRole from cached role so the UI doesn't flash incorrect items
+  type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    try {
+      const cachedRole = localStorage.getItem('tailora_role');
+      if (cachedRole && ['Owner', 'Admin', 'Tailor', 'Assistant'].includes(cachedRole)) {
+        return cachedRole as UserRole;
+      }
+    } catch {}
+    return 'Owner'; // first-time users default to owner
+  });
+
+  const roleBadgeStyles: Record<UserRole, { bg: string; color: string; label: string }> = {
+    Owner:     { bg: '#E7F6EC', color: '#036B26', label: 'Owner' },
+    Admin:     { bg: '#E8EFFD', color: '#1A56DB', label: 'Admin' },
+    Tailor:    { bg: '#FEF0E6', color: '#C4550A', label: 'Tailor' },
+    Assistant: { bg: '#F0E6FE', color: '#7C3AED', label: 'Assistant' },
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -327,20 +345,45 @@ useEffect(() => {
           setProfileEmail(user.email ?? "");
         }
 
+        // Check if user is a team member using RPC (bypasses RLS)
+        let member: any = null;
+        
+        const { data: rpcResult, error: rpcErr } = await supabase.rpc('get_my_team_role');
+        if (!rpcErr && rpcResult && rpcResult.length > 0) {
+          member = rpcResult[0];
+        }
+
+        const ownerId = member ? member.owner_id : user.id;
+
         const { data: profile, error: profileErr } = await supabase
           .from("profiles")
           .select("full_name, business_name, avatar_path")
           .eq("user_id", user.id)
           .maybeSingle();
 
+        const { data: ownerProfile } = member
+          ? await supabase
+              .from("profiles")
+              .select("business_name")
+              .eq("user_id", ownerId)
+              .maybeSingle()
+          : { data: null };
+
         if (profileErr || !profile) return;
 
         if (mounted) {
           setProfileName(profile.full_name ?? "");
-          setBusinessName((profile as any).business_name ?? "");
+          setBusinessName(ownerProfile?.business_name ?? profile.business_name ?? "");
+          // Determine role
+          const resolvedRole: UserRole = member ? (member.role as UserRole) : 'Owner';
+          setUserRole(resolvedRole);
+          try {
+            localStorage.setItem('tailora_role', resolvedRole);
+          } catch {}
           try {
             if (profile.full_name) localStorage.setItem('tailora_fullname', profile.full_name);
-            if (profile.business_name) localStorage.setItem('tailora_businessname', profile.business_name);
+            const biz = ownerProfile?.business_name ?? profile.business_name;
+            if (biz) localStorage.setItem('tailora_businessname', biz);
           } catch {}
 
           if (profile.avatar_path) {
@@ -387,6 +430,7 @@ useEffect(() => {
       localStorage.removeItem("tailora_avatar");
       localStorage.removeItem("tailora_fullname");
       localStorage.removeItem("tailora_businessname");
+      localStorage.removeItem("tailora_role");
     } catch {}
     // Clear the cookie so middleware redirects to login
     document.cookie = "sb-access-token=; path=/; max-age=0";
@@ -508,20 +552,24 @@ useEffect(() => {
               collapsed={isCollapsed}
               onClick={() => navigate("Dashboard")}
             />
-            <NavBtn
-              label="Client Management"
-              icon={PeopleIcon}
-              active={activeMenu === "Client Management"}
-              collapsed={isCollapsed}
-              onClick={() => navigate("Client Management")}
-            />
-            <NavBtn
-              label="Team Collaboration"
-              icon={TeamIcon}
-              active={activeMenu === "Team Collaboration"}
-              collapsed={isCollapsed}
-              onClick={() => navigate("Team Collaboration")}
-            />
+            {(userRole === 'Owner' || userRole === 'Admin' || userRole === 'Assistant') && (
+              <NavBtn
+                label="Client Management"
+                icon={PeopleIcon}
+                active={activeMenu === "Client Management"}
+                collapsed={isCollapsed}
+                onClick={() => navigate("Client Management")}
+              />
+            )}
+            {(userRole === 'Owner' || userRole === 'Admin') && (
+              <NavBtn
+                label="Team Collaboration"
+                icon={TeamIcon}
+                active={activeMenu === "Team Collaboration"}
+                collapsed={isCollapsed}
+                onClick={() => navigate("Team Collaboration")}
+              />
+            )}
           </div>
         </div>
 
@@ -552,31 +600,37 @@ useEffect(() => {
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <NavBtn
-              label="Add Client"
-              icon={AddClientIcon}
-              collapsed={isCollapsed}
-              onClick={() => onAddClient?.()}
-            />
-            <NavBtn
-              label="Invite Co-worker"
-              icon={InviteIcon}
-              collapsed={isCollapsed}
-              onClick={() => onInviteCoworker?.()}
-            />
+            {userRole !== 'Tailor' && (
+              <NavBtn
+                label="Add Client"
+                icon={AddClientIcon}
+                collapsed={isCollapsed}
+                onClick={() => onAddClient?.()}
+              />
+            )}
+            {userRole === 'Owner' && (
+              <NavBtn
+                label="Invite Co-worker"
+                icon={InviteIcon}
+                collapsed={isCollapsed}
+                onClick={() => onInviteCoworker?.()}
+              />
+            )}
           </div>
         </div>
 
         {/* Bottom */}
         <div style={{ padding: "0 8px 12px" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            <NavBtn
-              label="Settings"
-              icon={SettingsIcon}
-              active={activeMenu === "Settings"}
-              collapsed={isCollapsed}
-              onClick={() => navigate("Settings")}
-            />
+            {userRole === 'Owner' && (
+              <NavBtn
+                label="Settings"
+                icon={SettingsIcon}
+                active={activeMenu === "Settings"}
+                collapsed={isCollapsed}
+                onClick={() => navigate("Settings")}
+              />
+            )}
             <NavBtn
               label="Help & Support"
               icon={HelpIcon}
@@ -666,16 +720,22 @@ useEffect(() => {
                   >
                     {displayName}
                   </div>
-                  <div
-                    style={{
-                      color: "#B6B6B6",
-                      fontSize: 12,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {businessName || profileEmail || "Atelier"}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        padding: '1px 8px',
+                        borderRadius: 10,
+                        fontSize: 10,
+                        fontWeight: 600,
+                        lineHeight: '16px',
+                        background: roleBadgeStyles[userRole].bg,
+                        color: roleBadgeStyles[userRole].color,
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      {roleBadgeStyles[userRole].label}
+                    </span>
                   </div>
                 </div>
               </div>

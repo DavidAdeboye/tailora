@@ -54,10 +54,62 @@
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [authError, setAuthError] = useState<string | null>(null);
 
+    // Invitation states
+    const [invitationToken, setInvitationToken] = useState<string | null>(null);
+    const [invitationData, setInvitationData] = useState<{ invited_by: string; email: string; role: string } | null>(null);
+    const [inviteError, setInviteError] = useState<string | null>(null);
+
     // Slideshow state
     const [currentSlide, setCurrentSlide] = useState<number>(0);
     const [isPaused, setIsPaused] = useState<boolean>(false);
     const slideshowIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Validate invite token on mount
+    useEffect(() => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const token = searchParams.get("token");
+      if (token) {
+        setInvitationToken(token);
+        
+        const fetchInvitation = async () => {
+          try {
+            const { data, error } = await supabase
+              .from('invitations')
+              .select('*')
+              .eq('token', token)
+              .single();
+              
+            if (error || !data) {
+              setInviteError("Invalid or expired invitation link.");
+              return;
+            }
+            
+            // Fetch inviter's business name
+            const { data: inviterProfile } = await supabase
+              .from('profiles')
+              .select('business_name')
+              .eq('user_id', data.invited_by)
+              .single();
+            
+            setInvitationData({
+              invited_by: data.invited_by,
+              email: data.email,
+              role: data.role
+            });
+            
+            setFormData(p => ({
+              ...p,
+              email: data.email,
+              businessName: inviterProfile?.business_name || "Workspace Member"
+            }));
+          } catch (err) {
+            console.error("Failed to load invitation:", err);
+            setInviteError("Failed to load invitation details.");
+          }
+        };
+        fetchInvitation();
+      }
+    }, []);
 
     // Auto-play slideshow
     useEffect(() => {
@@ -110,12 +162,55 @@
 
         // If email confirmations are disabled in Supabase, signUp already
         // returns an active session. If not, sign in explicitly to get one.
-        if (!data.session) {
-          const { error: signInError } = await supabase.auth.signInWithPassword({
+        let activeSession = data.session;
+        if (!activeSession) {
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
             email: formData.email,
             password: formData.password,
           });
           if (signInError) throw signInError;
+          activeSession = signInData.session;
+        }
+
+        const sessionUser = data.user || activeSession?.user;
+        if (!sessionUser) {
+          throw new Error("Failed to retrieve user session after signup.");
+        }
+
+        // 1. Manually insert the user's profile record since there is no trigger
+        const { error: profileErr } = await supabase
+          .from('profiles')
+          .insert({
+            user_id: sessionUser.id,
+            full_name: formData.fullName,
+            business_name: formData.businessName
+          });
+          
+        if (profileErr) {
+          console.error("Profile creation error on signup:", profileErr);
+          // Continue anyway (non-blocking)
+        }
+
+        // 2. If signed up via invitation link, link them as an active team member
+        if (invitationToken) {
+          const { error: teamUpdateErr } = await supabase.rpc('link_team_member', {
+            invite_token: invitationToken,
+            new_user_id: sessionUser.id
+          });
+            
+          if (teamUpdateErr) {
+            console.error("Failed to link team member record:", teamUpdateErr);
+          }
+
+          // Pre-cache the role so the dashboard doesn't flash admin UI
+          if (invitationData?.role) {
+            try { localStorage.setItem('tailora_role', invitationData.role); } catch {}
+          }
+        }
+
+        // Set token session cookie for auth redirect
+        if (activeSession) {
+          document.cookie = `sb-access-token=${activeSession.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
         }
 
         setDone(true);
@@ -145,6 +240,28 @@
         setIsGoogleLoading(false);
       }
     };
+
+    if (inviteError) {
+      return (
+        <main className="flex min-h-screen items-center justify-center bg-[#FDFDFD] px-6">
+          <div className="flex flex-col items-center text-center w-full max-w-sm">
+            <div className="w-[72px] h-[72px] rounded-full bg-[#E03137] flex items-center justify-center mb-6">
+              <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+                <path d="M12 12L24 24M24 12L12 24" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+            <h2 className="text-[28px] font-['Sora'] font-bold mb-2 text-[#121212]">Invalid Invite Link</h2>
+            <p className="font-['Satoshi'] font-normal text-[15px] text-[#6C717D] mb-6">{inviteError}</p>
+            <button
+              onClick={() => { setInviteError(null); setInvitationToken(null); router.push("/signup"); }}
+              className="w-full h-[46px] bg-[#121212] text-white rounded-full text-[14px] font-['Satoshi'] font-medium hover:bg-black active:scale-[0.98] transition-all"
+            >
+              Sign Up Directly
+            </button>
+          </div>
+        </main>
+      );
+    }
 
     if (done) {
       return (
@@ -283,7 +400,7 @@
                   <>
                     <div>
                       <FieldLabel>Business Name</FieldLabel>
-                      <input type="text" placeholder="Your Business Name" value={formData.businessName} onChange={handleFormChange("businessName")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
+                      <input type="text" placeholder="Your Business Name" value={formData.businessName} onChange={handleFormChange("businessName")} disabled={!!invitationData} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={`${inputCls} ${invitationData ? 'opacity-70 cursor-not-allowed bg-gray-100' : ''}`} />
                     </div>
                     <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
                     <TermsText />
@@ -293,7 +410,7 @@
                   <>
                     <div>
                       <FieldLabel>Email Address</FieldLabel>
-                      <input type="email" placeholder="Your Email Address" value={formData.email} onChange={handleFormChange("email")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
+                      <input type="email" placeholder="Your Email Address" value={formData.email} onChange={handleFormChange("email")} disabled={!!invitationData} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={`${inputCls} ${invitationData ? 'opacity-70 cursor-not-allowed bg-gray-100' : ''}`} />
                     </div>
                     <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
                     <TermsText />

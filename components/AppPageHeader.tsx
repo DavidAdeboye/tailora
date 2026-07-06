@@ -30,6 +30,24 @@ export default function AppPageHeader({ title }: { title: string }) {
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
 
+  type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
+  const [userRole, setUserRole] = useState<UserRole>(() => {
+    try {
+      const cachedRole = localStorage.getItem('tailora_role');
+      if (cachedRole && ['Owner', 'Admin', 'Tailor', 'Assistant'].includes(cachedRole)) {
+        return cachedRole as UserRole;
+      }
+    } catch {}
+    return 'Owner';
+  });
+
+  const roleBadgeStyles: Record<UserRole, { bg: string; color: string }> = {
+    Owner:     { bg: '#E7F6EC', color: '#036B26' },
+    Admin:     { bg: '#E8EFFD', color: '#1A56DB' },
+    Tailor:    { bg: '#FEF0E6', color: '#C4550A' },
+    Assistant: { bg: '#F0E6FE', color: '#7C3AED' },
+  };
+
   useEffect(() => {
     let mounted = true;
     try {
@@ -48,6 +66,18 @@ export default function AppPageHeader({ title }: { title: string }) {
         const userId = user?.id;
         if (!userId) return;
         if (mounted) setUserEmail(user.email ?? "");
+
+        // Load role from RPC
+        const { data: rpcResult, error: rpcErr } = await supabase.rpc('get_my_team_role');
+        if (!rpcErr && rpcResult && rpcResult.length > 0 && mounted) {
+          const roleVal = rpcResult[0].role as UserRole;
+          setUserRole(roleVal);
+          try { localStorage.setItem('tailora_role', roleVal); } catch {}
+        } else if (mounted) {
+          setUserRole('Owner');
+          try { localStorage.setItem('tailora_role', 'Owner'); } catch {}
+        }
+
         const { data: profile, error } = await supabase.from('profiles').select('avatar_path, full_name, business_name').eq('user_id', userId).maybeSingle();
         if (error) return;
         if (profile) {
@@ -107,6 +137,7 @@ export default function AppPageHeader({ title }: { title: string }) {
       localStorage.removeItem("tailora_avatar");
       localStorage.removeItem("tailora_fullname");
       localStorage.removeItem("tailora_businessname");
+      localStorage.removeItem("tailora_role");
     } catch {}
     document.cookie = "sb-access-token=; path=/; max-age=0";
     router.push("/login");
@@ -271,6 +302,22 @@ export default function AppPageHeader({ title }: { title: string }) {
                     >
                       {fullName || "User"}
                     </div>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        padding: '1px 8px',
+                        borderRadius: 10,
+                        fontSize: 10,
+                        fontWeight: 600,
+                        lineHeight: '16px',
+                        background: roleBadgeStyles[userRole].bg,
+                        color: roleBadgeStyles[userRole].color,
+                        letterSpacing: '0.02em',
+                        marginTop: 2,
+                      }}
+                    >
+                      {userRole}
+                    </span>
                     <div
                       style={{
                         fontSize: 12,
