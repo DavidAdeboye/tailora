@@ -1,75 +1,107 @@
 "use client";
 import { useEffect, useState } from "react";
 
-export interface ClientFormData {
+export interface ClientData {
+  id: string;
   name: string;
   phone: string;
-  email: string;
+  email?: string;
   gender: string;
-  outfitType: string;
+  outfit: string;
+  status: string;
 }
 
-interface AddClientModalProps {
+interface EditClientModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveDraft?: (data: ClientFormData) => void;
-  onContinue: (data: ClientFormData) => void;
+  client: ClientData | null;
+  onSave: (updated: ClientData) => Promise<void>;
 }
 
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
 const OUTFIT_OPTIONS = ["Wedding Gown", "Suit", "Senator", "Agbada", "Ankara", "Iro & Buba", "Kaftan", "Custom"];
+const STATUS_OPTIONS = ["Due", "Overdue", "Collected"];
 
-export default function AddClientModal({ isOpen, onClose, onSaveDraft, onContinue }: AddClientModalProps) {
-  const [form, setForm] = useState<ClientFormData>({ name: "", phone: "", email: "", gender: "", outfitType: "" });
+export default function EditClientModal({ isOpen, onClose, client, onSave }: EditClientModalProps) {
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    email: "",
+    gender: "",
+    outfit: "",
+    status: ""
+  });
   const [isCustomOutfit, setIsCustomOutfit] = useState(false);
   const [customOutfitText, setCustomOutfitText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const set = (k: keyof ClientFormData, v: string) => setForm((p) => ({ ...p, [k]: v }));
+
+  const set = (k: keyof typeof form, v: string) => setForm(p => ({ ...p, [k]: v }));
 
   useEffect(() => {
-    if (!isOpen) {
-      setForm({ name: "", phone: "", email: "", gender: "", outfitType: "" });
-      setIsCustomOutfit(false);
-      setCustomOutfitText("");
+    if (client && isOpen) {
+      const isPreset = OUTFIT_OPTIONS.includes(client.outfit);
+      setForm({
+        name: client.name || "",
+        phone: client.phone || "",
+        email: client.email || "",
+        gender: client.gender || "",
+        outfit: client.outfit || "",
+        status: client.status || "Due"
+      });
+      if (!isPreset && client.outfit) {
+        setIsCustomOutfit(true);
+        setCustomOutfitText(client.outfit);
+      } else {
+        setIsCustomOutfit(false);
+        setCustomOutfitText("");
+      }
       setError(null);
     }
-  }, [isOpen]);
+  }, [client, isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !client) return null;
 
   const handleOutfitChange = (value: string) => {
     if (value === "Custom") {
       setIsCustomOutfit(true);
       setCustomOutfitText("");
-      set("outfitType", "");
+      set("outfit", "");
     } else {
       setIsCustomOutfit(false);
-      set("outfitType", value);
+      set("outfit", value);
     }
   };
 
   const handleCustomOutfitChange = (value: string) => {
     setCustomOutfitText(value);
-    set("outfitType", value);
+    set("outfit", value);
   };
 
-  const handleContinue = () => {
-    if (!form.name.trim() || !form.phone.trim() || !form.gender || !form.outfitType) {
+  const handleSave = async () => {
+    if (!form.name.trim() || !form.phone.trim() || !form.gender || !form.outfit) {
       setError("Please fill in client name, phone, gender, and outfit type.");
       return;
     }
     setError(null);
-    onContinue(form);
-  };
-
-  const handleSaveDraft = () => {
-    if (!form.name.trim()) {
-      setError("Add a client name to save a draft.");
-      return;
+    setIsSubmitting(true);
+    try {
+      await onSave({
+        ...client,
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        gender: form.gender,
+        outfit: form.outfit,
+        status: form.status
+      });
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Failed to update client.");
+    } finally {
+      setIsSubmitting(false);
     }
-    setError(null);
-    onSaveDraft?.(form);
-    onClose();
   };
 
   const inputStyle: React.CSSProperties = {
@@ -79,14 +111,14 @@ export default function AddClientModal({ isOpen, onClose, onSaveDraft, onContinu
   };
 
   return (
-    <div className="tailora-modal-backdrop" onClick={() => onClose()} style={{ position: "fixed", inset: 0, background: "rgba(10,13,18,0.70)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="tailora-modal-backdrop" onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(10,13,18,0.70)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div className="tailora-modal-panel" onClick={(e) => e.stopPropagation()} style={{ position: "relative", width: 514, background: "#fff", borderRadius: 16, overflow: "hidden", fontFamily: "Satoshi, Inter, sans-serif" }}>
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 180, background: "linear-gradient(180deg, #FDF6EC 30%, rgba(253,246,236,0) 100%)", pointerEvents: "none", zIndex: 0 }} />
-        <button type="button" onClick={() => onClose()} style={{ position: "absolute", top: 20, right: 20, width: 32, height: 32, borderRadius: "50%", background: "#F5F7F8", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
+        <button type="button" onClick={onClose} style={{ position: "absolute", top: 20, right: 20, width: 32, height: 32, borderRadius: "50%", background: "#F5F7F8", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="#000" strokeWidth="1.8" strokeLinecap="round" /></svg>
         </button>
         <div className="tailora-modal-inner" style={{ padding: "32px 30px 30px", position: "relative", zIndex: 1 }}>
-          <h2 style={{ margin: "0 0 16px", fontFamily: "Sora, sans-serif", fontWeight: 800, fontSize: 24, color: "#1A1A1A" }}>Add New Client</h2>
+          <h2 style={{ margin: "0 0 16px", fontFamily: "Sora, sans-serif", fontWeight: 800, fontSize: 24, color: "#1A1A1A" }}>Edit Client</h2>
           <div style={{ height: 1, background: "#F1F1F2", marginBottom: 24 }} />
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {/* Client Name */}
@@ -126,7 +158,7 @@ export default function AddClientModal({ isOpen, onClose, onSaveDraft, onContinu
               {!isCustomOutfit ? (
                 <div style={{ position: "relative" }}>
                   <select
-                    value={form.outfitType || ""}
+                    value={OUTFIT_OPTIONS.includes(form.outfit) ? form.outfit : (form.outfit ? "Custom" : "")}
                     onChange={e => handleOutfitChange(e.target.value)}
                     style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}
                   >
@@ -159,7 +191,7 @@ export default function AddClientModal({ isOpen, onClose, onSaveDraft, onContinu
                     onClick={() => {
                       setIsCustomOutfit(false);
                       setCustomOutfitText("");
-                      set("outfitType", "");
+                      set("outfit", "");
                     }}
                     style={{
                       alignSelf: "flex-start",
@@ -185,18 +217,30 @@ export default function AddClientModal({ isOpen, onClose, onSaveDraft, onContinu
                 </div>
               )}
             </div>
+            {/* Status */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: "#283145" }}>Status <span style={{ color: "#E03137" }}>*</span></label>
+              <div style={{ position: "relative" }}>
+                <select value={form.status} onChange={e => set("status", e.target.value)} style={{ ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" }}>
+                  {STATUS_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+                <div style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M19.92 8.95L13.4 15.47C12.63 16.24 11.37 16.24 10.6 15.47L4.08 8.95" stroke="#595653" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </div>
+              </div>
+            </div>
           </div>
           {error && (
             <p style={{ margin: "16px 0 0", fontSize: 13, color: "#9E0A05" }}>{error}</p>
           )}
           <div className="tailora-modal-actions" style={{ display: "flex", gap: 16, marginTop: 28 }}>
-            <button type="button" onClick={handleSaveDraft} style={{ flex: 1, padding: "13px 24px", background: "transparent", border: "1px solid #121212", borderRadius: 999, fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", cursor: "pointer" }}
+            <button type="button" onClick={onClose} style={{ flex: 1, padding: "13px 24px", background: "transparent", border: "1px solid #121212", borderRadius: 999, fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", cursor: "pointer" }}
               onMouseEnter={e => (e.currentTarget.style.background = "#F5F5F5")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-              Save Draft
+              Cancel
             </button>
-            <button type="button" onClick={handleContinue} style={{ flex: 1, padding: "13px 24px", background: "#121212", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 500, color: "#fff", fontFamily: "Satoshi, sans-serif", cursor: "pointer" }}
+            <button type="button" disabled={isSubmitting} onClick={handleSave} style={{ flex: 1, padding: "13px 24px", background: "#121212", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 500, color: "#fff", fontFamily: "Satoshi, sans-serif", cursor: isSubmitting ? "not-allowed" : "pointer", opacity: isSubmitting ? 0.6 : 1 }}
               onMouseEnter={e => (e.currentTarget.style.background = "#333")} onMouseLeave={e => (e.currentTarget.style.background = "#121212")}>
-              Continue
+              {isSubmitting ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>

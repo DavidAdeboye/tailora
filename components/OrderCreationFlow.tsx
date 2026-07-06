@@ -794,15 +794,15 @@ function OrderDetailsStep({
 
       <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: isMobile ? "16px 0" : "20px 24px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Date Received</label>
+          <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Date Received <span style={{ color: "#E03137" }}>*</span></label>
           <input type="text" placeholder="Feb, 23, 2026" value={orderDetails.dateReceived} onChange={(e) => set("dateReceived", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle}/>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Collection Date</label>
+          <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Collection Date <span style={{ color: "#E03137" }}>*</span></label>
           <input type="text" placeholder="Feb, 23, 2026" value={orderDetails.collectionDate} onChange={(e) => set("collectionDate", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle}/>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Price</label>
+          <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Price <span style={{ color: "#E03137" }}>*</span></label>
           <input type="text" inputMode="numeric" placeholder="00" value={orderDetails.price} onChange={(e) => set("price", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle}/>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -1045,6 +1045,13 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
     setIsSaving(true);
     setSaveError(null);
     try {
+      // Validation for finalized orders
+      if (!isDraft) {
+        if (!orderDetails.dateReceived.trim() || !orderDetails.collectionDate.trim() || !orderDetails.price.trim()) {
+          throw new Error("Please fill in all required fields (Date Received, Collection Date, and Price).");
+        }
+      }
+
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) {
         throw new Error("You must be logged in to save orders.");
@@ -1126,6 +1133,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
       const { error: orderErr } = await supabase
         .from('orders')
         .insert({
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined,
           user_id: ownerId,
           client_id: clientId,
           client_name: client.name,

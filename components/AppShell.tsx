@@ -81,6 +81,34 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setShowOrderFlow(true);
   };
 
+  // Save client draft from the modal directly to Supabase
+  const handleSaveClientDraft = async (data: ClientFormData) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return;
+      
+      let ownerId = userData.user.id;
+      const { data: rpcResult } = await supabase.rpc('get_my_team_role');
+      if (rpcResult && rpcResult.length > 0) {
+        ownerId = rpcResult[0].owner_id;
+      }
+
+      await supabase.from('clients').insert({
+        user_id: ownerId,
+        name: data.name,
+        phone: data.phone || '',
+        email: data.email || '',
+        gender: data.gender || '',
+        outfit_type: data.outfitType || '',
+        status: 'Pending'
+      });
+    } catch (err) {
+      console.error("Failed to save client draft:", err);
+    } finally {
+      closeAddClient();
+    }
+  };
+
   // "Back" from the flow → re-open the modal so user can edit client info
   const handleBackToModal = () => {
     setShowOrderFlow(false);
@@ -149,7 +177,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <AddClientModal
         isOpen={showAddClient}
         onClose={closeAddClient}
-        onSaveDraft={closeAddClient}
+        onSaveDraft={handleSaveClientDraft}
         onContinue={handleContinueFromModal}
       />
 

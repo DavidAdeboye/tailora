@@ -7,6 +7,7 @@ import AppPageHeader from "./AppPageHeader";
 import { AppPageBody, PageSectionHeader } from "./AppPageBody";
 import PrimaryButton from "./PrimaryButton";
 import { ActionMenuButton, DeleteConfirmModal } from "./Actionmenu";
+import EditClientModal, { type ClientData } from "./EditClientModal";
 
 type ClientStatusType = "collected" | "overdue" | "due";
 
@@ -15,6 +16,7 @@ interface Client {
   id: string;
   name: string;
   phone: string;
+  email?: string;
   gender: string;
   outfit: string;
   status: string;
@@ -138,6 +140,8 @@ export default function ClientManagementPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
+  const [editTarget, setEditTarget] = useState<ClientData | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const filteredClients = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -202,36 +206,38 @@ export default function ClientManagementPage() {
   const isOwnerOrAdmin = userRole === 'Owner' || userRole === 'Admin';
 
   const handleEdit = (client: Client) => {
-    // TODO: wire to your edit flow
-    alert(`Edit ${client.name} (${client.id})`);
+    setEditTarget({
+      id: client.id,
+      name: client.name,
+      phone: client.phone,
+      email: client.email || "",
+      gender: client.gender,
+      outfit: client.outfit,
+      status: client.status
+    });
+    setIsEditOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    if (!deleteTarget) return;
-    setClients(prev => prev.filter(c => c.id !== deleteTarget.id));
-    setDeleteTarget(null);
-  };
-
-  useEffect(() => {
-    let mounted = true;
-    async function loadClients() {
-      // Load role first
-      const { data: rpcResult, error: rpcErr } = await supabase.rpc('get_my_team_role');
-      if (!rpcErr && rpcResult && rpcResult.length > 0 && mounted) {
-        setUserRole(rpcResult[0].role as UserRole);
-      }
-
-      const { data, error } = await supabase
+  const handleSaveEdit = async (updated: ClientData) => {
+    try {
+      const { error } = await supabase
         .from('clients')
-        .select('id, name, phone, gender, outfit_type, status, created_at')
-        .order('created_at', { ascending: false });
-      if (error) {
-        console.error('Error fetching clients', error);
-        return;
-      }
-      if (mounted && data) {
-        setClients(data.map((c: any) => {
-          const rawStatus = c.status ?? 'Collected';
+        .update({
+          name: updated.name,
+          phone: updated.phone,
+          email: updated.email,
+          gender: updated.gender,
+          outfit_type: updated.outfit,
+          status: updated.status
+        })
+        .eq('id', updated.id);
+      
+      if (error) throw error;
+
+      // Update local state
+      setClients(prev => prev.map(c => {
+        if (c.id === updated.id) {
+          const rawStatus = updated.status;
           let statusTypeVal: ClientStatusType = 'collected';
           const normalized = rawStatus.toLowerCase();
           if (normalized.includes('overdue')) {
@@ -239,32 +245,168 @@ export default function ClientManagementPage() {
           } else if (normalized.includes('due')) {
             statusTypeVal = 'due';
           }
-
           return {
-            id: c.id,
-            name: c.name,
-            phone: c.phone ?? '',
-            gender: c.gender ?? '',
-            outfit: c.outfit_type ?? '',
-            status: rawStatus,
-            statusType: statusTypeVal,
-            date: (c.created_at ?? '').toString(),
+            ...c,
+            name: updated.name,
+            phone: updated.phone,
+            email: updated.email,
+            gender: updated.gender,
+            outfit: updated.outfit,
+            status: updated.status,
+            statusType: statusTypeVal
           };
-        }));
+        }
+        return c;
+      }));
+    } catch (err) {
+      console.error("Error updating client:", err);
+      alert("Failed to update client in database.");
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    try {
+      // Delete associated orders first to avoid foreign key constraint violation
+      const { error: ordersErr } = await supabase
+        .from('orders')
+        .delete()
+        .eq('client_id', deleteTarget.id);
+      if (ordersErr) throw ordersErr;
+
+      // Now delete the client
+      const { error: clientErr } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', deleteTarget.id);
+      if (clientErr) throw clientErr;
+
+      setClients(prev => prev.filter(c => c.id !== deleteTarget.id));
+    } catch (err: any) {
+      console.error("Error deleting client:", err);
+      alert(`Failed to delete client: ${err.message || 'Unknown error'}`);
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadClients() {
+      // 1. Load role
+      const { data: rpcResult, error: rpcErr } = await supabase.rpc('get_my_team_role');
+      let memberName = '';
+      let memberRole = '';
+      if (!rpcErr && rpcResult && rpcResult.length > 0 && mounted) {
+        memberName = rpcResult[0].name ?? '';
+        memberRole = rpcResult[0].role ?? '';
+        setUserRole(rpcResult[0].role as UserRole);
+      }
+
+      const isRestrictedRole = memberRole === 'Tailor' || memberRole === 'Assistant';
+
+      if (isRestrictedRole && memberName) {
+        // For Tailors/Assistants: fetch orders assigned to this member, then resolve client_ids
+        const { data: assignedOrders, error: ordersErr } = await supabase
+          .from('orders')
+          .select('client_id, assigned_team');
+        
+        if (ordersErr) {
+          console.error('Error fetching assigned orders', ordersErr);
+          return;
+        }
+
+        // Filter to only orders where this member is in the assigned_team array
+        const assignedClientIds: string[] = [];
+        (assignedOrders ?? []).forEach((o: any) => {
+          if (!o.assigned_team || !o.client_id) return;
+          const teamArr: string[] = Array.isArray(o.assigned_team)
+            ? o.assigned_team
+            : typeof o.assigned_team === 'string'
+              ? JSON.parse(o.assigned_team)
+              : [];
+          if (teamArr.some((name: string) => name.toLowerCase() === memberName.toLowerCase())) {
+            assignedClientIds.push(o.client_id);
+          }
+        });
+
+        if (!mounted) return;
+
+        if (assignedClientIds.length === 0) {
+          setClients([]);
+          return;
+        }
+
+        // Deduplicate IDs
+        const uniqueIds = Array.from(new Set(assignedClientIds));
+
+        const { data, error } = await supabase
+          .from('clients')
+          .select('id, name, phone, email, gender, outfit_type, status, created_at')
+          .in('id', uniqueIds)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Error fetching assigned clients', error);
+          return;
+        }
+
+        if (mounted && data) {
+          setClients(data.map((c: any) => {
+            const rawStatus = c.status ?? 'Collected';
+            let statusTypeVal: ClientStatusType = 'collected';
+            const normalized = rawStatus.toLowerCase();
+            if (normalized.includes('overdue')) statusTypeVal = 'overdue';
+            else if (normalized.includes('due')) statusTypeVal = 'due';
+            return {
+              id: c.id,
+              name: c.name,
+              phone: c.phone ?? '',
+              email: c.email ?? '',
+              gender: c.gender ?? '',
+              outfit: c.outfit_type ?? '',
+              status: rawStatus,
+              statusType: statusTypeVal,
+              date: (c.created_at ?? '').toString(),
+            };
+          }));
+        }
+      } else {
+        // Owners and Admins see all clients
+        const { data, error } = await supabase
+          .from('clients')
+          .select('id, name, phone, email, gender, outfit_type, status, created_at')
+          .order('created_at', { ascending: false });
+        if (error) {
+          console.error('Error fetching clients', error);
+          return;
+        }
+        if (mounted && data) {
+          setClients(data.map((c: any) => {
+            const rawStatus = c.status ?? 'Collected';
+            let statusTypeVal: ClientStatusType = 'collected';
+            const normalized = rawStatus.toLowerCase();
+            if (normalized.includes('overdue')) statusTypeVal = 'overdue';
+            else if (normalized.includes('due')) statusTypeVal = 'due';
+            return {
+              id: c.id,
+              name: c.name,
+              phone: c.phone ?? '',
+              email: c.email ?? '',
+              gender: c.gender ?? '',
+              outfit: c.outfit_type ?? '',
+              status: rawStatus,
+              statusType: statusTypeVal,
+              date: (c.created_at ?? '').toString(),
+            };
+          }));
+        }
       }
     }
     loadClients();
     return () => { mounted = false; };
   }, []);
 
-  if (userRole === 'Tailor') {
-    return (
-      <div className="tailora-page-view" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
-        <h2 style={{ fontFamily: "Sora, sans-serif" }}>Access Denied</h2>
-        <p style={{ color: "#667185" }}>You do not have permission to access Client Management.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="tailora-page-view" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
@@ -277,12 +419,16 @@ export default function ClientManagementPage() {
               <img src="/sewingmachine.svg" alt="" className="tailora-clients-title-icon" width={32} height={32} />
             </span>
           }
-          subtitle="Check out the most recent list of clients."
-          action={
+          subtitle={isOwnerOrAdmin
+            ? "Check out the most recent list of clients."
+            : "Clients assigned to your orders."
+          }
+          action={isOwnerOrAdmin ? (
             <PrimaryButton className="tailora-clients-add-btn" onClick={() => openAddClient()}>
               <AddIcon />
               Add Client
             </PrimaryButton>
+          ) : undefined
           }
         />
 
@@ -490,6 +636,13 @@ export default function ClientManagementPage() {
         itemName={deleteTarget ? `${deleteTarget.name} (${deleteTarget.id})` : undefined}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <EditClientModal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        client={editTarget}
+        onSave={handleSaveEdit}
       />
     </div>
   );
