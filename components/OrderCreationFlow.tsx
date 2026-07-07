@@ -981,8 +981,28 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
   const [invitedMembers, setInvitedMembers] = useState<Member[]>([]);
 
   const [teamList, setTeamList] = useState<Member[]>([]);
-  const [friendlyOrderId] = useState(() => `#A-${Math.floor(1000 + Math.random() * 9000)}`);
+  // Display-only label shown in the stepper header before save.
+  // The actual stored friendly ID is derived from the DB UUID inside saveOrderAndClient.
+  const [displayOrderId] = useState(() => `#A-${Math.floor(1000 + Math.random() * 9000)}`);
   const [isSaving, setIsSaving] = useState(false);
+
+  // avatarUrl loaded from localStorage (set by AppPageHeader/SettingsPage on login/save)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('tailora_avatar');
+      if (stored) setAvatarUrl(stored);
+    } catch {}
+    const handler = () => {
+      try {
+        const stored = localStorage.getItem('tailora_avatar');
+        if (stored) setAvatarUrl(stored);
+      } catch {}
+    };
+    window.addEventListener('tailora_profile_updated', handler);
+    return () => window.removeEventListener('tailora_profile_updated', handler);
+  }, []);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const w = useWindowWidth();
@@ -1108,6 +1128,9 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
       }
 
       // 3. Insert Order
+      // Derive a collision-free friendly ID from the DB-generated client UUID
+      const friendlyOrderId = `#A-${clientId.replace(/-/g, '').slice(0, 6).toUpperCase()}`;
+
       const measurementsJson = {
         unit,
         neck: measurements.neck || '',
@@ -1186,7 +1209,11 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
             <BellIcon />
           </button>
           <button type="button" style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #F1F1F2", borderRadius: 100, padding: "6px 10px", cursor: "pointer" }}>
-            <img src="/Ellipse2481.png" alt="" style={{ width: 22, height: 22, borderRadius: "50%" }}/>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Profile" style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover" }}/>
+            ) : (
+              <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#128C7E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: "#fff", fontFamily: "Satoshi, sans-serif" }}>T</div>
+            )}
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
               <path opacity="0.4" d="M15.48 13.23L11.69 8.18H6.08C5.12 8.18 4.64 9.34 5.32 10.02L10.5 15.2C11.33 16.03 12.68 16.03 13.51 15.2L15.48 13.23Z" fill="#121212"/>
               <path d="M17.92 8.18H11.69L15.48 13.23L18.69 10.02C19.36 9.34 18.88 8.18 17.92 8.18Z" fill="#121212"/>
@@ -1213,7 +1240,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
             </button>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
               <Stepper step={step}/>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Order: {friendlyOrderId}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Order: {displayOrderId}</span>
             </div>
           </div>
 

@@ -2,7 +2,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { useAppModals } from "./AppModalsContext";
 import PrimaryButton from "./PrimaryButton";
-import NotificationsPanel from "./NotificationsPanel";
 import AppPageHeader from "./AppPageHeader";
 import { supabase } from "../lib/supabase";
 import { ActionMenuButton, DeleteConfirmModal } from "./Actionmenu";
@@ -160,7 +159,6 @@ export default function TailoraDashboard() {
     });
   }, [searchQuery, filterGender, filterStatus, filterOutfit, orders]);
 
-  const [showNotifications, setShowNotifications] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
 
   const ITEMS_PER_PAGE = 7;
@@ -235,10 +233,23 @@ export default function TailoraDashboard() {
     alert(`Edit order ${order.id}`);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
-    setDeleteTarget(null);
+    try {
+      const { error: deleteErr } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', deleteTarget.id);
+
+      if (deleteErr) throw deleteErr;
+
+      setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to delete order from database.");
+    } finally {
+      setDeleteTarget(null);
+    }
   };
 
   useEffect(() => {
@@ -299,7 +310,9 @@ export default function TailoraDashboard() {
       try {
         const { count: cCount } = await supabase
           .from('clients')
-          .select('*', { count: 'exact', head: true });
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', workspaceOwnerId);
+
         if (cCount !== null && mounted) {
           setClientsCount(cCount);
         }
@@ -682,7 +695,7 @@ export default function TailoraDashboard() {
         </div>
       </div>
 
-      {showNotifications && <NotificationsPanel onClose={() => setShowNotifications(false)} />}
+
 
       <DeleteConfirmModal
         isOpen={!!deleteTarget}

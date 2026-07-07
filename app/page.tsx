@@ -2,6 +2,7 @@
 import type { NextPage } from "next";
 import Image from "next/image";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { supabase } from "../lib/supabase";
 
 // Button Component
 const Button = ({
@@ -9,11 +10,15 @@ const Button = ({
   property1 = "Default",
   buttonBackgroundColor,
   createAccountColor,
+  text = "Get Started",
+  href = "/signup",
 }: {
   className?: string;
   property1?: string;
   buttonBackgroundColor?: CSSProperties["backgroundColor"];
   createAccountColor?: CSSProperties["color"];
+  text?: string;
+  href?: string;
 }) => {
   const buttonStyle: CSSProperties = useMemo(() => {
     return {
@@ -32,12 +37,12 @@ const Button = ({
       className={`tailora-landing-btn cursor-pointer [border:none] py-[13px] px-6 bg-foundation-primary-normal h-[46px] w-[175px] rounded-[999px] overflow-hidden shrink-0 flex items-center justify-center box-border ${className}`}
       style={buttonStyle}
     >
-      <a href="/signup">
+      <a href={href}>
       <div
         className="relative text-sm leading-5 font-medium font-[Satoshi] text-[#fff] text-left"
         style={createAccountStyle}
       >
-        Get Started
+        {text}
       </div>
       </a>
     </button>
@@ -177,6 +182,21 @@ const MeasurementRows = ({
 // Desktop4 - Hero/Navbar Section
 const Desktop4 = ({ className = "" }: { className?: string }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const heroCards = [
     { name: "Ajoke Sandra",   role: "Tailor",          img: "/Slide1.png" },
@@ -318,39 +338,59 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
 
             {/* Right side */}
             <div className="flex items-center gap-4 shrink-0">
-              <div className="flex items-center justify-center py-0 px-2 cursor-pointer mq960:hidden mq800:hidden">
-                <div className="relative leading-[22px] font-medium"><a href="/login">Sign in </a></div>
-              </div>
-              <Button property1="Default" className="mq960:hidden mq800:hidden" />
+              {user ? (
+                <Button
+                  property1="Default"
+                  buttonBackgroundColor="#121212"
+                  createAccountColor="#fff"
+                  text="Dashboard"
+                  href="/dashboard"
+                  className="mq960:hidden mq800:hidden"
+                />
+              ) : (
+                <>
+                  <div className="flex items-center justify-center py-0 px-2 cursor-pointer mq960:hidden mq800:hidden">
+                    <div className="relative leading-[22px] font-medium"><a href="/login">Sign in </a></div>
+                  </div>
+                  <Button property1="Default" className="mq960:hidden mq800:hidden" />
+                </>
+              )}
               {/* Hamburger */}
-<button
-  className="mq960:flex mq800:flex hidden flex-col items-center justify-center w-[38px] h-[38px] gap-[5px] border border-foundation-gray-light rounded-full cursor-pointer transition-colors hover:bg-foundation-gray-lightest"
-  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
->
-  <span className={`block w-4 h-[1.5px] bg-foundation-primary-normal rounded-full transition-transform duration-300 origin-center ${isMobileMenuOpen ? "translate-y-[6.5px] rotate-45" : ""}`} />
-  <span className={`block w-4 h-[1.5px] bg-foundation-primary-normal rounded-full transition-opacity duration-300 ${isMobileMenuOpen ? "opacity-0" : ""}`} />
-  <span className={`block w-4 h-[1.5px] bg-foundation-primary-normal rounded-full transition-transform duration-300 origin-center ${isMobileMenuOpen ? "-translate-y-[6.5px] -rotate-45" : ""}`} />
-</button>
+              <button
+                className="mq960:flex mq800:flex hidden flex-col items-center justify-center w-[38px] h-[38px] gap-[5px] border border-foundation-gray-light rounded-full cursor-pointer transition-colors hover:bg-foundation-gray-lightest"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              >
+                <span className={`block w-4 h-[1.5px] bg-foundation-primary-normal rounded-full transition-transform duration-300 origin-center ${isMobileMenuOpen ? "translate-y-[6.5px] rotate-45" : ""}`} />
+                <span className={`block w-4 h-[1.5px] bg-foundation-primary-normal rounded-full transition-opacity duration-300 ${isMobileMenuOpen ? "opacity-0" : ""}`} />
+                <span className={`block w-4 h-[1.5px] bg-foundation-primary-normal rounded-full transition-transform duration-300 origin-center ${isMobileMenuOpen ? "-translate-y-[6.5px] -rotate-45" : ""}`} />
+              </button>
             </div>
           </nav>
           {/* Mobile menu dropdown */}
-<div className={`w-full overflow-hidden transition-all duration-300 ease-in-out hidden mq960:block ${isMobileMenuOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"}`}>
-  <div className="pt-3 pb-2 px-1 flex flex-col gap-1">
-    {["Home", "Features", "Pricing", "How It Works"].map((item) => (
-      <a key={item} href="#" className="flex items-center px-4 py-3 rounded-xl text-sm font-medium font-[Satoshi] text-foundation-gray-darker hover:bg-foundation-gray-lightest transition-colors">
-        {item}
-      </a>
-    ))}
-    <div className="h-px bg-foundation-gray-light mx-2 my-1" />
-    <a href="/login" className="flex items-center px-4 py-3 rounded-xl text-sm font-medium font-[Satoshi] text-foundation-gray-dark hover:bg-foundation-gray-lightest transition-colors">
-      Sign in
-    </a>
-    <div className="px-2 pb-1 pt-1">
-      <Button property1="Default" className="w-full" />
-    </div>
-  </div>
-</div>
-
+          <div className={`w-full overflow-hidden transition-all duration-300 ease-in-out hidden mq960:block ${isMobileMenuOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"}`}>
+            <div className="pt-3 pb-2 px-1 flex flex-col gap-1">
+              {["Home", "Features", "Pricing", "How It Works"].map((item) => (
+                <a key={item} href="#" className="flex items-center px-4 py-3 rounded-xl text-sm font-medium font-[Satoshi] text-foundation-gray-darker hover:bg-foundation-gray-lightest transition-colors">
+                  {item}
+                </a>
+              ))}
+              <div className="h-px bg-foundation-gray-light mx-2 my-1" />
+              {user ? (
+                <div className="px-2 pb-1 pt-1">
+                  <Button property1="Default" text="Dashboard" href="/dashboard" className="w-full" />
+                </div>
+              ) : (
+                <>
+                  <a href="/login" className="flex items-center px-4 py-3 rounded-xl text-sm font-medium font-[Satoshi] text-foundation-gray-dark hover:bg-foundation-gray-lightest transition-colors">
+                    Sign in
+                  </a>
+                  <div className="px-2 pb-1 pt-1">
+                    <Button property1="Default" className="w-full" />
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </header>
       </div>
 
@@ -399,11 +439,21 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
         </p>
 
         {/* CTA */}
-        <Button
-          property1="Default"
-          buttonBackgroundColor="#121212"
-          createAccountColor="#fff"
-        />
+        {user ? (
+          <Button
+            property1="Default"
+            buttonBackgroundColor="#121212"
+            createAccountColor="#fff"
+            text="Go to Dashboard"
+            href="/dashboard"
+          />
+        ) : (
+          <Button
+            property1="Default"
+            buttonBackgroundColor="#121212"
+            createAccountColor="#fff"
+          />
+        )}
       </div>
 
       {/* ── Infinite-scroll carousel ── */}

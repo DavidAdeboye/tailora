@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useRouter } from "next/navigation";
 import MobileMenuButton from "./MobileMenuButton";
-import NotificationsPanel from "./NotificationsPanel";
+import NotificationsPanel, { NotificationItem } from "./NotificationsPanel";
 import LogoutModal from "./LogoutModal";
 
 function BellIcon() {
@@ -124,6 +124,227 @@ export default function AppPageHeader({ title }: { title: string }) {
     };
   }, []);
 
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(true);
+
+  async function fetchNotificationsList() {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return;
+      const userId = userData.user.id;
+
+      let readIds: string[] = [];
+      let dismissedIds: string[] = [];
+      try {
+        const r = localStorage.getItem('tailora_read_notifications');
+        if (r) readIds = JSON.parse(r);
+        const d = localStorage.getItem('tailora_dismissed_notifications');
+        if (d) dismissedIds = JSON.parse(d);
+      } catch {}
+
+      const { data: tableData, error: tableError } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!tableError && tableData) {
+        const items = tableData
+          .map((n: any) => {
+            const createdDate = new Date(n.created_at);
+            const dateStr = createdDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+            const timeStr = createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            
+            return {
+              id: n.id,
+              title: n.title,
+              message: n.message,
+              type: n.type || 'info',
+              date: dateStr,
+              time: timeStr,
+              is_read: n.is_read || readIds.includes(n.id)
+            };
+          })
+          .filter((n: any) => !dismissedIds.includes(n.id));
+
+        setNotifications(items);
+        setNotificationsLoading(false);
+        return;
+      }
+
+      // Fallback: table doesn't exist, generate dynamically
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('id, client_name, outfit, status, created_at, measurements')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      const { data: team } = await supabase
+        .from('team_members')
+        .select('name, role, status')
+        .limit(5);
+
+      const dynamicNotifications: NotificationItem[] = [];
+
+      if (orders) {
+        orders.forEach((o: any) => {
+          const createdDate = new Date(o.created_at);
+          const dateStr = createdDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+          const timeStr = createdDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+          const placedId = `${o.id}-placed`;
+          dynamicNotifications.push({
+            id: placedId,
+            title: "New Order Placed",
+            message: `New order for client ${o.client_name} (${o.outfit || 'Custom Outfit'}) has been placed`,
+            type: 'info',
+            date: dateStr,
+            time: timeStr,
+            is_read: readIds.includes(placedId)
+          });
+
+          if (o.status === 'Collected') {
+            const colId = `${o.id}-collected`;
+            dynamicNotifications.push({
+              id: colId,
+              title: "Order Collected",
+              message: `Client collected order for ${o.client_name}`,
+              type: 'success',
+              date: dateStr,
+              time: timeStr,
+              is_read: readIds.includes(colId)
+            });
+          }
+
+          const measurementsData = o.measurements || {};
+          const collectionDateStr = measurementsData.collectionDate;
+          if (collectionDateStr) {
+            const collectionDate = new Date(collectionDateStr);
+            const today = new Date();
+            const diffTime = collectionDate.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (o.status !== 'Collected') {
+              if (diffDays < 0) {
+                const ovId = `${o.id}-overdue`;
+                dynamicNotifications.push({
+                  id: ovId,
+                  title: "Overdue Alert",
+                  message: `Overdue alert: Order for ${o.client_name} is ${Math.abs(diffDays)} day(s) past due`,
+                  type: 'danger',
+                  date: collectionDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+                  time: "09:00 AM",
+                  is_read: readIds.includes(ovId)
+                });
+              } else if (diffDays <= 3) {
+                const dsId = `${o.id}-due-soon`;
+                dynamicNotifications.push({
+                  id: dsId,
+                  title: "Order Due Soon",
+                  message: `Order for ${o.client_name} is due in ${diffDays} day(s)`,
+                  type: 'warning',
+                  date: "Today",
+                  time: "08:00 AM",
+                  is_read: readIds.includes(dsId)
+                });
+              }
+            }
+          }
+        });
+      }
+
+      if (team) {
+        team.forEach((t: any, idx: number) => {
+          const tmId = `team-${idx}`;
+          dynamicNotifications.push({
+            id: tmId,
+            title: "Team Member Status",
+            message: `Team member ${t.name} (${t.role}) is ${t.status === 'Active' ? 'active in workspace' : 'pending invitation'}`,
+            type: 'info',
+            date: "Recently",
+            time: "",
+            is_read: readIds.includes(tmId)
+          });
+        });
+      }
+
+      const filtered = dynamicNotifications
+        .filter((n) => !dismissedIds.includes(n.id))
+        .slice(0, 15);
+
+      setNotifications(filtered);
+    } catch (err) {
+      console.error("AppPageHeader: Error loading notifications", err);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchNotificationsList();
+  }, []);
+
+  useEffect(() => {
+    if (showNotifications) {
+      fetchNotificationsList();
+    }
+  }, [showNotifications]);
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      const allIds = notifications.map((n) => n.id);
+      let readIds: string[] = [];
+      try {
+        const r = localStorage.getItem('tailora_read_notifications');
+        if (r) readIds = JSON.parse(r);
+      } catch {}
+
+      const newReadIds = Array.from(new Set([...readIds, ...allIds]));
+      try {
+        localStorage.setItem('tailora_read_notifications', JSON.stringify(newReadIds));
+      } catch {}
+
+      const hasTableBacked = notifications.some(
+        (n) => !n.id.includes('-') && n.id.length === 36
+      );
+      if (hasTableBacked) {
+        await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .in('id', allIds.filter(id => id.length === 36 && !id.includes('-')));
+      }
+
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    } catch (err) {
+      console.error("Failed to mark all as read:", err);
+    }
+  };
+
+  const handleClearNotification = async (id: string) => {
+    try {
+      let dismissedIds: string[] = [];
+      try {
+        const d = localStorage.getItem('tailora_dismissed_notifications');
+        if (d) dismissedIds = JSON.parse(d);
+      } catch {}
+
+      dismissedIds.push(id);
+      try {
+        localStorage.setItem('tailora_dismissed_notifications', JSON.stringify(dismissedIds));
+      } catch {}
+
+      if (id.length === 36 && !id.includes('-') && !id.includes('team')) {
+        await supabase
+          .from('notifications')
+          .delete()
+          .eq('id', id);
+      }
+
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (err) {
+      console.error("Failed to clear notification:", err);
+    }
+  };
+
   const handleLogoutClick = () => {
     setShowUserMenu(false);       // close dropdown first
     setShowLogoutModal(true);     // then open modal
@@ -190,9 +411,23 @@ export default function AppPageHeader({ title }: { title: string }) {
               alignItems: "center",
               justifyContent: "center",
               boxShadow: "0px 0px 1px rgba(78,78,78,0.16)",
+              position: "relative",
             }}
           >
             <BellIcon />
+            {notifications.some(n => !n.is_read) && (
+              <span
+                style={{
+                  position: "absolute",
+                  top: 10,
+                  right: 10,
+                  width: 8,
+                  height: 8,
+                  background: "#E57301",
+                  borderRadius: "50%",
+                }}
+              />
+            )}
           </button>
 
           {/* Avatar + dropdown */}
@@ -402,7 +637,13 @@ export default function AppPageHeader({ title }: { title: string }) {
 
 
       {showNotifications && (
-        <NotificationsPanel onClose={() => setShowNotifications(false)} />
+        <NotificationsPanel
+          notifications={notifications}
+          loading={notificationsLoading}
+          onClose={() => setShowNotifications(false)}
+          onMarkAllAsRead={handleMarkAllAsRead}
+          onClearNotification={handleClearNotification}
+        />
       )}
 
       {/* Logout confirmation modal */}
