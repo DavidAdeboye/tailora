@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useAppModals } from "./AppModalsContext";
 
 export interface ClientData {
   id: string;
@@ -35,6 +36,21 @@ export default function EditClientModal({ isOpen, onClose, client, onSave }: Edi
   const [customOutfitText, setCustomOutfitText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { openOrderFlowForClient } = useAppModals();
+
+  const handleEditMore = () => {
+    if (client && openOrderFlowForClient) {
+      openOrderFlowForClient({
+        id: client.id,
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        gender: form.gender,
+        outfitType: form.outfit
+      });
+      onClose();
+    }
+  };
 
   const set = (k: keyof typeof form, v: string) => setForm(p => ({ ...p, [k]: v }));
 
@@ -233,6 +249,25 @@ export default function EditClientModal({ isOpen, onClose, client, onSave }: Edi
           {error && (
             <p style={{ margin: "16px 0 0", fontSize: 13, color: "#9E0A05" }}>{error}</p>
           )}
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 24, marginBottom: -8 }}>
+            <button
+              type="button"
+              onClick={handleEditMore}
+              style={{
+                background: "none", border: "none", color: "#EB5017", cursor: "pointer",
+                fontSize: 14, fontWeight: 600, fontFamily: "Satoshi, sans-serif",
+                textDecoration: "underline", display: "flex", alignItems: "center", gap: 6,
+                padding: 0
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M11 2H9C4 2 2 4 2 9v6c0 5 2 7 7 7h6c5 0 7-2 7-7v-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M16.085 2.72L7.585 11.22c-.35.35-.7.105-1.05-.245s-.6-.7-.25-1.05l8.5-8.5c.595-.595 1.715-.595 2.3 0C17.68 2.015 17.68 2.125 16.085 2.72z" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M15 4.5l3 3" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              Edit Measurements & Order Details
+            </button>
+          </div>
           <div className="tailora-modal-actions" style={{ display: "flex", gap: 16, marginTop: 28 }}>
             <button type="button" onClick={onClose} style={{ flex: 1, padding: "13px 24px", background: "transparent", border: "1px solid #121212", borderRadius: 999, fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", cursor: "pointer" }}
               onMouseEnter={e => (e.currentTarget.style.background = "#F5F5F5")} onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>

@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import type { ClientFormData } from "./AddClientModal";
 import { supabase } from "../lib/supabase";
+import AppPageHeader from "./AppPageHeader";
+import { useAppModals } from "./AppModalsContext";
 
 interface Props {
   client: ClientFormData;
@@ -28,8 +30,8 @@ interface Member {
 }
 
 const roleBadge: Record<Role, { bg: string; color: string }> = {
-  Admin:     { bg: "#E3EFFC", color: "#04326B" },
-  Tailor:    { bg: "#E7F6EC", color: "#036B26" },
+  Admin: { bg: "#E3EFFC", color: "#04326B" },
+  Tailor: { bg: "#E7F6EC", color: "#036B26" },
   Assistant: { bg: "#FEF6E7", color: "#865503" },
 };
 
@@ -50,9 +52,9 @@ function useWindowWidth() {
 function BellIcon() {
   return (
     <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
-      <path opacity="0.4" d="M22.1 17.69C21.8 18.5 21.16 19.12 20.32 19.4C19.15 19.79 17.95 20.08 16.74 20.29L16.38 20.34C16.18 20.38 15.99 20.4 15.8 20.42C15.56 20.45 15.31 20.47 15.06 20.5C14.38 20.55 13.7 20.58 13.02 20.58C12.33 20.58 11.64 20.55 10.95 20.49C10.66 20.46 10.38 20.43 10.1 20.39C9.93 20.37 9.77 20.34 9.62 20.32C9.5 20.3 9.38 20.29 9.26 20.27C8.06 20.07 6.87 19.78 5.71 19.39C4.84 19.1 4.18 18.48 3.89 17.69C3.6 16.91 3.71 16 4.17 15.22L5.4 13.18C5.65 12.74 5.89 11.88 5.89 11.36V9.35C5.89 5.42 9.08 2.22 13.02 2.22C16.94 2.22 20.14 5.42 20.14 9.35V11.36C20.14 11.88 20.38 12.74 20.65 13.18L21.87 15.22C22.32 15.98 22.4 16.87 22.1 17.69Z" fill="#121212"/>
-      <path d="M13 11.66C12.55 11.66 12.18 11.29 12.18 10.83V7.48C12.18 7.02 12.55 6.65 13 6.65C13.46 6.65 13.82 7.02 13.82 7.48V10.83C13.82 11.29 13.44 11.66 13 11.66Z" fill="#121212"/>
-      <path d="M16.07 21.68C15.61 22.93 14.41 23.83 13 23.83C12.14 23.83 11.3 23.49 10.7 22.87C10.36 22.54 10.1 22.11 9.94 21.67C10.09 21.69 10.23 21.7 10.38 21.72C10.63 21.75 10.89 21.79 11.15 21.81C11.77 21.86 12.4 21.89 13.02 21.89C13.64 21.89 14.26 21.86 14.86 21.81C15.09 21.79 15.32 21.77 15.54 21.74C15.71 21.72 15.88 21.7 16.07 21.68Z" fill="#121212"/>
+      <path opacity="0.4" d="M22.1 17.69C21.8 18.5 21.16 19.12 20.32 19.4C19.15 19.79 17.95 20.08 16.74 20.29L16.38 20.34C16.18 20.38 15.99 20.4 15.8 20.42C15.56 20.45 15.31 20.47 15.06 20.5C14.38 20.55 13.7 20.58 13.02 20.58C12.33 20.58 11.64 20.55 10.95 20.49C10.66 20.46 10.38 20.43 10.1 20.39C9.93 20.37 9.77 20.34 9.62 20.32C9.5 20.3 9.38 20.29 9.26 20.27C8.06 20.07 6.87 19.78 5.71 19.39C4.84 19.1 4.18 18.48 3.89 17.69C3.6 16.91 3.71 16 4.17 15.22L5.4 13.18C5.65 12.74 5.89 11.88 5.89 11.36V9.35C5.89 5.42 9.08 2.22 13.02 2.22C16.94 2.22 20.14 5.42 20.14 9.35V11.36C20.14 11.88 20.38 12.74 20.65 13.18L21.87 15.22C22.32 15.98 22.4 16.87 22.1 17.69Z" fill="#121212" />
+      <path d="M13 11.66C12.55 11.66 12.18 11.29 12.18 10.83V7.48C12.18 7.02 12.55 6.65 13 6.65C13.46 6.65 13.82 7.02 13.82 7.48V10.83C13.82 11.29 13.44 11.66 13 11.66Z" fill="#121212" />
+      <path d="M16.07 21.68C15.61 22.93 14.41 23.83 13 23.83C12.14 23.83 11.3 23.49 10.7 22.87C10.36 22.54 10.1 22.11 9.94 21.67C10.09 21.69 10.23 21.7 10.38 21.72C10.63 21.75 10.89 21.79 11.15 21.81C11.77 21.86 12.4 21.89 13.02 21.89C13.64 21.89 14.26 21.86 14.86 21.81C15.09 21.79 15.32 21.77 15.54 21.74C15.71 21.72 15.88 21.7 16.07 21.68Z" fill="#121212" />
     </svg>
   );
 }
@@ -60,7 +62,7 @@ function BellIcon() {
 function BackArrowIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path d="M15 20L7 12L15 4" stroke="#121212" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M15 20L7 12L15 4" stroke="#121212" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -68,9 +70,9 @@ function BackArrowIcon() {
 function TrashIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path d="M21 5.98C17.67 5.65 14.32 5.48 10.98 5.48C9 5.48 7.02 5.58 5.04 5.78L3 5.98" stroke="#E03137" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path opacity="0.4" d="M8.5 4.97L8.72 3.66C8.88 2.71 9 2 10.69 2H13.31C15 2 15.13 2.75 15.28 3.67L15.5 4.97" stroke="#E03137" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <path d="M18.85 9.14L18.2 19.21C18.09 20.78 18 22 15.21 22H8.79C6 22 5.91 20.78 5.8 19.21L5.15 9.14" stroke="#E03137" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M21 5.98C17.67 5.65 14.32 5.48 10.98 5.48C9 5.48 7.02 5.58 5.04 5.78L3 5.98" stroke="#E03137" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path opacity="0.4" d="M8.5 4.97L8.72 3.66C8.88 2.71 9 2 10.69 2H13.31C15 2 15.13 2.75 15.28 3.67L15.5 4.97" stroke="#E03137" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M18.85 9.14L18.2 19.21C18.09 20.78 18 22 15.21 22H8.79C6 22 5.91 20.78 5.8 19.21L5.15 9.14" stroke="#E03137" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -78,8 +80,8 @@ function TrashIcon() {
 function AddPlusIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path opacity="0.4" d="M12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22Z" fill="#fff"/>
-      <path d="M16 12.75H12.75V16C12.75 16.41 12.41 16.75 12 16.75C11.59 16.75 11.25 16.41 11.25 16V12.75H8C7.59 12.75 7.25 12.41 7.25 12C7.25 11.59 7.59 11.25 8 11.25H11.25V8C11.25 7.59 11.59 7.25 12 7.25C12.41 7.25 12.75 7.59 12.75 8V11.25H16C16.41 11.25 16.75 11.59 16.75 12C16.75 12.41 16.41 12.75 16 12.75Z" fill="#fff"/>
+      <path opacity="0.4" d="M12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22Z" fill="#fff" />
+      <path d="M16 12.75H12.75V16C12.75 16.41 12.41 16.75 12 16.75C11.59 16.75 11.25 16.41 11.25 16V12.75H8C7.59 12.75 7.25 12.41 7.25 12C7.25 11.59 7.59 11.25 8 11.25H11.25V8C11.25 7.59 11.59 7.25 12 7.25C12.41 7.25 12.75 7.59 12.75 8V11.25H16C16.41 11.25 16.75 11.59 16.75 12C16.75 12.41 16.41 12.75 16 12.75Z" fill="#fff" />
     </svg>
   );
 }
@@ -87,10 +89,10 @@ function AddPlusIcon() {
 function InviteIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-      <path opacity="0.4" d="M7.5 1.67C5.32 1.67 3.54 3.44 3.54 5.63C3.54 7.77 5.22 9.5 7.4 9.58C7.47 9.57 7.53 9.57 7.58 9.58C7.6 9.58 7.61 9.58 7.63 9.58C7.63 9.58 7.63 9.58 7.64 9.58C9.77 9.5 11.45 7.77 11.46 5.63C11.46 3.44 9.68 1.67 7.5 1.67Z" fill="#fff"/>
-      <path d="M11.73 11.79C9.41 10.24 5.62 10.24 3.28 11.79C2.22 12.5 1.63 13.46 1.63 14.48C1.63 15.51 2.22 16.46 3.27 17.16C4.43 17.94 5.97 18.33 7.5 18.33C9.03 18.33 10.57 17.94 11.73 17.16C12.78 16.45 13.37 15.5 13.37 14.47C13.36 13.44 12.78 12.49 11.73 11.79Z" fill="#fff"/>
-      <path opacity="0.4" d="M16.66 6.1C16.79 7.73 15.64 9.15 14.05 9.34C14.04 9.34 14.04 9.34 14.03 9.34H14.01C13.96 9.34 13.91 9.34 13.87 9.36C13.07 9.4 12.32 9.14 11.76 8.67C12.62 7.9 13.11 6.75 13.01 5.5C12.95 4.82 12.72 4.21 12.37 3.68C12.68 3.52 13.05 3.42 13.43 3.39C15.06 3.25 16.51 4.47 16.66 6.1Z" fill="#fff"/>
-      <path d="M18.33 13.83C18.26 14.63 17.74 15.33 16.88 15.81C16.04 16.27 14.99 16.48 13.95 16.46C14.55 15.92 14.9 15.24 14.97 14.53C15.05 13.49 14.56 12.5 13.58 11.71C13.02 11.27 12.37 10.92 11.66 10.66C13.5 10.13 15.82 10.48 17.24 11.63C18.01 12.25 18.4 13.03 18.33 13.83Z" fill="#fff"/>
+      <path opacity="0.4" d="M7.5 1.67C5.32 1.67 3.54 3.44 3.54 5.63C3.54 7.77 5.22 9.5 7.4 9.58C7.47 9.57 7.53 9.57 7.58 9.58C7.6 9.58 7.61 9.58 7.63 9.58C7.63 9.58 7.63 9.58 7.64 9.58C9.77 9.5 11.45 7.77 11.46 5.63C11.46 3.44 9.68 1.67 7.5 1.67Z" fill="#fff" />
+      <path d="M11.73 11.79C9.41 10.24 5.62 10.24 3.28 11.79C2.22 12.5 1.63 13.46 1.63 14.48C1.63 15.51 2.22 16.46 3.27 17.16C4.43 17.94 5.97 18.33 7.5 18.33C9.03 18.33 10.57 17.94 11.73 17.16C12.78 16.45 13.37 15.5 13.37 14.47C13.36 13.44 12.78 12.49 11.73 11.79Z" fill="#fff" />
+      <path opacity="0.4" d="M16.66 6.1C16.79 7.73 15.64 9.15 14.05 9.34C14.04 9.34 14.04 9.34 14.03 9.34H14.01C13.96 9.34 13.91 9.34 13.87 9.36C13.07 9.4 12.32 9.14 11.76 8.67C12.62 7.9 13.11 6.75 13.01 5.5C12.95 4.82 12.72 4.21 12.37 3.68C12.68 3.52 13.05 3.42 13.43 3.39C15.06 3.25 16.51 4.47 16.66 6.1Z" fill="#fff" />
+      <path d="M18.33 13.83C18.26 14.63 17.74 15.33 16.88 15.81C16.04 16.27 14.99 16.48 13.95 16.46C14.55 15.92 14.9 15.24 14.97 14.53C15.05 13.49 14.56 12.5 13.58 11.71C13.02 11.27 12.37 10.92 11.66 10.66C13.5 10.13 15.82 10.48 17.24 11.63C18.01 12.25 18.4 13.03 18.33 13.83Z" fill="#fff" />
     </svg>
   );
 }
@@ -98,7 +100,7 @@ function InviteIcon() {
 function ChevronDownIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path d="M19.92 8.95L13.4 15.47C12.63 16.24 11.37 16.24 10.6 15.47L4.08 8.95" stroke="#696969" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M19.92 8.95L13.4 15.47C12.63 16.24 11.37 16.24 10.6 15.47L4.08 8.95" stroke="#696969" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -106,7 +108,7 @@ function ChevronDownIcon() {
 function SearchIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
-      <path d="M17.5 17.5L13.875 13.875M15.8333 9.16667C15.8333 12.8486 12.8486 15.8333 9.16667 15.8333C5.48477 15.8333 2.5 12.8486 2.5 9.16667C2.5 5.48477 5.48477 2.5 9.16667 2.5C12.8486 2.5 15.8333 5.48477 15.8333 9.16667Z" stroke="#667185" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M17.5 17.5L13.875 13.875M15.8333 9.16667C15.8333 12.8486 12.8486 15.8333 9.16667 15.8333C5.48477 15.8333 2.5 12.8486 2.5 9.16667C2.5 5.48477 5.48477 2.5 9.16667 2.5C12.8486 2.5 15.8333 5.48477 15.8333 9.16667Z" stroke="#667185" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -114,7 +116,7 @@ function SearchIcon() {
 function CheckIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-      <path d="M3 8L6.5 11.5L13 4.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M3 8L6.5 11.5L13 4.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -122,7 +124,7 @@ function CheckIcon() {
 function CloseIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path d="M18 6L6 18M6 6L18 18" stroke="#121212" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M18 6L6 18M6 6L18 18" stroke="#121212" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -168,8 +170,8 @@ function InviteTeamDrawer({
     name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 
   const avatarColors: Record<Role, { bg: string; color: string }> = {
-    Admin:     { bg: "#E3EFFC", color: "#04326B" },
-    Tailor:    { bg: "#E7F6EC", color: "#036B26" },
+    Admin: { bg: "#E3EFFC", color: "#04326B" },
+    Tailor: { bg: "#E7F6EC", color: "#036B26" },
     Assistant: { bg: "#FEF6E7", color: "#865503" },
   };
 
@@ -252,7 +254,7 @@ function InviteTeamDrawer({
             padding: "8px 12px", background: "#fff", cursor: "text",
             transition: "border-color 0.15s",
           }}
-            onFocus={() => {}}
+            onFocus={() => { }}
           >
             <SearchIcon />
             <input
@@ -343,7 +345,7 @@ function InviteTeamDrawer({
                         fontSize: 11, color: isActive ? "#036B26" : "#865503",
                         fontFamily: "Satoshi, sans-serif", flexShrink: 0,
                       }}>
-                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: isActive ? "#036B26" : "#F59E0B", display: "inline-block" }}/>
+                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: isActive ? "#036B26" : "#F59E0B", display: "inline-block" }} />
                         {member.status}
                       </span>
                     </div>
@@ -397,7 +399,7 @@ function InviteTeamDrawer({
                       style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", lineHeight: 1 }}
                     >
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <path d="M1 1L9 9M9 1L1 9" stroke={av.color} strokeWidth="1.5" strokeLinecap="round"/>
+                        <path d="M1 1L9 9M9 1L1 9" stroke={av.color} strokeWidth="1.5" strokeLinecap="round" />
                       </svg>
                     </button>
                   </div>
@@ -440,7 +442,7 @@ function InviteTeamDrawer({
               {invited ? (
                 <>
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8L6.5 11.5L13 4.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M3 8L6.5 11.5L13 4.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                   Invited!
                 </>
@@ -494,53 +496,51 @@ function MeasurementField({ label, hint, value, onChange, unit }: {
   );
 }
 
-/* ── CustomMeasurementRow ── */
-function CustomMeasurementRow({ fieldName, value, unit, onFieldNameChange, onValueChange, onRemove }: {
+/* ── CustomMeasurementField ── */
+function CustomMeasurementField({ fieldName, value, unit, onFieldNameChange, onValueChange, onRemove }: {
   fieldName: string; value: string; unit: string;
   onFieldNameChange: (v: string) => void; onValueChange: (v: string) => void; onRemove: () => void;
 }) {
   const [nameFocused, setNameFocused] = useState(false);
   const [valFocused, setValFocused] = useState(false);
   return (
-    <div style={{ border: "1.5px dashed #D0D5DD", borderRadius: 10, padding: 16, background: "#FAFAFA" }}>
-      <div style={{ fontSize: 12, fontWeight: 500, color: "#696969", marginBottom: 8, fontFamily: "Satoshi, sans-serif" }}>
-        Custom measurements
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <input
-          type="text" placeholder="Field name (e.g. Inseam)" value={fieldName}
+          type="text" placeholder="Field name" value={fieldName}
           onChange={(e) => onFieldNameChange(e.target.value)}
           onFocus={() => setNameFocused(true)} onBlur={() => setNameFocused(false)}
           style={{
-            width: "100%", border: "none",
+            border: "none",
             borderBottom: `1px solid ${nameFocused ? "#121212" : "#E2E4E9"}`,
-            fontSize: 13, color: "#121212", fontFamily: "Satoshi, sans-serif",
-            outline: "none", background: "transparent", padding: "4px 0",
-            boxSizing: "border-box", transition: "border-color 0.15s",
+            fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif",
+            outline: "none", background: "transparent", padding: "2px 0",
+            width: "80%", transition: "border-color 0.15s",
           }}
         />
-        <div style={{ position: "relative" }}>
-          <input
-            type="text" inputMode="decimal" placeholder="0.0" value={value}
-            onChange={(e) => onValueChange(e.target.value)}
-            onFocus={() => setValFocused(true)} onBlur={() => setValFocused(false)}
-            style={{
-              width: "100%", height: 40,
-              border: `1px solid ${valFocused ? "#121212" : "#E2E4E9"}`,
-              borderRadius: 8, padding: "0 72px 0 12px",
-              fontSize: 14, color: "#121212", fontFamily: "Satoshi, sans-serif",
-              outline: "none", background: "#fff", boxSizing: "border-box", transition: "border-color 0.15s",
-            }}
-          />
-          <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#999", fontFamily: "Satoshi, sans-serif" }}>
-              {unit === "inches" ? "IN" : "CM"}
-            </span>
-            <button type="button" onClick={onRemove} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
-              <TrashIcon />
-            </button>
-          </div>
-        </div>
+        <button type="button" onClick={onRemove} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}>
+          <TrashIcon />
+        </button>
+      </div>
+      <div style={{ position: "relative" }}>
+        <input
+          type="text" inputMode="decimal" placeholder="0.0" value={value}
+          onChange={(e) => onValueChange(e.target.value)}
+          onFocus={() => setValFocused(true)} onBlur={() => setValFocused(false)}
+          style={{
+            width: "100%", height: 44,
+            border: `1px solid ${valFocused ? "#121212" : "#E2E4E9"}`,
+            borderRadius: 8, padding: "0 48px 0 12px",
+            fontSize: 14, color: "#121212", fontFamily: "Satoshi, sans-serif",
+            outline: "none", background: "#fff", boxSizing: "border-box", transition: "border-color 0.15s",
+          }}
+        />
+        <span style={{
+          position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)",
+          fontSize: 13, fontWeight: 600, color: "#999", fontFamily: "Satoshi, sans-serif", pointerEvents: "none",
+        }}>
+          {unit === "inches" ? "IN" : "CM"}
+        </span>
       </div>
     </div>
   );
@@ -596,17 +596,17 @@ function ReferenceImageDropzone({ images, setImages }: { images: File[]; setImag
       >
         <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#fff", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 6px rgba(0,0,0,0.08)" }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path opacity="0.4" d="M9 22H15C20 22 22 20 22 15V9C22 4 20 2 15 2H9C4 2 2 4 2 9V15C2 20 4 22 9 22Z" fill="#B0825A"/>
-            <path d="M9 10C10.1046 10 11 9.10457 11 8C11 6.89543 10.1046 6 9 6C7.89543 6 7 6.89543 7 8C7 9.10457 7.89543 10 9 10Z" fill="#B0825A"/>
-            <path d="M2.67 18.95L7.6 15.64C8.39 15.11 9.53 15.17 10.24 15.78L10.57 16.07C11.35 16.74 12.61 16.74 13.39 16.07L17.55 12.5C18.33 11.83 19.59 11.83 20.37 12.5L22 13.9" stroke="#B0825A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M15 7H19M17 5V9" stroke="#B0825A" strokeWidth="1.5" strokeLinecap="round"/>
+            <path opacity="0.4" d="M9 22H15C20 22 22 20 22 15V9C22 4 20 2 15 2H9C4 2 2 4 2 9V15C2 20 4 22 9 22Z" fill="#B0825A" />
+            <path d="M9 10C10.1046 10 11 9.10457 11 8C11 6.89543 10.1046 6 9 6C7.89543 6 7 6.89543 7 8C7 9.10457 7.89543 10 9 10Z" fill="#B0825A" />
+            <path d="M2.67 18.95L7.6 15.64C8.39 15.11 9.53 15.17 10.24 15.78L10.57 16.07C11.35 16.74 12.61 16.74 13.39 16.07L17.55 12.5C18.33 11.83 19.59 11.83 20.37 12.5L22 13.9" stroke="#B0825A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M15 7H19M17 5V9" stroke="#B0825A" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
         </div>
         <div style={{ textAlign: "center" }}>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Drop reference images here</p>
           <p style={{ margin: "3px 0 0", fontSize: 12, color: "#888", fontFamily: "Satoshi, sans-serif" }}>Style inspiration, fabric swatches — PNG, JPG up to 6 files</p>
         </div>
-        <input ref={inputRef} type="file" accept="image/png,image/jpeg" multiple style={{ display: "none" }} onChange={(e) => addFiles(e.target.files)}/>
+        <input ref={inputRef} type="file" accept="image/png,image/jpeg" multiple style={{ display: "none" }} onChange={(e) => addFiles(e.target.files)} />
       </div>
       {images.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 12 }}>
@@ -614,14 +614,14 @@ function ReferenceImageDropzone({ images, setImages }: { images: File[]; setImag
             const url = URL.createObjectURL(img);
             return (
               <div key={idx} style={{ position: "relative", width: 72, height: 72 }}>
-                <img src={url} alt="" style={{ width: 72, height: 72, borderRadius: 8, objectFit: "cover", border: "1px solid #E2E4E9" }}/>
+                <img src={url} alt="" style={{ width: 72, height: 72, borderRadius: 8, objectFit: "cover", border: "1px solid #E2E4E9" }} />
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
                   style={{ position: "absolute", top: -6, right: -6, width: 20, height: 20, borderRadius: "50%", background: "#121212", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                 >
                   <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                    <path d="M1 1L9 9M9 1L1 9" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
+                    <path d="M1 1L9 9M9 1L1 9" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                 </button>
               </div>
@@ -636,28 +636,25 @@ function ReferenceImageDropzone({ images, setImages }: { images: File[]; setImag
 /* ── MeasurementsStep ── */
 function MeasurementsStep({
   unit, setUnit, measurements, setMeasurements,
-  customFields, setCustomFields, notes, setNotes,
-  referenceImages, setReferenceImages,
+  customFields, setCustomFields,
 }: {
   unit: string; setUnit: (u: string) => void;
   measurements: Record<string, string>; setMeasurements: (m: Record<string, string>) => void;
   customFields: Array<{ id: number; fieldName: string; value: string }>;
   setCustomFields: (f: Array<{ id: number; fieldName: string; value: string }>) => void;
-  notes: string; setNotes: (n: string) => void;
-  referenceImages: File[]; setReferenceImages: (imgs: File[]) => void;
 }) {
   const w = useWindowWidth();
   const isMobile = w < 480;
   const gridCols = isMobile ? "1fr 1fr" : w < 768 ? "1fr 1fr" : "repeat(3, 1fr)";
 
   const standardFields = [
-    { key: "neck",           label: "Neck",           hint: "Around base" },
-    { key: "chestBust",      label: "Chest/ Bust",    hint: "Fullest point" },
-    { key: "waist",          label: "Waist",          hint: "Natural line" },
-    { key: "hip",            label: "Hip",            hint: "Fullest point" },
-    { key: "shoulder",       label: "Shoulder",       hint: "Seam to seam" },
-    { key: "sleeve",         label: "Sleeve",         hint: "Shoulder to wrist" },
-    { key: "trouserLength",  label: "Trouser Length", hint: "Waist to hem" },
+    { key: "neck", label: "Neck", hint: "Around base" },
+    { key: "chestBust", label: "Chest/ Bust", hint: "Fullest point" },
+    { key: "waist", label: "Waist", hint: "Natural line" },
+    { key: "hip", label: "Hip", hint: "Fullest point" },
+    { key: "shoulder", label: "Shoulder", hint: "Seam to seam" },
+    { key: "sleeve", label: "Sleeve", hint: "Shoulder to wrist" },
+    { key: "trouserLength", label: "Trouser Length", hint: "Waist to hem" },
   ];
 
   const addCustomField = () => setCustomFields([...customFields, { id: Date.now(), fieldName: "", value: "" }]);
@@ -691,31 +688,16 @@ function MeasurementsStep({
 
         <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: isMobile ? "14px 10px" : "20px 24px" }}>
           {standardFields.map((f) => (
-            <MeasurementField key={f.key} label={f.label} hint={f.hint} value={measurements[f.key] ?? ""} onChange={(v) => setMeasurements({ ...measurements, [f.key]: v })} unit={unit}/>
+            <MeasurementField key={f.key} label={f.label} hint={f.hint} value={measurements[f.key] ?? ""} onChange={(v) => setMeasurements({ ...measurements, [f.key]: v })} unit={unit} />
           ))}
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {customFields.map((cf) => (
-            <CustomMeasurementRow
+            <CustomMeasurementField
               key={cf.id} fieldName={cf.fieldName} value={cf.value} unit={unit}
               onFieldNameChange={(v) => updateCustomField(cf.id, "fieldName", v)}
               onValueChange={(v) => updateCustomField(cf.id, "value", v)}
               onRemove={() => removeCustomField(cf.id)}
             />
           ))}
-          {customFields.length === 0 && (
-            <div style={{ border: "1.5px dashed #D0D5DD", borderRadius: 10, padding: 16, background: "#FAFAFA" }}>
-              <div style={{ fontSize: 12, fontWeight: 500, color: "#696969", marginBottom: 8, fontFamily: "Satoshi, sans-serif" }}>Custom measurements</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ fontSize: 13, color: "#B0B0B0", fontFamily: "Satoshi, sans-serif", borderBottom: "1px solid #E2E4E9", padding: "4px 0" }}>Field name (e.g. Inseam)</div>
-                <div style={{ height: 40, border: "1px solid #E2E4E9", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 12px" }}>
-                  <span style={{ fontSize: 14, color: "#C0C0C0", fontFamily: "Satoshi, sans-serif" }}>0.0</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "#999" }}>{unit === "inches" ? "IN" : "CM"}</span>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         <button
@@ -725,26 +707,6 @@ function MeasurementsStep({
           <AddPlusIcon /> Add Custom Measurement
         </button>
       </div>
-
-      <div style={{ height: 1, background: "#F0F2F5" }}/>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <SectionLabel number="Section 02" title="Notes & preferences" description="Posture quirks, fit preferences, allergies, anything the tailor should know." optional/>
-        <textarea
-          value={notes} onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g. Prefers a slightly relaxed shoulder. Right arm sits 0.5&quot; higher than left..."
-          onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")}
-          onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")}
-          style={{ width: "100%", minHeight: 100, border: "1px solid #E2E4E9", borderRadius: 10, padding: "12px 14px", fontSize: 14, color: "#121212", fontFamily: "Satoshi, sans-serif", outline: "none", resize: "vertical", background: "#fff", boxSizing: "border-box", transition: "border-color 0.15s", lineHeight: 1.6 }}
-        />
-      </div>
-
-      <div style={{ height: 1, background: "#F0F2F5" }}/>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <SectionLabel number="Section 03" title="Reference images" description="Add inspiration, fabric swatches, or photos of preferred garments." optional/>
-        <ReferenceImageDropzone images={referenceImages} setImages={setReferenceImages}/>
-      </div>
     </div>
   );
 }
@@ -753,19 +715,22 @@ function MeasurementsStep({
 function OrderDetailsStep({
   orderDetails,
   setOrderDetails,
-  invitedMembers,
   onOpenInviteDrawer,
   teamMembers,
+  assignedStaffs,
+  setAssignedStaffs,
 }: {
-  orderDetails: { dateReceived: string; collectionDate: string; price: string; paymentStatus: string; assignedStaff: string };
+  orderDetails: { dateReceived: string; collectionDate: string; price: string; paymentStatus: string };
   setOrderDetails: (d: typeof orderDetails) => void;
-  invitedMembers: Member[];
   onOpenInviteDrawer: () => void;
   teamMembers: Member[];
+  assignedStaffs: string[];
+  setAssignedStaffs: (s: string[]) => void;
 }) {
   const w = useWindowWidth();
   const isMobile = w < 480;
   const gridCols = isMobile ? "1fr" : w < 768 ? "1fr 1fr" : "repeat(3, 1fr)";
+  const [showStaffDropdown, setShowStaffDropdown] = useState(false);
 
   const set = (key: keyof typeof orderDetails, val: string) => setOrderDetails({ ...orderDetails, [key]: val });
 
@@ -777,15 +742,6 @@ function OrderDetailsStep({
 
   const selectStyle: React.CSSProperties = { ...inputStyle, appearance: "none", WebkitAppearance: "none", paddingRight: 36, cursor: "pointer" };
 
-  const avatarColors: Record<Role, { bg: string; color: string }> = {
-    Admin:     { bg: "#E3EFFC", color: "#04326B" },
-    Tailor:    { bg: "#E7F6EC", color: "#036B26" },
-    Assistant: { bg: "#FEF6E7", color: "#865503" },
-  };
-
-  const initials = (name: string) =>
-    name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
       <h2 style={{ margin: 0, fontFamily: "Sora, sans-serif", fontWeight: 700, fontSize: isMobile ? 20 : 24, color: "#121212" }}>
@@ -795,15 +751,23 @@ function OrderDetailsStep({
       <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: isMobile ? "16px 0" : "20px 24px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Date Received <span style={{ color: "#E03137" }}>*</span></label>
-          <input type="text" placeholder="Feb, 23, 2026" value={orderDetails.dateReceived} onChange={(e) => set("dateReceived", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle}/>
+          <input type="date" value={orderDetails.dateReceived} onChange={(e) => set("dateReceived", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Collection Date <span style={{ color: "#E03137" }}>*</span></label>
-          <input type="text" placeholder="Feb, 23, 2026" value={orderDetails.collectionDate} onChange={(e) => set("collectionDate", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle}/>
+          <input type="date" value={orderDetails.collectionDate} onChange={(e) => set("collectionDate", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Price <span style={{ color: "#E03137" }}>*</span></label>
-          <input type="text" inputMode="numeric" placeholder="00" value={orderDetails.price} onChange={(e) => set("price", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle}/>
+          <div style={{ position: "relative" }}>
+            <span style={{
+              position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)",
+              fontSize: 14, fontWeight: 600, color: "#121212", fontFamily: "Satoshi, sans-serif", pointerEvents: "none"
+            }}>
+              ₦
+            </span>
+            <input type="text" inputMode="numeric" placeholder="00" value={orderDetails.price} onChange={(e) => set("price", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={{ ...inputStyle, paddingLeft: 28 }} />
+          </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Payment Status</label>
@@ -819,21 +783,144 @@ function OrderDetailsStep({
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Assigned Staff</label>
           <div style={{ position: "relative" }}>
-            <select value={orderDetails.assignedStaff} onChange={(e) => set("assignedStaff", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={selectStyle}>
-              {teamMembers.length > 0 ? (
-                teamMembers.map(m => (
-                  <option key={m.id || m.email} value={m.name}>{m.name}</option>
-                ))
-              ) : (
-                <option value="">No staff members</option>
-              )}
-            </select>
-            <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}><ChevronDownIcon /></div>
+            <div
+              onClick={() => setShowStaffDropdown(!showStaffDropdown)}
+              style={{
+                width: "100%", height: 44, border: "1px solid #E2E4E9", borderRadius: 8,
+                padding: "0 36px 0 12px", fontSize: 14, color: "#121212", fontFamily: "Satoshi, sans-serif",
+                outline: "none", background: "#fff", boxSizing: "border-box", cursor: "pointer",
+                display: "flex", alignItems: "center", position: "relative"
+              }}
+            >
+              <span style={{ color: assignedStaffs.length > 0 ? "#121212" : "#98A2B3" }}>
+                {assignedStaffs.length === 0
+                  ? "Select staff members..."
+                  : assignedStaffs.length === 1
+                  ? `${assignedStaffs[0]}`
+                  : `${assignedStaffs.length} staff members selected`}
+              </span>
+              <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                <ChevronDownIcon />
+              </div>
+            </div>
+
+            {/* Dropdown panel */}
+            {showStaffDropdown && (
+              <>
+                <div
+                  onClick={() => setShowStaffDropdown(false)}
+                  style={{ position: "fixed", inset: 0, zIndex: 100 }}
+                />
+                <div
+                  style={{
+                    position: "absolute", top: "105%", left: 0, right: 0,
+                    background: "#fff", border: "1px solid #E2E4E9", borderRadius: 8,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)", zIndex: 101,
+                    maxHeight: 200, overflowY: "auto", padding: 4
+                  }}
+                >
+                  {teamMembers.length > 0 ? (
+                    teamMembers.map(m => {
+                      const isSelected = assignedStaffs.includes(m.name);
+                      return (
+                        <div
+                          key={m.id || m.email}
+                          onClick={() => {
+                            if (isSelected) {
+                              setAssignedStaffs(assignedStaffs.filter(n => n !== m.name));
+                            } else {
+                              setAssignedStaffs([...assignedStaffs, m.name]);
+                            }
+                          }}
+                          style={{
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            padding: "8px 12px", borderRadius: 6, cursor: "pointer",
+                            background: isSelected ? "#FDF6EC" : "transparent",
+                            transition: "background 0.1s"
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = "#F5F5F5";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{
+                              width: 24, height: 24, borderRadius: "50%",
+                              background: roleBadge[m.role]?.bg || "#E2E4E9",
+                              color: roleBadge[m.role]?.color || "#121212",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              fontSize: 10, fontWeight: 700
+                            }}>
+                              {m.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                            </div>
+                            <span style={{ fontSize: 13, fontWeight: 500, color: "#121212" }}>{m.name}</span>
+                          </div>
+                          {isSelected && (
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                              <path d="M3 8L6.5 11.5L13 4.5" stroke="#121212" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div style={{ padding: "8px 12px", fontSize: 13, color: "#B0B0B0" }}>No staff members available</div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
+
+          {/* Selected staff chips below */}
+          {assignedStaffs.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+              {assignedStaffs.map(name => {
+                const member = teamMembers.find(m => m.name === name);
+                const role = member?.role || "Tailor";
+                const avBg = roleBadge[role]?.bg || "#E2E4E9";
+                const avColor = roleBadge[role]?.color || "#121212";
+                return (
+                  <div
+                    key={name}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 6,
+                      background: "#fff", border: "1px solid #E2E4E9",
+                      borderRadius: 100, padding: "4px 10px 4px 4px",
+                      boxShadow: "0 1px 4px rgba(0,0,0,0.04)"
+                    }}
+                  >
+                    <div style={{
+                      width: 22, height: 22, borderRadius: "50%",
+                      background: avBg, color: avColor,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 10, fontWeight: 700
+                    }}>
+                      {name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>
+                      {name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAssignedStaffs(assignedStaffs.filter(n => n !== name))}
+                      style={{
+                        background: "none", border: "none", cursor: "pointer", padding: 0,
+                        display: "flex", alignItems: "center", fontSize: 14, fontWeight: 600, color: "#888"
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Invite button + invited members preview */}
+      {/* Invite button */}
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <button
           type="button"
@@ -851,71 +938,7 @@ function OrderDetailsStep({
         >
           <InviteIcon />
           Invite Team Member
-          {invitedMembers.length > 0 && (
-            <span style={{
-              background: "#B0825A", color: "#fff",
-              borderRadius: 100, fontSize: 11, fontWeight: 700,
-              padding: "1px 7px", marginLeft: 2,
-              fontFamily: "Satoshi, sans-serif",
-            }}>
-              {invitedMembers.length}
-            </span>
-          )}
         </button>
-
-        {/* Invited members chips */}
-        {invitedMembers.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {invitedMembers.map((m) => {
-              const av = avatarColors[m.role];
-              const rb = roleBadge[m.role];
-              return (
-                <div key={m.email} style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  background: "#fff", border: "1px solid #E2E4E9",
-                  borderRadius: 10, padding: "8px 12px",
-                  boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                }}>
-                  <div style={{
-                    width: 30, height: 30, borderRadius: "50%",
-                    background: av.bg,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 11, fontWeight: 700, color: av.color,
-                    fontFamily: "Satoshi, sans-serif",
-                  }}>
-                    {initials(m.name)}
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, color: "#121212", fontFamily: "Satoshi, sans-serif", lineHeight: 1.2 }}>
-                      {m.name}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
-                      <span style={{
-                        display: "inline-flex", alignItems: "center",
-                        padding: "1px 6px", borderRadius: 10,
-                        fontSize: 10, fontWeight: 500,
-                        background: rb.bg, color: rb.color,
-                        fontFamily: "Satoshi, sans-serif",
-                      }}>
-                        {m.role}
-                      </span>
-                    </div>
-                  </div>
-                  <div style={{
-                    marginLeft: 4,
-                    width: 18, height: 18, borderRadius: "50%",
-                    background: "#E7F6EC",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                  }}>
-                    <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8L6.5 11.5L13 4.5" stroke="#036B26" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
     </div>
   );
@@ -942,7 +965,7 @@ function Stepper({ step }: { step: Step }) {
               {done ? (
                 <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#121212", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8L6.5 11.5L13 4.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M3 8L6.5 11.5L13 4.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                   </svg>
                 </div>
               ) : (
@@ -957,7 +980,7 @@ function Stepper({ step }: { step: Step }) {
               )}
             </div>
             {i < steps.length - 1 && (
-              <div style={{ width: isMobile ? 20 : 40, height: 1, background: done ? "#121212" : "#E2E4E9", margin: "0 6px" }}/>
+              <div style={{ width: isMobile ? 20 : 40, height: 1, background: done ? "#121212" : "#E2E4E9", margin: "0 6px" }} />
             )}
           </div>
         );
@@ -974,17 +997,83 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
   const [customFields, setCustomFields] = useState<Array<{ id: number; fieldName: string; value: string }>>([]);
   const [notes, setNotes] = useState("");
   const [referenceImages, setReferenceImages] = useState<File[]>([]);
+  const { openInviteCoworker } = useAppModals();
   const [orderDetails, setOrderDetails] = useState({
-    dateReceived: "", collectionDate: "", price: "", paymentStatus: "Paid", assignedStaff: "",
+    dateReceived: "", collectionDate: "", price: "", paymentStatus: "Paid",
   });
-  const [showInviteDrawer, setShowInviteDrawer] = useState(false);
-  const [invitedMembers, setInvitedMembers] = useState<Member[]>([]);
+  const [assignedStaffs, setAssignedStaffs] = useState<string[]>([]);
 
   const [teamList, setTeamList] = useState<Member[]>([]);
   // Display-only label shown in the stepper header before save.
   // The actual stored friendly ID is derived from the DB UUID inside saveOrderAndClient.
-  const [displayOrderId] = useState(() => `#A-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [displayOrderId, setDisplayOrderId] = useState(() => `#A-${Math.floor(1000 + Math.random() * 9000)}`);
   const [isSaving, setIsSaving] = useState(false);
+  const [existingOrderId, setExistingOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const clientIdVal = client.id;
+    if (!clientIdVal) return;
+    let mounted = true;
+    async function loadExistingOrder(id: string) {
+      try {
+        const { data, error } = await supabase
+          .from('orders')
+          .select('id, measurements, assigned_team, notes')
+          .eq('client_id', id)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error loading existing order for client:", error);
+          return;
+        }
+
+        if (data && mounted) {
+          setExistingOrderId(data.id);
+          const meas = data.measurements || {};
+          if (meas.friendlyOrderId) {
+            setDisplayOrderId(meas.friendlyOrderId);
+          } else {
+            setDisplayOrderId(`#A-${id.replace(/-/g, '').slice(0, 6).toUpperCase()}`);
+          }
+          if (meas.unit) {
+            setUnit(meas.unit);
+          }
+          setMeasurements({
+            neck: meas.neck || '',
+            chestBust: meas.chestBust || '',
+            waist: meas.waist || '',
+            hip: meas.hip || '',
+            shoulder: meas.shoulder || '',
+            sleeve: meas.sleeve || '',
+            trouserLength: meas.trouserLength || '',
+          });
+          if (meas.customFields && Array.isArray(meas.customFields)) {
+            setCustomFields(meas.customFields.map((f: any, i: number) => ({
+              id: Date.now() + i,
+              fieldName: f.name || f.fieldName,
+              value: f.value
+            })));
+          }
+          setOrderDetails({
+            dateReceived: meas.dateReceived || '',
+            collectionDate: meas.collectionDate || '',
+            price: meas.price || '',
+            paymentStatus: meas.paymentStatus || 'Paid',
+          });
+          if (data.assigned_team && Array.isArray(data.assigned_team)) {
+            setAssignedStaffs(data.assigned_team);
+          }
+          if (data.notes) {
+            setNotes(data.notes);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load existing order info:", err);
+      }
+    }
+    loadExistingOrder(clientIdVal);
+    return () => { mounted = false; };
+  }, [client.id]);
 
   // avatarUrl loaded from localStorage (set by AppPageHeader/SettingsPage on login/save)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -993,12 +1082,12 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
     try {
       const stored = localStorage.getItem('tailora_avatar');
       if (stored) setAvatarUrl(stored);
-    } catch {}
+    } catch { }
     const handler = () => {
       try {
         const stored = localStorage.getItem('tailora_avatar');
         if (stored) setAvatarUrl(stored);
-      } catch {}
+      } catch { }
     };
     window.addEventListener('tailora_profile_updated', handler);
     return () => window.removeEventListener('tailora_profile_updated', handler);
@@ -1009,10 +1098,6 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
   const isMobile = w < 480;
 
   const handleBack = () => { if (step === 2) setStep(1); else onBack(); };
-
-  const handleInvite = (members: Member[]) => {
-    setInvitedMembers(members);
-  };
 
   useEffect(() => {
     let mounted = true;
@@ -1047,10 +1132,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
           }));
           setTeamList(membersList);
           if (membersList.length > 0) {
-            setOrderDetails(prev => ({
-              ...prev,
-              assignedStaff: prev.assignedStaff || membersList[0].name
-            }));
+            setAssignedStaffs(prev => prev.length > 0 ? prev : [membersList[0].name]);
           }
         }
       } catch (err) {
@@ -1059,6 +1141,38 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
     }
     loadTeam();
     return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    const handleInvited = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const newMember = customEvent.detail;
+      if (newMember && newMember.name) {
+        const memberObj: Member = {
+          name: newMember.name,
+          email: newMember.email,
+          role: newMember.role,
+          status: "Pending",
+          joined: "Just Invited",
+          avatar: "/Ellipse2481.png"
+        };
+        setTeamList(prev => {
+          if (prev.some(m => m.email.toLowerCase() === memberObj.email.toLowerCase())) {
+            return prev;
+          }
+          return [...prev, memberObj].sort((a, b) => a.name.localeCompare(b.name));
+        });
+        setAssignedStaffs(prev => {
+          if (prev.includes(newMember.name)) return prev;
+          return [...prev, newMember.name];
+        });
+      }
+    };
+
+    window.addEventListener("tailora_team_member_invited", handleInvited);
+    return () => {
+      window.removeEventListener("tailora_team_member_invited", handleInvited);
+    };
   }, []);
 
   const saveOrderAndClient = async (isDraft: boolean) => {
@@ -1085,23 +1199,44 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
         ownerId = rpcResult[0].owner_id;
       }
 
-      // 1. Insert Client
-      const { data: newClient, error: clientErr } = await supabase
-        .from('clients')
-        .insert({
-          user_id: ownerId,
-          name: client.name,
-          phone: client.phone,
-          email: client.email,
-          gender: client.gender,
-          outfit_type: client.outfitType,
-          status: isDraft ? 'Pending' : 'Due'
-        })
-        .select()
-        .single();
+      // 1. Insert or Update Client
+      let clientId = client.id;
+      if (!clientId) {
+        const { data: newClient, error: clientErr } = await supabase
+          .from('clients')
+          .insert({
+            user_id: ownerId,
+            name: client.name,
+            phone: client.phone,
+            email: client.email,
+            gender: client.gender,
+            outfit_type: client.outfitType,
+            status: isDraft ? 'Pending' : 'Due'
+          })
+          .select()
+          .single();
 
-      if (clientErr) throw clientErr;
-      const clientId = newClient.id;
+        if (clientErr) throw clientErr;
+        clientId = newClient.id;
+      } else {
+        const { error: clientErr } = await supabase
+          .from('clients')
+          .update({
+            name: client.name,
+            phone: client.phone,
+            email: client.email,
+            gender: client.gender,
+            outfit_type: client.outfitType,
+            status: isDraft ? 'Pending' : 'Due'
+          })
+          .eq('id', clientId);
+
+        if (clientErr) throw clientErr;
+      }
+
+      if (!clientId) {
+        throw new Error("Failed to generate or retrieve client ID.");
+      }
 
       // 2. Upload Reference Images
       const imageUrls: string[] = [];
@@ -1127,7 +1262,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
         }
       }
 
-      // 3. Insert Order
+      // 3. Insert or Update Order
       // Derive a collision-free friendly ID from the DB-generated client UUID
       const friendlyOrderId = `#A-${clientId.replace(/-/g, '').slice(0, 6).toUpperCase()}`;
 
@@ -1148,30 +1283,48 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
         friendlyOrderId
       };
 
-      const teamAssigned = Array.from(new Set([
-        orderDetails.assignedStaff,
-        ...invitedMembers.map(m => m.name)
-      ])).filter(Boolean);
+      const teamAssigned = assignedStaffs.filter(Boolean);
 
-      const { error: orderErr } = await supabase
-        .from('orders')
-        .insert({
-          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined,
-          user_id: ownerId,
-          client_id: clientId,
-          client_name: client.name,
-          phone: client.phone,
-          gender: client.gender,
-          outfit: client.outfitType,
-          status: isDraft ? 'Due' : (orderDetails.paymentStatus === 'Paid' ? 'Collected' : 'Due'),
-          status_type: isDraft ? 'due' : (orderDetails.paymentStatus === 'Paid' ? 'collected' : 'due'),
-          measurements: measurementsJson,
-          assigned_team: teamAssigned,
-          reference_images: imageUrls,
-          notes: notes || '',
-        });
+      if (existingOrderId) {
+        const { error: orderErr } = await supabase
+          .from('orders')
+          .update({
+            client_name: client.name,
+            phone: client.phone,
+            gender: client.gender,
+            outfit: client.outfitType,
+            status: isDraft ? 'Due' : (orderDetails.paymentStatus === 'Paid' ? 'Collected' : 'Due'),
+            status_type: isDraft ? 'due' : (orderDetails.paymentStatus === 'Paid' ? 'collected' : 'due'),
+            measurements: measurementsJson,
+            assigned_team: teamAssigned,
+            reference_images: imageUrls,
+            notes: notes || '',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingOrderId);
 
-      if (orderErr) throw orderErr;
+        if (orderErr) throw orderErr;
+      } else {
+        const { error: orderErr } = await supabase
+          .from('orders')
+          .insert({
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined,
+            user_id: ownerId,
+            client_id: clientId,
+            client_name: client.name,
+            phone: client.phone,
+            gender: client.gender,
+            outfit: client.outfitType,
+            status: isDraft ? 'Due' : (orderDetails.paymentStatus === 'Paid' ? 'Collected' : 'Due'),
+            status_type: isDraft ? 'due' : (orderDetails.paymentStatus === 'Paid' ? 'collected' : 'due'),
+            measurements: measurementsJson,
+            assigned_team: teamAssigned,
+            reference_images: imageUrls,
+            notes: notes || '',
+          });
+
+        if (orderErr) throw orderErr;
+      }
 
       if (isDraft) {
         onSaveDraft();
@@ -1197,34 +1350,12 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
     <div style={{ position: "fixed", inset: 0, background: "#FDFDFD", zIndex: 150, display: "flex", flexDirection: "column", overflow: "hidden" }}>
 
       {/* Header */}
-      <header style={{
-        background: "#fff", borderBottom: "1px solid #F0F2F5",
-        padding: isMobile ? "0 16px" : "0 36px",
-        height: isMobile ? 60 : 72,
-        display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
-      }}>
-        <span style={{ fontFamily: "Sora, sans-serif", fontWeight: 800, fontSize: isMobile ? 16 : 18, color: "#121212" }}>Tailora</span>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button type="button" style={{ width: 36, height: 36, borderRadius: "50%", background: "#FEFCF9", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <BellIcon />
-          </button>
-          <button type="button" style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #F1F1F2", borderRadius: 100, padding: "6px 10px", cursor: "pointer" }}>
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="Profile" style={{ width: 22, height: 22, borderRadius: "50%", objectFit: "cover" }}/>
-            ) : (
-              <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#128C7E", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: "#fff", fontFamily: "Satoshi, sans-serif" }}>T</div>
-            )}
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path opacity="0.4" d="M15.48 13.23L11.69 8.18H6.08C5.12 8.18 4.64 9.34 5.32 10.02L10.5 15.2C11.33 16.03 12.68 16.03 13.51 15.2L15.48 13.23Z" fill="#121212"/>
-              <path d="M17.92 8.18H11.69L15.48 13.23L18.69 10.02C19.36 9.34 18.88 8.18 17.92 8.18Z" fill="#121212"/>
-            </svg>
-          </button>
-        </div>
-      </header>
+      <AppPageHeader title={client.id ? "Edit Client & Order" : "Add Client"} />
+
 
       {/* Scrollable body */}
       <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", position: "relative" }}>
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 200, background: "linear-gradient(180deg, #FDF6EC 0%, rgba(253,246,236,0) 100%)", pointerEvents: "none" }}/>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 200, background: "linear-gradient(180deg, #FDF6EC 0%, rgba(253,246,236,0) 100%)", pointerEvents: "none" }} />
 
         <div style={{ maxWidth: 900, margin: "0 auto", padding: isMobile ? "20px 16px 60px" : "32px 36px 60px", position: "relative" }}>
 
@@ -1239,7 +1370,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
               <BackArrowIcon /> Back
             </button>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
-              <Stepper step={step}/>
+              <Stepper step={step} />
               <span style={{ fontSize: 13, fontWeight: 700, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Order: {displayOrderId}</span>
             </div>
           </div>
@@ -1250,17 +1381,16 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
               unit={unit} setUnit={setUnit}
               measurements={measurements} setMeasurements={setMeasurements}
               customFields={customFields} setCustomFields={setCustomFields}
-              notes={notes} setNotes={setNotes}
-              referenceImages={referenceImages} setReferenceImages={setReferenceImages}
             />
           )}
           {step === 2 && (
             <OrderDetailsStep
               orderDetails={orderDetails}
               setOrderDetails={setOrderDetails}
-              invitedMembers={invitedMembers}
-              onOpenInviteDrawer={() => setShowInviteDrawer(true)}
+              onOpenInviteDrawer={openInviteCoworker}
               teamMembers={teamList}
+              assignedStaffs={assignedStaffs}
+              setAssignedStaffs={setAssignedStaffs}
             />
           )}
 
@@ -1299,14 +1429,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
         </div>
       </div>
 
-      {/* Invite Team Member Drawer */}
-      {showInviteDrawer && (
-        <InviteTeamDrawer
-          onClose={() => setShowInviteDrawer(false)}
-          onInvite={handleInvite}
-          teamMembers={teamList}
-        />
-      )}
+
     </div>
   );
 }

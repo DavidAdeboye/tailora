@@ -47,6 +47,11 @@ export default function InviteTeamMemberModal({ isOpen, onClose }: Props) {
       }
 
       setSignupLink(resData.signupLink);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("tailora_team_member_invited", {
+          detail: { name: form.name.trim(), email: form.email.trim(), role: form.role }
+        }));
+      }
     } catch (err: any) {
       console.error("Failed to invite team member:", {
         message: err.message,

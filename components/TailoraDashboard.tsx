@@ -10,12 +10,19 @@ type OrderStatusType = "collected" | "overdue" | "due";
 
 interface Order {
   id: string;
+  clientId?: string;
   client: string;
   phone: string;
   gender: string;
   outfit: string;
   status: string;
   statusType: OrderStatusType;
+}
+
+function formatClientId(id: string) {
+  if (!id) return "";
+  const part = id.split("-")[0] || id.slice(0, 8);
+  return `CLI-${part.toUpperCase()}`;
 }
 
 // initialOrders removed: will load from Supabase at runtime
@@ -347,7 +354,7 @@ export default function TailoraDashboard() {
       try {
         const { data, error } = await supabase
           .from('orders')
-          .select('id, client_name, phone, gender, outfit, status, status_type, assigned_team')
+          .select('id, client_id, client_name, phone, gender, outfit, status, status_type, assigned_team')
           .order('created_at', { ascending: false });
           
         if (error) {
@@ -364,6 +371,7 @@ export default function TailoraDashboard() {
         if (data && mounted) {
           let ordersList = data.map((o: any) => ({
             id: o.id,
+            clientId: o.client_id,
             client: o.client_name ?? o.client,
             phone: o.phone,
             gender: o.gender,
@@ -547,7 +555,7 @@ export default function TailoraDashboard() {
                   return (
                     <div key={order.id} className="tailora-m-card" style={{ position: "relative" }}>
                       <div className="tailora-m-card-top" style={{ paddingRight: 40 }}>
-                        <span className="tailora-m-card-id">{order.id}</span>
+                        <span className="tailora-m-card-id">{formatClientId(order.clientId || order.id)}</span>
                         <span className="tailora-m-card-pill" style={{ background: st.bg, color: st.color }}>{order.status}</span>
                       </div>
                       <div className="tailora-m-card-title">{order.client}</div>
@@ -584,7 +592,7 @@ export default function TailoraDashboard() {
                       const st = statusStyles[order.statusType];
                       return (
                         <tr key={order.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
-                          <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.id}</td>
+                          <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{formatClientId(order.clientId || order.id)}</td>
                           <td style={{ padding: "16px 24px" }}><span style={{ fontSize: 14, fontWeight: 500, color: "#101928" }}>{order.client}</span></td>
                           <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.phone}</td>
                           <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.gender}</td>

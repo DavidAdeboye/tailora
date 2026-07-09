@@ -7,6 +7,7 @@ export type AppModalsContextValue = {
   openInviteCoworker: () => void;
   toggleMobileMenu: () => void;
   closeMobileMenu: () => void;
+  openOrderFlowForClient?: (clientData: any) => void;
 };
 
 export const AppModalsContext = createContext<AppModalsContextValue | null>(null);

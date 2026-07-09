@@ -38,6 +38,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const closeInvite = () => setShowInvite(false);
   const toggleMobileMenu = () => setMobileMenuOpen((o) => !o);
   const closeMobileMenu = () => setMobileMenuOpen(false);
+  const openOrderFlowForClient = (clientData: ClientFormData) => {
+    setPendingClient(clientData);
+    setShowOrderFlow(true);
+  };
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -54,13 +58,21 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function checkAuth() {
-      const { data } = await supabase.auth.getUser();
-      const user = (data as any)?.user;
-      if (!user) {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error || !data?.user) {
+          // Clear cookie to prevent middleware redirect loop
+          document.cookie = "sb-access-token=; path=/; max-age=0";
+          router.replace("/login");
+          return;
+        }
+        setIsCheckingAuth(false);
+      } catch (err) {
+        console.error("Auth check failed:", err);
+        // Clear cookie to prevent middleware redirect loop
+        document.cookie = "sb-access-token=; path=/; max-age=0";
         router.replace("/login");
-        return;
       }
-      setIsCheckingAuth(false);
     }
 
     checkAuth();
@@ -129,7 +141,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AppModalsContext.Provider value={{ openAddClient, openInviteCoworker, toggleMobileMenu, closeMobileMenu }}>
+    <AppModalsContext.Provider value={{ openAddClient, openInviteCoworker, toggleMobileMenu, closeMobileMenu, openOrderFlowForClient }}>
       <div
         className="tailora-app-shell"
         style={{

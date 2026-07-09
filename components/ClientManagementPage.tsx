@@ -95,6 +95,12 @@ function getInitials(name: string) {
   return name.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase();
 }
 
+function formatClientId(id: string) {
+  if (!id) return "";
+  const part = id.split("-")[0] || id.slice(0, 8);
+  return `CLI-${part.toUpperCase()}`;
+}
+
 function ClientMobileCard({ client, onEdit, onDelete, showActions = true }: { client: Client; onEdit: () => void; onDelete: () => void; showActions?: boolean }) {
   const st = statusStyles[client.statusType];
   return (
@@ -105,7 +111,7 @@ function ClientMobileCard({ client, onEdit, onDelete, showActions = true }: { cl
           <div className="tailora-client-card-head">
             <div className="tailora-client-card-name-wrap">
               <h3 className="tailora-client-card-name">{client.name}</h3>
-              <span className="tailora-client-card-id">{client.id}</span>
+              <span className="tailora-client-card-id">{formatClientId(client.id)}</span>
             </div>
             <span className="tailora-client-card-status" style={{ background: st.bg, color: st.color }}>{client.status}</span>
           </div>
@@ -544,7 +550,7 @@ export default function ClientManagementPage() {
                   const st = statusStyles[c.statusType];
                   return (
                     <tr key={c.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
-                      <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "Inter, sans-serif" }}>{c.id}</td>
+                      <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "Inter, sans-serif" }}>{formatClientId(c.id)}</td>
                       <td style={{ padding: "16px 24px" }}><span style={{ fontSize: 14, fontWeight: 500, color: "#101928", fontFamily: "var(--font-satoshi)" }}>{c.name}</span></td>
                       <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "Inter, sans-serif" }}>{c.phone}</td>
                       <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "var(--font-satoshi)" }}>{c.gender}</td>
@@ -633,7 +639,7 @@ export default function ClientManagementPage() {
 
       <DeleteConfirmModal
         isOpen={!!deleteTarget}
-        itemName={deleteTarget ? `${deleteTarget.name} (${deleteTarget.id})` : undefined}
+        itemName={deleteTarget ? `${deleteTarget.name} (${formatClientId(deleteTarget.id)})` : undefined}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
       />
