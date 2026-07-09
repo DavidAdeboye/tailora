@@ -5,6 +5,7 @@ import PrimaryButton from "./PrimaryButton";
 import AppPageHeader from "./AppPageHeader";
 import { supabase } from "../lib/supabase";
 import { ActionMenuButton, DeleteConfirmModal } from "./Actionmenu";
+import EditClientModal, { type ClientData } from "./EditClientModal";
 
 type OrderStatusType = "collected" | "overdue" | "due";
 
@@ -13,11 +14,26 @@ interface Order {
   clientId?: string;
   client: string;
   phone: string;
+  email?: string;
   gender: string;
   outfit: string;
   status: string;
   statusType: OrderStatusType;
+  collectionDate?: string;
+  dateReceived?: string;
 }
+
+function formatDateString(dateStr?: string) {
+  if (!dateStr) return "—";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return dateStr;
+  }
+}
+
 
 function formatClientId(id: string) {
   if (!id) return "";
@@ -128,8 +144,10 @@ const statusStyles = {
 };
 
 export default function TailoraDashboard() {
-  const { openAddClient } = useAppModals();
+  const { openAddClient, openOrderFlowForClient } = useAppModals();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [editTarget, setEditTarget] = useState<ClientData | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterGender, setFilterGender] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -237,7 +255,61 @@ export default function TailoraDashboard() {
   }, [isOwnerOrAdmin, clientsCount, pendingCount, progressCount, teamCount, orders]);
 
   const handleEdit = (order: Order) => {
-    alert(`Edit order ${order.id}`);
+    setEditTarget({
+      id: order.clientId || order.id,
+      name: order.client,
+      phone: order.phone,
+      email: order.email || "",
+      gender: order.gender,
+      outfit: order.outfit,
+      status: order.status
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleSaveEdit = async (updated: ClientData) => {
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          name: updated.name,
+          phone: updated.phone,
+          email: updated.email,
+          gender: updated.gender,
+          outfit_type: updated.outfit,
+          status: updated.status
+        })
+        .eq('id', updated.id);
+      
+      if (error) throw error;
+
+      // Update local state
+      setOrders(prev => prev.map(o => {
+        if (o.id === updated.id) {
+          const rawStatus = updated.status;
+          let statusTypeVal: OrderStatusType = 'collected';
+          const normalized = rawStatus.toLowerCase();
+          if (normalized.includes('overdue')) statusTypeVal = 'overdue';
+          else if (normalized.includes('due')) statusTypeVal = 'due';
+          else if (normalized.includes('pending')) statusTypeVal = 'due';
+
+          return {
+            ...o,
+            client: updated.name,
+            phone: updated.phone,
+            email: updated.email,
+            gender: updated.gender,
+            outfit: updated.outfit,
+            status: rawStatus,
+            statusType: statusTypeVal
+          };
+        }
+        return o;
+      }));
+    } catch (err) {
+      console.error("Error updating client:", err);
+      alert("Failed to update client in database.");
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -358,17 +430,21 @@ export default function TailoraDashboard() {
         });
       }
 
-      // Fetch assigned team mapping from orders to preserve Tailor/Assistant assignment filtering
-      let clientToTeamMap: Record<string, any> = {};
+      // Fetch assigned team mapping and order dates from orders
+      let clientToOrderMap: Record<string, any> = {};
       try {
         const { data: teamOrders } = await supabase
           .from('orders')
-          .select('client_id, assigned_team')
+          .select('client_id, assigned_team, measurements')
           .eq('user_id', workspaceOwnerId);
         if (teamOrders) {
           teamOrders.forEach((o: any) => {
-            if (o.client_id && o.assigned_team) {
-              clientToTeamMap[o.client_id] = o.assigned_team;
+            if (o.client_id) {
+              clientToOrderMap[o.client_id] = {
+                assignedTeam: o.assigned_team || [],
+                collectionDate: o.measurements?.collectionDate || "",
+                dateReceived: o.measurements?.dateReceived || "",
+              };
             }
           });
         }
@@ -379,7 +455,7 @@ export default function TailoraDashboard() {
       try {
         const { data, error } = await supabase
           .from('clients')
-          .select('id, name, phone, gender, outfit_type, status, created_at')
+          .select('id, name, phone, email, gender, outfit_type, status, created_at')
           .eq('user_id', workspaceOwnerId)
           .order('created_at', { ascending: false });
           
@@ -403,16 +479,21 @@ export default function TailoraDashboard() {
             else if (normalized.includes('due')) statusTypeVal = 'due';
             else if (normalized.includes('pending')) statusTypeVal = 'due';
 
+            const orderDetails = clientToOrderMap[c.id];
+
             return {
               id: c.id,
               clientId: c.id,
               client: c.name,
               phone: c.phone ?? '',
+              email: c.email ?? '',
               gender: c.gender ?? '',
               outfit: c.outfit_type ?? '',
               status: rawStatus,
               statusType: statusTypeVal,
-              assignedTeam: clientToTeamMap[c.id] || []
+              assignedTeam: orderDetails?.assignedTeam || [],
+              collectionDate: orderDetails?.collectionDate || "",
+              dateReceived: orderDetails?.dateReceived || "",
             };
           });
 
@@ -597,6 +678,11 @@ export default function TailoraDashboard() {
                       <div className="tailora-m-card-meta">
                         <span>{order.phone}</span>
                         <span>{order.gender} · {order.outfit}</span>
+                        {order.collectionDate && (
+                          <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#667185" }}>
+                            Delivery: {formatDateString(order.collectionDate)}
+                          </span>
+                        )}
                       </div>
                       {isOwnerOrAdmin && (
                         <div style={{ position: "absolute", top: 12, right: 12 }}>
@@ -617,7 +703,7 @@ export default function TailoraDashboard() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#F8F8F8" }}>
-                      {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Status", ...(isOwnerOrAdmin ? [""] : [])].map((h, i) => (
+                      {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Delivery Date", "Status", ...(isOwnerOrAdmin ? [""] : [])].map((h, i) => (
                         <th key={i} style={{ padding: "12px 24px", textAlign: h === "" ? "center" : "left", fontSize: 12, fontWeight: 500, color: "#344054", borderBottom: "1px solid #E4E7EC", whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
@@ -632,6 +718,7 @@ export default function TailoraDashboard() {
                           <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.phone}</td>
                           <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.gender}</td>
                           <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.outfit}</td>
+                          <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", whiteSpace: "nowrap" }}>{formatDateString(order.collectionDate)}</td>
                           <td style={{ padding: "16px 24px" }}>
                             <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, background: st.bg, color: st.color }}>{order.status}</span>
                           </td>
@@ -745,6 +832,13 @@ export default function TailoraDashboard() {
         itemName={deleteTarget ? `Order ${deleteTarget.id}` : undefined}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <EditClientModal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        client={editTarget}
+        onSave={handleSaveEdit}
       />
     </div>
   );

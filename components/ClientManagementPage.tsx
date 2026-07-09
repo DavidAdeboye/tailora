@@ -21,6 +21,18 @@ interface Client {
   outfit: string;
   status: string;
   statusType: ClientStatusType;
+  collectionDate?: string;
+}
+
+function formatDateString(dateStr?: string) {
+  if (!dateStr) return "—";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch {
+    return dateStr;
+  }
 }
 
 // clients will be loaded from Supabase
@@ -116,6 +128,11 @@ function ClientMobileCard({ client, onEdit, onDelete, showActions = true }: { cl
             <span className="tailora-client-card-status" style={{ background: st.bg, color: st.color }}>{client.status}</span>
           </div>
           <div className="tailora-client-card-phone"><PhoneIcon /><span>{client.phone}</span></div>
+          {client.collectionDate && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#667185", marginTop: 4, fontFamily: "var(--font-satoshi)" }}>
+              <span>Delivery: {formatDateString(client.collectionDate)}</span>
+            </div>
+          )}
           <div className="tailora-client-card-tags">
             <span className="tailora-client-card-tag">{client.gender}</span>
             <span className="tailora-client-card-tag tailora-client-card-tag--outfit">{client.outfit}</span>
@@ -322,6 +339,26 @@ export default function ClientManagementPage() {
 
       if (!workspaceOwnerId) return;
 
+      // Fetch associated orders to get collection dates (due dates)
+      let clientToOrderMap: Record<string, { collectionDate: string }> = {};
+      try {
+        const { data: teamOrders } = await supabase
+          .from('orders')
+          .select('client_id, measurements')
+          .eq('user_id', workspaceOwnerId);
+        if (teamOrders) {
+          teamOrders.forEach((o: any) => {
+            if (o.client_id) {
+              clientToOrderMap[o.client_id] = {
+                collectionDate: o.measurements?.collectionDate || "",
+              };
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching team orders mapping:', err);
+      }
+
       const isRestrictedRole = memberRole === 'Tailor' || memberRole === 'Assistant';
 
       if (isRestrictedRole && memberName) {
@@ -379,6 +416,7 @@ export default function ClientManagementPage() {
             const normalized = rawStatus.toLowerCase();
             if (normalized.includes('overdue')) statusTypeVal = 'overdue';
             else if (normalized.includes('due')) statusTypeVal = 'due';
+            const orderDetails = clientToOrderMap[c.id];
             return {
               id: c.id,
               name: c.name,
@@ -389,6 +427,7 @@ export default function ClientManagementPage() {
               status: rawStatus,
               statusType: statusTypeVal,
               date: (c.created_at ?? '').toString(),
+              collectionDate: orderDetails?.collectionDate || "",
             };
           }));
         }
@@ -410,6 +449,7 @@ export default function ClientManagementPage() {
             const normalized = rawStatus.toLowerCase();
             if (normalized.includes('overdue')) statusTypeVal = 'overdue';
             else if (normalized.includes('due')) statusTypeVal = 'due';
+            const orderDetails = clientToOrderMap[c.id];
             return {
               id: c.id,
               name: c.name,
@@ -420,6 +460,7 @@ export default function ClientManagementPage() {
               status: rawStatus,
               statusType: statusTypeVal,
               date: (c.created_at ?? '').toString(),
+              collectionDate: orderDetails?.collectionDate || "",
             };
           }));
         }
@@ -554,7 +595,7 @@ export default function ClientManagementPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#F8F8F8" }}>
-                  {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Status", ...(isOwnerOrAdmin ? [""] : [])].map((h, i) => (
+                  {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Delivery Date", "Status", ...(isOwnerOrAdmin ? [""] : [])].map((h, i) => (
                     <th key={h || "actions"} style={{ padding: "12px 24px", textAlign: h === "" ? "center" : "left", fontSize: 12, fontWeight: 500, color: "#344054", borderBottom: "1px solid #E4E7EC", whiteSpace: "nowrap", fontFamily: i === 0 ? "Inter, sans-serif" : "Satoshi, var(--font-satoshi), sans-serif" }}>
                       {h}
                     </th>
@@ -571,6 +612,7 @@ export default function ClientManagementPage() {
                       <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "Inter, sans-serif" }}>{c.phone}</td>
                       <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "var(--font-satoshi)" }}>{c.gender}</td>
                       <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "var(--font-satoshi)" }}>{c.outfit}</td>
+                      <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "var(--font-satoshi)", whiteSpace: "nowrap" }}>{formatDateString(c.collectionDate)}</td>
                       <td style={{ padding: "16px 24px" }}>
                         <span style={{ display: "inline-block", padding: "0 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, lineHeight: "17px", background: st.bg, color: st.color, fontFamily: "var(--font-satoshi)" }}>
                           {c.status}
