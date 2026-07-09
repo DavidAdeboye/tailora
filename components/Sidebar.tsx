@@ -358,7 +358,7 @@ useEffect(() => {
         const { data: profile, error: profileErr } = await supabase
           .from("profiles")
           .select("full_name, business_name, avatar_path")
-          .eq("user_id", user.id)
+          .eq("id", user.id)
           .maybeSingle();
 
         const { data: ownerProfile } = member

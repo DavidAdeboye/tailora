@@ -147,7 +147,7 @@ function ProfileTab() {
         const { data, error } = await supabase
           .from('profiles')
           .select('full_name, business_name, address, avatar_path')
-          .eq('user_id', userId)
+          .eq('id', userId)
           .maybeSingle();
 
         if (error) {
@@ -209,7 +209,7 @@ function ProfileTab() {
       // update profiles table
       const { error: upsertError } = await supabase
         .from('profiles')
-        .upsert({ user_id: userId, avatar_path: destPath }, { onConflict: 'user_id' });
+        .upsert({ id: userId, avatar_path: destPath }, { onConflict: 'id' });
       if (upsertError) throw upsertError;
 
       const url = await getPublicUrl('avatars', destPath);
@@ -238,11 +238,11 @@ function ProfileTab() {
       const { error: upsertError } = await supabase
         .from('profiles')
         .upsert({
-          user_id: userId,
+          id: userId,
           full_name: fullName,
           business_name: businessName,
           address: address
-        }, { onConflict: 'user_id' });
+        }, { onConflict: 'id' });
       if (upsertError) throw upsertError;
 
       // Update local storage and dispatch custom event so Sidebar and Header update in real-time

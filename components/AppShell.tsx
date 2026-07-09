@@ -180,7 +180,16 @@ export default function AppShell({ children }: { children: ReactNode }) {
             className="tailora-route-enter"
             style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, width: "100%" }}
           >
-            {children}
+            {showOrderFlow && pendingClient ? (
+              <OrderCreationFlow
+                client={pendingClient}
+                onBack={handleBackToModal}
+                onSaveDraft={handleSaveDraft}
+                onComplete={handleOrderFlowComplete}
+              />
+            ) : (
+              children
+            )}
           </div>
         </div>
       </div>
@@ -192,16 +201,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
         onSaveDraft={handleSaveClientDraft}
         onContinue={handleContinueFromModal}
       />
-
-      {/* Steps 2 & 3: Full-page flow (measurements + order details) */}
-      {showOrderFlow && pendingClient && (
-        <OrderCreationFlow
-          client={pendingClient}
-          onBack={handleBackToModal}
-          onSaveDraft={handleSaveDraft}
-          onComplete={handleOrderFlowComplete}
-        />
-      )}
 
       <InviteTeamMemberModal isOpen={showInvite} onClose={closeInvite} />
       <SuccessModal isOpen={showSuccess} onAction={() => setShowSuccess(false)} />

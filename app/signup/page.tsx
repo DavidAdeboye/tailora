@@ -88,7 +88,7 @@
             const { data: inviterProfile } = await supabase
               .from('profiles')
               .select('business_name')
-              .eq('user_id', data.invited_by)
+              .eq('id', data.invited_by)
               .single();
             
             setInvitationData({
@@ -151,6 +151,7 @@
           email: formData.email,
           password: formData.password,
           options: {
+            emailRedirectTo: `${window.location.origin}/dashboard`,
             data: {
               full_name: formData.fullName,
               business_name: formData.businessName,
@@ -181,7 +182,7 @@
         const { error: profileErr } = await supabase
           .from('profiles')
           .insert({
-            user_id: sessionUser.id,
+            id: sessionUser.id,
             full_name: formData.fullName,
             business_name: formData.businessName
           });

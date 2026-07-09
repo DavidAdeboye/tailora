@@ -461,14 +461,17 @@ function InviteTeamDrawer({
 }
 
 /* ── MeasurementField ── */
-function MeasurementField({ label, hint, value, onChange, unit }: {
+function MeasurementField({ label, hint, value, onChange, unit, onKeyDown }: {
   label: string; hint?: string; value: string; onChange: (v: string) => void; unit: string;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 }) {
   const [focused, setFocused] = useState(false);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
-        <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>{label}</label>
+        <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>
+          {label} <span style={{ color: "#E03137" }}>*</span>
+        </label>
         {hint && <span style={{ fontSize: 12, color: "#999", fontFamily: "Satoshi, sans-serif" }}>{hint}</span>}
       </div>
       <div style={{ position: "relative" }}>
@@ -476,6 +479,7 @@ function MeasurementField({ label, hint, value, onChange, unit }: {
           type="text" inputMode="decimal" value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          onKeyDown={onKeyDown}
           placeholder="0.0"
           style={{
             width: "100%", height: 44,
@@ -497,9 +501,10 @@ function MeasurementField({ label, hint, value, onChange, unit }: {
 }
 
 /* ── CustomMeasurementField ── */
-function CustomMeasurementField({ fieldName, value, unit, onFieldNameChange, onValueChange, onRemove }: {
+function CustomMeasurementField({ fieldName, value, unit, onFieldNameChange, onValueChange, onRemove, onKeyDown }: {
   fieldName: string; value: string; unit: string;
   onFieldNameChange: (v: string) => void; onValueChange: (v: string) => void; onRemove: () => void;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 }) {
   const [nameFocused, setNameFocused] = useState(false);
   const [valFocused, setValFocused] = useState(false);
@@ -510,6 +515,7 @@ function CustomMeasurementField({ fieldName, value, unit, onFieldNameChange, onV
           type="text" placeholder="Field name" value={fieldName}
           onChange={(e) => onFieldNameChange(e.target.value)}
           onFocus={() => setNameFocused(true)} onBlur={() => setNameFocused(false)}
+          onKeyDown={onKeyDown}
           style={{
             border: "none",
             borderBottom: `1px solid ${nameFocused ? "#121212" : "#E2E4E9"}`,
@@ -527,6 +533,7 @@ function CustomMeasurementField({ fieldName, value, unit, onFieldNameChange, onV
           type="text" inputMode="decimal" placeholder="0.0" value={value}
           onChange={(e) => onValueChange(e.target.value)}
           onFocus={() => setValFocused(true)} onBlur={() => setValFocused(false)}
+          onKeyDown={onKeyDown}
           style={{
             width: "100%", height: 44,
             border: `1px solid ${valFocused ? "#121212" : "#E2E4E9"}`,
@@ -633,15 +640,16 @@ function ReferenceImageDropzone({ images, setImages }: { images: File[]; setImag
   );
 }
 
-/* ── MeasurementsStep ── */
 function MeasurementsStep({
   unit, setUnit, measurements, setMeasurements,
   customFields, setCustomFields,
+  onKeyDown,
 }: {
   unit: string; setUnit: (u: string) => void;
   measurements: Record<string, string>; setMeasurements: (m: Record<string, string>) => void;
   customFields: Array<{ id: number; fieldName: string; value: string }>;
   setCustomFields: (f: Array<{ id: number; fieldName: string; value: string }>) => void;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 }) {
   const w = useWindowWidth();
   const isMobile = w < 480;
@@ -688,7 +696,7 @@ function MeasurementsStep({
 
         <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: isMobile ? "14px 10px" : "20px 24px" }}>
           {standardFields.map((f) => (
-            <MeasurementField key={f.key} label={f.label} hint={f.hint} value={measurements[f.key] ?? ""} onChange={(v) => setMeasurements({ ...measurements, [f.key]: v })} unit={unit} />
+            <MeasurementField key={f.key} label={f.label} hint={f.hint} value={measurements[f.key] ?? ""} onChange={(v) => setMeasurements({ ...measurements, [f.key]: v })} unit={unit} onKeyDown={onKeyDown} />
           ))}
           {customFields.map((cf) => (
             <CustomMeasurementField
@@ -696,6 +704,7 @@ function MeasurementsStep({
               onFieldNameChange={(v) => updateCustomField(cf.id, "fieldName", v)}
               onValueChange={(v) => updateCustomField(cf.id, "value", v)}
               onRemove={() => removeCustomField(cf.id)}
+              onKeyDown={onKeyDown}
             />
           ))}
         </div>
@@ -719,6 +728,7 @@ function OrderDetailsStep({
   teamMembers,
   assignedStaffs,
   setAssignedStaffs,
+  onKeyDown,
 }: {
   orderDetails: { dateReceived: string; collectionDate: string; price: string; paymentStatus: string };
   setOrderDetails: (d: typeof orderDetails) => void;
@@ -726,6 +736,7 @@ function OrderDetailsStep({
   teamMembers: Member[];
   assignedStaffs: string[];
   setAssignedStaffs: (s: string[]) => void;
+  onKeyDown?: React.KeyboardEventHandler<HTMLInputElement | HTMLSelectElement>;
 }) {
   const w = useWindowWidth();
   const isMobile = w < 480;
@@ -751,11 +762,11 @@ function OrderDetailsStep({
       <div style={{ display: "grid", gridTemplateColumns: gridCols, gap: isMobile ? "16px 0" : "20px 24px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Date Received <span style={{ color: "#E03137" }}>*</span></label>
-          <input type="date" value={orderDetails.dateReceived} onChange={(e) => set("dateReceived", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle} />
+          <input type="date" value={orderDetails.dateReceived} onChange={(e) => set("dateReceived", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle} onKeyDown={onKeyDown} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Collection Date <span style={{ color: "#E03137" }}>*</span></label>
-          <input type="date" value={orderDetails.collectionDate} onChange={(e) => set("collectionDate", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle} />
+          <input type="date" value={orderDetails.collectionDate} onChange={(e) => set("collectionDate", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={inputStyle} onKeyDown={onKeyDown} />
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Price <span style={{ color: "#E03137" }}>*</span></label>
@@ -766,13 +777,13 @@ function OrderDetailsStep({
             }}>
               ₦
             </span>
-            <input type="text" inputMode="numeric" placeholder="00" value={orderDetails.price} onChange={(e) => set("price", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={{ ...inputStyle, paddingLeft: 28 }} />
+            <input type="text" inputMode="numeric" placeholder="00" value={orderDetails.price} onChange={(e) => set("price", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={{ ...inputStyle, paddingLeft: 28 }} onKeyDown={onKeyDown} />
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>Payment Status</label>
           <div style={{ position: "relative" }}>
-            <select value={orderDetails.paymentStatus} onChange={(e) => set("paymentStatus", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={selectStyle}>
+            <select value={orderDetails.paymentStatus} onChange={(e) => set("paymentStatus", e.target.value)} onFocus={(e) => (e.currentTarget.style.borderColor = "#121212")} onBlur={(e) => (e.currentTarget.style.borderColor = "#E2E4E9")} style={selectStyle} onKeyDown={onKeyDown}>
               <option value="Paid">Paid</option>
               <option value="Unpaid">Unpaid</option>
               <option value="Partial">Partial</option>
@@ -796,8 +807,8 @@ function OrderDetailsStep({
                 {assignedStaffs.length === 0
                   ? "Select staff members..."
                   : assignedStaffs.length === 1
-                  ? `${assignedStaffs[0]}`
-                  : `${assignedStaffs.length} staff members selected`}
+                    ? `${assignedStaffs[0]}`
+                    : `${assignedStaffs.length} staff members selected`}
               </span>
               <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
                 <ChevronDownIcon />
@@ -1003,6 +1014,44 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
   });
   const [assignedStaffs, setAssignedStaffs] = useState<string[]>([]);
 
+  const isMeasurementsStepValid = () => {
+    const requiredKeys = ["neck", "chestBust", "waist", "hip", "shoulder", "sleeve", "trouserLength"];
+    for (const key of requiredKeys) {
+      if (!measurements[key] || !measurements[key].trim()) {
+        return false;
+      }
+    }
+    for (const cf of customFields) {
+      if (!cf.fieldName.trim() || !cf.value.trim()) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const isOrderDetailsStepValid = () => {
+    return (
+      orderDetails.dateReceived.trim() !== "" &&
+      orderDetails.collectionDate.trim() !== "" &&
+      orderDetails.price.trim() !== ""
+    );
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const container = e.currentTarget.closest(".order-creation-flow-container");
+      if (container) {
+        const selectors = "input[type='text']:not([disabled]), input[type='date']:not([disabled]), select:not([disabled])";
+        const inputs = Array.from(container.querySelectorAll(selectors)) as HTMLElement[];
+        const index = inputs.indexOf(e.currentTarget);
+        if (index > -1 && index < inputs.length - 1) {
+          inputs[index + 1].focus();
+        }
+      }
+    }
+  };
+
   const [teamList, setTeamList] = useState<Member[]>([]);
   // Display-only label shown in the stepper header before save.
   // The actual stored friendly ID is derived from the DB UUID inside saveOrderAndClient.
@@ -1181,7 +1230,10 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
     try {
       // Validation for finalized orders
       if (!isDraft) {
-        if (!orderDetails.dateReceived.trim() || !orderDetails.collectionDate.trim() || !orderDetails.price.trim()) {
+        if (!isMeasurementsStepValid()) {
+          throw new Error("Please fill in all body measurement fields.");
+        }
+        if (!isOrderDetailsStepValid()) {
           throw new Error("Please fill in all required fields (Date Received, Collection Date, and Price).");
         }
       }
@@ -1347,7 +1399,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#FDFDFD", zIndex: 150, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div className="order-creation-flow-container" style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", background: "#FDFDFD", width: "100%" }}>
 
       {/* Header */}
       <AppPageHeader title={client.id ? "Edit Client & Order" : "Add Client"} />
@@ -1381,6 +1433,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
               unit={unit} setUnit={setUnit}
               measurements={measurements} setMeasurements={setMeasurements}
               customFields={customFields} setCustomFields={setCustomFields}
+              onKeyDown={handleKeyDown}
             />
           )}
           {step === 2 && (
@@ -1391,6 +1444,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
               teamMembers={teamList}
               assignedStaffs={assignedStaffs}
               setAssignedStaffs={setAssignedStaffs}
+              onKeyDown={handleKeyDown}
             />
           )}
 
@@ -1408,7 +1462,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
               </p>
             )}
             <button
-              type="button" onClick={() => saveOrderAndClient(true)}
+              type="button" onClick={() => { setSaveError(null); saveOrderAndClient(true); }}
               disabled={isSaving}
               style={{ padding: "13px 28px", background: "transparent", border: "1px solid #121212", borderRadius: 100, fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", cursor: isSaving ? "not-allowed" : "pointer", width: isMobile ? "100%" : "auto", opacity: isSaving ? 0.6 : 1 }}
               onMouseEnter={(e) => !isSaving && (e.currentTarget.style.background = "#F5F5F5")}
@@ -1417,7 +1471,27 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
               Save Draft
             </button>
             <button
-              type="button" onClick={() => { if (step === 1) setStep(2); else saveOrderAndClient(false); }}
+              type="button"
+              onClick={() => {
+                setSaveError(null);
+                if (step === 1) {
+                  if (!isMeasurementsStepValid()) {
+                    setSaveError("Please fill in all body measurement fields to continue.");
+                    return;
+                  }
+                  setStep(2);
+                } else {
+                  if (!isMeasurementsStepValid()) {
+                    setSaveError("Please fill in all body measurement fields to save.");
+                    return;
+                  }
+                  if (!isOrderDetailsStepValid()) {
+                    setSaveError("Please fill in all required order details (Date Received, Collection Date, and Price) to save.");
+                    return;
+                  }
+                  saveOrderAndClient(false);
+                }
+              }}
               disabled={isSaving}
               style={{ padding: "13px 28px", background: "#121212", border: "none", borderRadius: 100, fontSize: 14, fontWeight: 500, color: "#fff", fontFamily: "Satoshi, sans-serif", cursor: isSaving ? "not-allowed" : "pointer", width: isMobile ? "100%" : "auto", opacity: isSaving ? 0.6 : 1 }}
               onMouseEnter={(e) => !isSaving && (e.currentTarget.style.background = "#333")}

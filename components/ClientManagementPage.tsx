@@ -299,15 +299,28 @@ export default function ClientManagementPage() {
   useEffect(() => {
     let mounted = true;
     async function loadClients() {
-      // 1. Load role
+      // 1. Load user & role
+      let workspaceOwnerId = '';
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user && mounted) {
+          workspaceOwnerId = userData.user.id;
+        }
+      } catch (err) {
+        console.error('Error getting user in loadClients:', err);
+      }
+
       const { data: rpcResult, error: rpcErr } = await supabase.rpc('get_my_team_role');
       let memberName = '';
       let memberRole = '';
       if (!rpcErr && rpcResult && rpcResult.length > 0 && mounted) {
         memberName = rpcResult[0].name ?? '';
         memberRole = rpcResult[0].role ?? '';
+        workspaceOwnerId = rpcResult[0].owner_id;
         setUserRole(rpcResult[0].role as UserRole);
       }
+
+      if (!workspaceOwnerId) return;
 
       const isRestrictedRole = memberRole === 'Tailor' || memberRole === 'Assistant';
 
@@ -315,7 +328,8 @@ export default function ClientManagementPage() {
         // For Tailors/Assistants: fetch orders assigned to this member, then resolve client_ids
         const { data: assignedOrders, error: ordersErr } = await supabase
           .from('orders')
-          .select('client_id, assigned_team');
+          .select('client_id, assigned_team')
+          .eq('user_id', workspaceOwnerId);
         
         if (ordersErr) {
           console.error('Error fetching assigned orders', ordersErr);
@@ -350,6 +364,7 @@ export default function ClientManagementPage() {
           .from('clients')
           .select('id, name, phone, email, gender, outfit_type, status, created_at')
           .in('id', uniqueIds)
+          .eq('user_id', workspaceOwnerId)
           .order('created_at', { ascending: false });
 
         if (error) {
@@ -378,10 +393,11 @@ export default function ClientManagementPage() {
           }));
         }
       } else {
-        // Owners and Admins see all clients
+        // Owners and Admins see their own clients
         const { data, error } = await supabase
           .from('clients')
           .select('id, name, phone, email, gender, outfit_type, status, created_at')
+          .eq('user_id', workspaceOwnerId)
           .order('created_at', { ascending: false });
         if (error) {
           console.error('Error fetching clients', error);

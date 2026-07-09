@@ -78,7 +78,7 @@ export default function AppPageHeader({ title }: { title: string }) {
           try { localStorage.setItem('tailora_role', 'Owner'); } catch {}
         }
 
-        const { data: profile, error } = await supabase.from('profiles').select('avatar_path, full_name, business_name').eq('user_id', userId).maybeSingle();
+        const { data: profile, error } = await supabase.from('profiles').select('avatar_path, full_name, business_name').eq('id', userId).maybeSingle();
         if (error) return;
         if (profile) {
           if (profile.full_name && mounted) {
@@ -145,6 +145,7 @@ export default function AppPageHeader({ title }: { title: string }) {
       const { data: tableData, error: tableError } = await supabase
         .from('notifications')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
       if (!tableError && tableData) {
@@ -172,15 +173,27 @@ export default function AppPageHeader({ title }: { title: string }) {
       }
 
       // Fallback: table doesn't exist, generate dynamically
+      let workspaceOwnerId = userId;
+      try {
+        const { data: rpcResult } = await supabase.rpc('get_my_team_role');
+        if (rpcResult && rpcResult.length > 0) {
+          workspaceOwnerId = rpcResult[0].owner_id;
+        }
+      } catch (err) {
+        console.error('Error resolving role for dynamic notifications:', err);
+      }
+
       const { data: orders } = await supabase
         .from('orders')
         .select('id, client_name, outfit, status, created_at, measurements')
+        .eq('user_id', workspaceOwnerId)
         .order('created_at', { ascending: false })
         .limit(10);
 
       const { data: team } = await supabase
         .from('team_members')
         .select('name, role, status')
+        .eq('user_id', workspaceOwnerId)
         .limit(5);
 
       const dynamicNotifications: NotificationItem[] = [];

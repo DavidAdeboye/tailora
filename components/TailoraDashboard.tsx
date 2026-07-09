@@ -243,17 +243,24 @@ export default function TailoraDashboard() {
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     try {
-      const { error: deleteErr } = await supabase
+      // Delete associated orders first to avoid foreign key constraint violation
+      const { error: ordersErr } = await supabase
         .from('orders')
         .delete()
-        .eq('id', deleteTarget.id);
+        .eq('client_id', deleteTarget.id);
+      if (ordersErr) throw ordersErr;
 
-      if (deleteErr) throw deleteErr;
+      // Delete client from clients table
+      const { error: clientErr } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', deleteTarget.id);
+      if (clientErr) throw clientErr;
 
       setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "Failed to delete order from database.");
+      alert(err.message || "Failed to delete from database.");
     } finally {
       setDeleteTarget(null);
     }
@@ -298,7 +305,7 @@ export default function TailoraDashboard() {
           const { data: profile } = await supabase
             .from('profiles')
             .select('business_name')
-            .eq('user_id', workspaceOwnerId)
+            .eq('id', workspaceOwnerId)
             .maybeSingle();
             
           if (profile?.business_name && mounted) {
@@ -351,14 +358,33 @@ export default function TailoraDashboard() {
         });
       }
 
+      // Fetch assigned team mapping from orders to preserve Tailor/Assistant assignment filtering
+      let clientToTeamMap: Record<string, any> = {};
+      try {
+        const { data: teamOrders } = await supabase
+          .from('orders')
+          .select('client_id, assigned_team')
+          .eq('user_id', workspaceOwnerId);
+        if (teamOrders) {
+          teamOrders.forEach((o: any) => {
+            if (o.client_id && o.assigned_team) {
+              clientToTeamMap[o.client_id] = o.assigned_team;
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching team orders mapping:', err);
+      }
+
       try {
         const { data, error } = await supabase
-          .from('orders')
-          .select('id, client_id, client_name, phone, gender, outfit, status, status_type, assigned_team')
+          .from('clients')
+          .select('id, name, phone, gender, outfit_type, status, created_at')
+          .eq('user_id', workspaceOwnerId)
           .order('created_at', { ascending: false });
           
         if (error) {
-          console.error('Error fetching orders from Supabase:', {
+          console.error('Error fetching clients from Supabase:', {
             message: error.message,
             details: error.details,
             hint: error.hint,
@@ -369,17 +395,26 @@ export default function TailoraDashboard() {
         }
         
         if (data && mounted) {
-          let ordersList = data.map((o: any) => ({
-            id: o.id,
-            clientId: o.client_id,
-            client: o.client_name ?? o.client,
-            phone: o.phone,
-            gender: o.gender,
-            outfit: o.outfit,
-            status: o.status,
-            statusType: (o.status_type ?? o.statusType) as OrderStatusType,
-            assignedTeam: o.assigned_team
-          }));
+          let ordersList = data.map((c: any) => {
+            const rawStatus = c.status ?? 'Collected';
+            let statusTypeVal: OrderStatusType = 'collected';
+            const normalized = rawStatus.toLowerCase();
+            if (normalized.includes('overdue')) statusTypeVal = 'overdue';
+            else if (normalized.includes('due')) statusTypeVal = 'due';
+            else if (normalized.includes('pending')) statusTypeVal = 'due';
+
+            return {
+              id: c.id,
+              clientId: c.id,
+              client: c.name,
+              phone: c.phone ?? '',
+              gender: c.gender ?? '',
+              outfit: c.outfit_type ?? '',
+              status: rawStatus,
+              statusType: statusTypeVal,
+              assignedTeam: clientToTeamMap[c.id] || []
+            };
+          });
 
           // Filter by assigned staff if user is a Tailor or Assistant
           if (memberRole === 'Tailor' || memberRole === 'Assistant') {
@@ -400,7 +435,7 @@ export default function TailoraDashboard() {
           setOrders(ordersList);
         }
       } catch (err: any) {
-        console.error('Error fetching orders:', {
+        console.error('Error fetching clients:', {
           message: err.message,
           details: err.details,
           hint: err.hint,
