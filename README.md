@@ -61,10 +61,4 @@ The app still contains hardcoded placeholder data that should be replaced with r
 ## Notes
 - Some placeholder content also exists in marketing pages (`app/page.tsx`, `app/help/page.tsx`), but the priority is the authenticated app workspace flows above.
 - The Supabase integration is already present in several files, so the remaining work is mostly replacing static UI values with real backend data and persistence.
-
-
-
-
-
-
-## In the end, we'd need verified SMTP/Resend API keys
+- For a comprehensive guide on email systems, integration files, environment configurations, and production setup (including Resend and Supabase SMTP), refer to the [EMAIL_SETUP.md](file:///c:/Users/david/Desktop/Tailora%20(Copy)%20(1)/EMAIL_SETUP.md) documentation guide.
