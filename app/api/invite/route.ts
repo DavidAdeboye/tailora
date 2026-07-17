@@ -101,8 +101,9 @@ export async function POST(req: NextRequest) {
     if (resendApiKey) {
       try {
         const resend = new Resend(resendApiKey);
+        const senderEmail = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
         await resend.emails.send({
-          from: 'Tailora <onboarding@resend.dev>',
+          from: `Tailora <${senderEmail}>`,
           to: email,
           subject: 'You have been invited to join Tailora!',
           html: `

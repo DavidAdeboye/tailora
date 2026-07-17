@@ -37,8 +37,8 @@
     },
   ];
 
-  // OTP step removed — now just 4 steps
-  const TOTAL_STEPS = 4;
+  // OTP verification added — now 5 steps
+  const TOTAL_STEPS = 5;
 
   export default function SignupPage() {
     const router = useRouter();
@@ -49,6 +49,10 @@
       email: "",
       password: "",
     });
+    const [otpVals, setOtpVals] = useState<string[]>(Array(6).fill(""));
+    const [cooldown, setCooldown] = useState<number>(0);
+    const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
+
     const [done, setDone] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -123,30 +127,121 @@
       };
     }, [isPaused]);
 
+    // OTP cooldown timer
+    useEffect(() => {
+      if (cooldown > 0) {
+        const timer = setTimeout(() => setCooldown(c => c - 1), 1000);
+        return () => clearTimeout(timer);
+      }
+    }, [cooldown]);
+
     const handleFormChange =
       (field: keyof FormData) =>
       (e: ChangeEvent<HTMLInputElement>): void => {
         setFormData((prev) => ({ ...prev, [field]: e.target.value }));
       };
 
-    const goNext = (): void => {
-      if (step < TOTAL_STEPS) {
-        setStep((s) => s + 1);
-      } else if (step === TOTAL_STEPS) {
-        handleSignUp();
+    const goNext = async (): Promise<void> => {
+      if (step === 1) {
+        if (!formData.fullName.trim()) {
+          setAuthError("Full name is required.");
+          return;
+        }
+        setAuthError(null);
+        setStep(2);
+      } else if (step === 2) {
+        if (!formData.businessName.trim()) {
+          setAuthError("Business name is required.");
+          return;
+        }
+        setAuthError(null);
+        setStep(3);
+      } else if (step === 3) {
+        if (!formData.email.trim() || !formData.email.includes("@")) {
+          setAuthError("A valid email address is required.");
+          return;
+        }
+        setAuthError(null);
+        setStep(4);
+      } else if (step === 4) {
+        if (!formData.password || formData.password.length < 6) {
+          setAuthError("Password must be at least 6 characters.");
+          return;
+        }
+        setAuthError(null);
+        await handleSendOtp();
+      } else if (step === 5) {
+        await handleVerifyAndSignUp();
       }
     };
 
     const goBack = (): void => {
-      if (step > 1) setStep((s) => s - 1);
+      if (step > 1) {
+        setAuthError(null);
+        setStep((s) => s - 1);
+      }
     };
 
-    // Final step → sign up, then sign in immediately (no email verification needed)
-    const handleSignUp = async () => {
+    const handleSendOtp = async (isResend = false) => {
       setIsLoading(true);
       setAuthError(null);
-
       try {
+        const response = await fetch('/api/otp/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: formData.email.trim() })
+        });
+        
+        const resData = await response.json();
+        if (!response.ok) {
+          throw new Error(resData.error || "Failed to send verification code.");
+        }
+        
+        setCooldown(60);
+        if (!isResend) {
+          setStep(5);
+          setOtpVals(Array(6).fill(""));
+        } else {
+          alert("Verification code resent to your email.");
+        }
+      } catch (err: any) {
+        console.error("Failed to send OTP:", err);
+        setAuthError(err.message || "Failed to send verification code.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const handleVerifyAndSignUp = async () => {
+      const enteredOtp = otpVals.join("");
+      if (enteredOtp.length < 6) {
+        setAuthError("Please enter the complete 6-digit verification code.");
+        return;
+      }
+      
+      setIsLoading(true);
+      setAuthError(null);
+      try {
+        // 1. Verify OTP
+        const verifyResponse = await fetch('/api/otp/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: formData.email.trim(),
+            otp: enteredOtp
+          })
+        });
+
+        const verifyData = await verifyResponse.json();
+        if (!verifyResponse.ok) {
+          throw new Error(verifyData.error || "Invalid or expired verification code.");
+        }
+
+        // 2. Perform actual sign up
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -161,8 +256,6 @@
 
         if (error) throw error;
 
-        // If email confirmations are disabled in Supabase, signUp already
-        // returns an active session. If not, sign in explicitly to get one.
         let activeSession = data.session;
         if (!activeSession) {
           const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
@@ -178,7 +271,7 @@
           throw new Error("Failed to retrieve user session after signup.");
         }
 
-        // 1. Manually insert the user's profile record since there is no trigger
+        // 3. Create Profile
         const { error: profileErr } = await supabase
           .from('profiles')
           .insert({
@@ -189,10 +282,9 @@
           
         if (profileErr) {
           console.error("Profile creation error on signup:", profileErr);
-          // Continue anyway (non-blocking)
         }
 
-        // 2. If signed up via invitation link, link them as an active team member
+        // 4. Link team member
         if (invitationToken) {
           const { error: teamUpdateErr } = await supabase.rpc('link_team_member', {
             invite_token: invitationToken,
@@ -203,13 +295,11 @@
             console.error("Failed to link team member record:", teamUpdateErr);
           }
 
-          // Pre-cache the role so the dashboard doesn't flash admin UI
           if (invitationData?.role) {
             try { localStorage.setItem('tailora_role', invitationData.role); } catch {}
           }
         }
 
-        // Set token session cookie for auth redirect
         if (activeSession) {
           document.cookie = `sb-access-token=${activeSession.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
         }
@@ -235,10 +325,57 @@
         });
 
         if (error) throw error;
-        // On success, Supabase redirects to Google then back to redirectTo.
       } catch (error: any) {
         setAuthError(error.message || "Failed to sign up with Google");
         setIsGoogleLoading(false);
+      }
+    };
+
+    const handleOtpChange = (index: number, val: string) => {
+      const numOnly = val.replace(/[^0-9]/g, "");
+      const newVals = [...otpVals];
+      
+      if (numOnly.length > 0) {
+        const char = numOnly[numOnly.length - 1];
+        newVals[index] = char;
+        setOtpVals(newVals);
+        
+        if (index < 5) {
+          otpInputsRef.current[index + 1]?.focus();
+        }
+      } else {
+        newVals[index] = "";
+        setOtpVals(newVals);
+      }
+    };
+
+    const handleOtpKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Backspace") {
+        if (!otpVals[index] && index > 0) {
+          const newVals = [...otpVals];
+          newVals[index - 1] = "";
+          setOtpVals(newVals);
+          otpInputsRef.current[index - 1]?.focus();
+        } else {
+          const newVals = [...otpVals];
+          newVals[index] = "";
+          setOtpVals(newVals);
+        }
+        e.preventDefault();
+      } else if (e.key === "ArrowLeft" && index > 0) {
+        otpInputsRef.current[index - 1]?.focus();
+      } else if (e.key === "ArrowRight" && index < 5) {
+        otpInputsRef.current[index + 1]?.focus();
+      }
+    };
+
+    const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      const pasteData = e.clipboardData.getData("text").trim().replace(/[^0-9]/g, "");
+      if (pasteData.length === 6) {
+        const newVals = pasteData.split("");
+        setOtpVals(newVals);
+        otpInputsRef.current[5]?.focus();
       }
     };
 
@@ -429,9 +566,60 @@
                       </div>
                     )}
                     <PrimaryButton onClick={goNext} disabled={isLoading}>
-                      {isLoading ? "Creating account..." : "Create Account"}
+                      {isLoading ? "Sending code..." : "Continue"}
                     </PrimaryButton>
                     <TermsText />
+                  </>
+                )}
+                {step === 5 && (
+                  <>
+                    <div>
+                      <FieldLabel>Verification Code</FieldLabel>
+                      <p className="font-['Satoshi'] font-normal text-[13px] text-[#6C717D] mt-1 mb-3">
+                        We sent a 6-digit code to <strong className="text-[#121212]">{formData.email}</strong>. Enter it below to verify your email.
+                      </p>
+                      <div className="flex gap-2 justify-between mt-3 mb-1">
+                        {otpVals.map((val, idx) => (
+                          <input
+                            key={idx}
+                            ref={el => { otpInputsRef.current[idx] = el; }}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            maxLength={1}
+                            value={val}
+                            onChange={e => handleOtpChange(idx, e.target.value)}
+                            onKeyDown={e => handleOtpKeyDown(idx, e)}
+                            onPaste={handleOtpPaste}
+                            className="w-[48px] h-[52px] border border-[#E2E4E9] rounded-[10px] text-center font-['Satoshi'] font-bold text-[18px] text-[#121212] focus:border-[#121212] outline-none shadow-[0px_1px_2px_rgba(228,229,231,0.12)] transition-colors"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    {authError && (
+                      <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                        {authError}
+                      </div>
+                    )}
+                    <PrimaryButton onClick={goNext} disabled={isLoading}>
+                      {isLoading ? "Verifying..." : "Verify & Create Account"}
+                    </PrimaryButton>
+                    
+                    <div className="text-center mt-2">
+                      {cooldown > 0 ? (
+                        <span className="font-['Satoshi'] text-[13px] text-[#9CA3AF]">
+                          Resend code in {cooldown}s
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSendOtp(true)}
+                          className="font-['Satoshi'] font-bold text-[13px] text-[#121212] hover:underline bg-none border-none p-0 cursor-pointer"
+                        >
+                          Resend verification code
+                        </button>
+                      )}
+                    </div>
                   </>
                 )}
               </div>
