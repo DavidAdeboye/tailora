@@ -8,7 +8,7 @@ export default function InviteTeamMemberModal({ isOpen, onClose }: Props) {
   const [form, setForm] = useState({ name: "", email: "", role: "Admin" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [signupLink, setSignupLink] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const set = (k: keyof typeof form, v: string) => setForm(p => ({ ...p, [k]: v }));
 
@@ -46,7 +46,7 @@ export default function InviteTeamMemberModal({ isOpen, onClose }: Props) {
         throw new Error(resData.error || "Failed to send invitation.");
       }
 
-      setSignupLink(resData.signupLink);
+      setIsSuccess(true);
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("tailora_team_member_invited", {
           detail: { name: form.name.trim(), email: form.email.trim(), role: form.role }
@@ -66,31 +66,20 @@ export default function InviteTeamMemberModal({ isOpen, onClose }: Props) {
     }
   };
 
-  if (signupLink) {
+  if (isSuccess) {
     return (
-      <div className="tailora-modal-backdrop" onClick={() => { setSignupLink(null); setForm({ name: "", email: "", role: "Admin" }); onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(10,13,18,0.70)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div className="tailora-modal-backdrop" onClick={() => { setIsSuccess(false); setForm({ name: "", email: "", role: "Admin" }); onClose(); }} style={{ position: "fixed", inset: 0, background: "rgba(10,13,18,0.70)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div className="tailora-modal-panel" onClick={(e) => e.stopPropagation()} style={{ position: "relative", width: 514, background: "#fff", borderRadius: 16, overflow: "hidden", fontFamily: "Satoshi, Inter, sans-serif" }}>
           <div style={{ padding: "32px 30px 30px", position: "relative", zIndex: 1, textAlign: "center" }}>
             <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#E7F6EC", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
               <svg width="24" height="24" viewBox="0 0 16 16" fill="none"><path d="M3 8L6.5 11.5L13 4.5" stroke="#036B26" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
-            <h2 style={{ margin: "0 0 8px", fontFamily: "Sora, sans-serif", fontWeight: 800, fontSize: 22, color: "#1a1a1a" }}>Invitation Link Generated!</h2>
-            <p style={{ margin: "0 0 20px", fontSize: 14, color: "#555960", lineHeight: "20px" }}>
-              Share this signup link with your team member to let them join your workspace:
+            <h2 style={{ margin: "0 0 8px", fontFamily: "Sora, sans-serif", fontWeight: 800, fontSize: 22, color: "#1a1a1a" }}>Invitation Sent!</h2>
+            <p style={{ margin: "0 0 24px", fontSize: 14, color: "#555960", lineHeight: "20px" }}>
+              We've sent an email invitation to <strong style={{ color: "#121212" }}>{form.email}</strong> to join your workspace as an <strong style={{ color: "#121212" }}>{form.role}</strong>.
             </p>
-            <div style={{ display: "flex", gap: 8, background: "#F5F7F8", padding: "12px 16px", borderRadius: 8, border: "1px solid #E2E4E9", alignItems: "center", marginBottom: 24 }}>
-              <span style={{ fontSize: 13, color: "#333", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, textAlign: "left", fontFamily: "monospace" }}>
-                {signupLink}
-              </span>
-              <button type="button" onClick={() => {
-                navigator.clipboard.writeText(signupLink);
-                alert("Link copied to clipboard!");
-              }} style={{ background: "#121212", color: "#fff", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, cursor: "pointer", fontWeight: 500 }}>
-                Copy
-              </button>
-            </div>
             <button type="button" onClick={() => {
-              setSignupLink(null);
+              setIsSuccess(false);
               setForm({ name: "", email: "", role: "Admin" });
               onClose();
             }} style={{ width: "100%", padding: "13px 24px", background: "#121212", border: "none", borderRadius: 999, fontSize: 14, fontWeight: 500, color: "#fff", cursor: "pointer" }}>

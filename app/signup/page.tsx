@@ -304,8 +304,10 @@
           document.cookie = `sb-access-token=${activeSession.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
         }
 
-        setDone(true);
-        setIsLoading(false);
+        // Hard-navigate so the browser sends the cookie with the server
+        // request — router.push() is client-side and middleware won't see
+        // the cookie in time, causing a redirect loop back to /login.
+        window.location.href = "/dashboard";
       } catch (error: any) {
         setAuthError(error.message || "Failed to sign up");
         setIsLoading(false);
@@ -412,7 +414,7 @@
             </div>
             <h2 className="text-[32px] font-['Sora'] font-bold mb-2 text-[#121212]">Sign Up Successful</h2>
             <button
-              onClick={() => router.push("/dashboard")}
+              onClick={() => { window.location.href = "/dashboard"; }}
               className="w-full h-[46px] bg-[#121212] text-white rounded-full text-[14px] font-['Satoshi'] font-medium hover:bg-black active:scale-[0.98] transition-all"
             >
               Go to Dashboard

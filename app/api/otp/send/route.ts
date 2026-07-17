@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     }
 
     const resend = new Resend(resendApiKey);
-    const senderEmail = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
+    const senderEmail = process.env.SENDER_EMAIL || 'otp@mail.tailora.ng';
 
     try {
       await resend.emails.send({

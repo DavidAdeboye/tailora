@@ -123,8 +123,10 @@ export default function SigninPage() {
       if (event === "SIGNED_IN" && session) {
         // Set the cookie so middleware allows protected routes
         document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-        window.history.replaceState(null, "", window.location.pathname);
-        router.replace("/dashboard");
+        // Use a hard navigation so the browser sends the fresh cookie with the
+        // server request — router.replace() is client-side and the middleware
+        // won't see the cookie in time, causing a redirect loop.
+        window.location.href = "/dashboard";
       }
     });
 
@@ -143,14 +145,13 @@ export default function SigninPage() {
 
       if (error) throw error;
 
-      // Set the cookie so middleware allows protected routes
+      // Set the cookie so middleware allows protected routes, then hard-navigate
+      // so the browser sends the cookie with the server request (router.replace
+      // is client-side and the middleware won't see the cookie in time).
       if (data.session) {
         document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
       }
-
-      // Successful sign in
-      setSigninDone(true);
-      setIsLoading(false);
+      window.location.href = "/dashboard";
     } catch (error: any) {
       setAuthError(error.message || "Failed to sign in");
       setIsLoading(false);
@@ -165,7 +166,7 @@ export default function SigninPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/login`,
+          redirectTo: `${window.location.origin}/dashboard`,
         },
       });
 
