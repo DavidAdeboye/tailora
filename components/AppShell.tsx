@@ -66,6 +66,29 @@ export default function AppShell({ children }: { children: ReactNode }) {
           router.replace("/login");
           return;
         }
+
+        // Ensure user has a profile record to avoid foreign key violations (e.g., for OAuth/Google signups)
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        if (!profile && !profileError) {
+          const email = data.user.email;
+          const fullName = data.user.user_metadata?.full_name || email?.split('@')[0] || "User";
+          const businessName = data.user.user_metadata?.business_name || "My Workspace";
+          const { error: insertError } = await supabase.from('profiles').insert({
+            id: data.user.id,
+            email: email,
+            full_name: fullName,
+            business_name: businessName
+          });
+          if (insertError) {
+            console.error("Failed to auto-create profile:", insertError);
+          }
+        }
+
         setIsCheckingAuth(false);
       } catch (err) {
         console.error("Auth check failed:", err);

@@ -365,7 +365,7 @@ useEffect(() => {
           ? await supabase
               .from("profiles")
               .select("business_name")
-              .eq("user_id", ownerId)
+              .eq("id", ownerId)
               .maybeSingle()
           : { data: null };
 
