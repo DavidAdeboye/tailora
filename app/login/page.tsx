@@ -116,6 +116,20 @@ export default function SigninPage() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // 2FA OTP state
+  const [otpVals, setOtpVals] = useState<string[]>(Array(6).fill(""));
+  const otpInputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const [cooldown, setCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+
+  // OTP cooldown timer
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(c => c - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
+
   useEffect(() => {
     // In Supabase v2 the client auto-parses the OAuth hash fragment.
     // We listen for the SIGNED_IN event, persist the cookie for middleware, and redirect.
@@ -138,23 +152,158 @@ export default function SigninPage() {
     setAuthError(null);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: signinData.email,
-        password: signinData.password,
+      const response = await fetch('/api/auth/login-challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: signinData.email,
+          password: signinData.password
+        })
       });
 
-      if (error) throw error;
+      const data = await response.json();
 
-      // Set the cookie so middleware allows protected routes, then hard-navigate
-      // so the browser sends the cookie with the server request (router.replace
-      // is client-side and the middleware won't see the cookie in time).
-      if (data.session) {
-        document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to sign in');
       }
-      window.location.href = "/dashboard";
+
+      if (data.twoFactorRequired) {
+        setSigninStep(3);
+        setCooldown(60);
+      } else {
+        if (data.session) {
+          document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+        }
+        window.location.href = "/dashboard";
+      }
     } catch (error: any) {
       setAuthError(error.message || "Failed to sign in");
       setIsLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async () => {
+    const code = otpVals.join("");
+    if (code.length < 6) {
+      setAuthError("Please enter all 6 digits.");
+      return;
+    }
+
+    setIsLoading(true);
+    setAuthError(null);
+
+    try {
+      const response = await fetch('/api/auth/login-verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: signinData.email,
+          password: signinData.password,
+          otp: code
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Invalid verification code');
+      }
+
+      if (data.session) {
+        document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        await supabase.auth.setSession({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+        });
+      }
+      window.location.href = "/dashboard";
+    } catch (error: any) {
+      setAuthError(error.message || "Failed to verify 2FA code");
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend2FA = async () => {
+    setIsResending(true);
+    setAuthError(null);
+
+    try {
+      const response = await fetch('/api/auth/login-challenge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: signinData.email,
+          password: signinData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to resend code');
+      }
+
+      setCooldown(60);
+      setOtpVals(Array(6).fill(""));
+      setTimeout(() => {
+        otpInputsRef.current[0]?.focus();
+      }, 50);
+    } catch (error: any) {
+      setAuthError(error.message || "Failed to resend code");
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleOtpChange = (index: number, val: string) => {
+    const numOnly = val.replace(/[^0-9]/g, "");
+    const newVals = [...otpVals];
+    
+    if (numOnly.length > 0) {
+      const char = numOnly[numOnly.length - 1];
+      newVals[index] = char;
+      setOtpVals(newVals);
+      
+      if (index < 5) {
+        otpInputsRef.current[index + 1]?.focus();
+      }
+    } else {
+      newVals[index] = "";
+      setOtpVals(newVals);
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace") {
+      if (!otpVals[index] && index > 0) {
+        const newVals = [...otpVals];
+        newVals[index - 1] = "";
+        setOtpVals(newVals);
+        otpInputsRef.current[index - 1]?.focus();
+      } else {
+        const newVals = [...otpVals];
+        newVals[index] = "";
+        setOtpVals(newVals);
+      }
+      e.preventDefault();
+    } else if (e.key === "ArrowLeft" && index > 0) {
+      otpInputsRef.current[index - 1]?.focus();
+    } else if (e.key === "ArrowRight" && index < 5) {
+      otpInputsRef.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData("text").trim().replace(/[^0-9]/g, "");
+    if (pasteData.length === 6) {
+      const newVals = pasteData.split("");
+      setOtpVals(newVals);
+      otpInputsRef.current[5]?.focus();
     }
   };
 
@@ -202,7 +351,7 @@ export default function SigninPage() {
   }
 
   const step = signinStep;
-  const totalSteps = SIGNIN_STEPS;
+  const totalSteps = signinStep === 3 ? 3 : 2;
 
   const goBack = () => {
     if (signinStep > 1) setSigninStep((s) => s - 1);
@@ -341,6 +490,59 @@ export default function SigninPage() {
                   <PrimaryButton onClick={() => handleSignIn()} disabled={isLoading}>
                     {isLoading ? "Signing in..." : "Sign In"}
                   </PrimaryButton>
+                </>
+              )}
+
+              {signinStep === 3 && (
+                <>
+                  <div>
+                    <FieldLabel>Verification Code</FieldLabel>
+                    <p className="font-['Satoshi'] font-normal text-[13px] text-[#6C717D] mt-1 mb-3">
+                      We sent a 6-digit code to <strong className="text-[#121212]">{signinData.email}</strong>. Enter it below to verify your identity.
+                    </p>
+                    <div className="flex gap-2 justify-between mt-3 mb-1">
+                      {otpVals.map((val, idx) => (
+                        <input
+                          key={idx}
+                          ref={el => { otpInputsRef.current[idx] = el; }}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={1}
+                          value={val}
+                          onChange={e => handleOtpChange(idx, e.target.value)}
+                          onKeyDown={e => handleOtpKeyDown(idx, e)}
+                          onPaste={handleOtpPaste}
+                          className="w-[48px] h-[52px] border border-[#E2E4E9] rounded-[10px] text-center font-['Satoshi'] font-bold text-[18px] text-[#121212] focus:border-[#121212] outline-none shadow-[0px_1px_2px_rgba(228,229,231,0.12)] transition-colors"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  {authError && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                      {authError}
+                    </div>
+                  )}
+                  <PrimaryButton onClick={handleVerify2FA} disabled={isLoading}>
+                    {isLoading ? "Verifying..." : "Verify & Sign In"}
+                  </PrimaryButton>
+                  
+                  <div className="text-center mt-2">
+                    {cooldown > 0 ? (
+                      <span className="font-['Satoshi'] text-[13px] text-[#9CA3AF]">
+                        Resend code in {cooldown}s
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleResend2FA}
+                        disabled={isResending}
+                        className="font-['Satoshi'] font-bold text-[13px] text-[#121212] hover:underline bg-none border-none p-0 cursor-pointer"
+                      >
+                        Resend verification code
+                      </button>
+                    )}
+                  </div>
                 </>
               )}
             </div>

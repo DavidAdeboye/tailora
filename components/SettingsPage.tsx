@@ -742,7 +742,7 @@ function SecurityTab() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0" }}>
             <div>
               <div style={{ fontSize: 15, fontWeight: 500, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Two-Factor Authentication (2FA)</div>
-              <div style={{ fontSize: 12, color: "#6C717D", fontFamily: "Satoshi, sans-serif" }}>Show/hide</div>
+              <div style={{ fontSize: 12, color: "#6C717D", fontFamily: "Satoshi, sans-serif" }}>{twoFA ? "Enabled" : "Disabled"}</div>
             </div>
             <Toggle checked={twoFA} onChange={handleToggle2FA} />
           </div>
