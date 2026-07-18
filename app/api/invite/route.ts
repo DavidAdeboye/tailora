@@ -122,8 +122,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to complete invitation setup: ' + errorMsg }, { status: 500 });
     }
 
-    // Both DB writes succeeded. Email will be picked up and sent by the
-    // background cron job (/api/cron/send-invites) — no Resend call here.
+    // Both DB writes succeeded. Trigger the cron route in the background
+    // to send the email immediately without blocking the response.
+    const cronSecret = process.env.CRON_SECRET;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
+    if (cronSecret) {
+      fetch(`${appUrl}/api/cron/send-invites`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${cronSecret}`
+        }
+      }).catch(err => console.error('Failed to trigger cron inline:', err));
+    }
+
     return NextResponse.json({ success: true, emailQueued: true });
 
   } catch (err: any) {

@@ -33,6 +33,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to generate verification code: ' + dbErr.message }, { status: 500 });
     }
 
+    console.log(`[Signup OTP] Generated code ${otpCode} for ${cleanEmail}`);
+
     // Send the email using Resend
     const resendApiKey = process.env.RESEND_API_KEY;
     if (!resendApiKey) {
