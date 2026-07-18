@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { buildInviteEmailHtml } from '../../../../lib/invite-email';
 
 /**
- * Vercel Cron Job — runs every minute (configured in vercel.json).
+ * Cron Job — runs every minute (triggered via an external scheduler like cron-job.org).
  * Picks up pending invite emails from the `invitations` table and sends
  * them via Resend, respecting the 10 req/sec rate limit with 110ms gaps.
  *
