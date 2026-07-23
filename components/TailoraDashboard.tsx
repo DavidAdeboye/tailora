@@ -233,12 +233,15 @@ export default function TailoraDashboard() {
   const isOwnerOrAdmin = userRole === 'Owner' || userRole === 'Admin';
 
   const stats = useMemo(() => {
+    const activeClients = Math.max(clientsCount, orders.length);
+    const activeTeam = Math.max(teamCount, 1);
+
     if (isOwnerOrAdmin) {
       return [
-        { label: "Total Clients",        value: clientsCount.toLocaleString(), icon: <PeopleIcon /> },
+        { label: "Total Clients",        value: activeClients.toLocaleString(), icon: <PeopleIcon /> },
         { label: "Pending Deliveries",   value: pendingCount.toLocaleString(), icon: <GraphIcon /> },
         { label: "Orders in Progress",   value: progressCount.toLocaleString(), icon: <CoinIcon /> },
-        { label: "Team Members",         value: teamCount.toLocaleString(), icon: <TeamIcon /> },
+        { label: "Team Members",         value: activeTeam.toLocaleString(), icon: <TeamIcon /> },
       ];
     }
     // Tailor / Assistant stats
@@ -472,12 +475,23 @@ export default function TailoraDashboard() {
         
         if (data && mounted) {
           let ordersList = data.map((c: any) => {
-            const rawStatus = c.status ?? 'Collected';
+            const rawStatus = c.status ?? 'Pending';
             let statusTypeVal: OrderStatusType = 'collected';
             const normalized = rawStatus.toLowerCase();
-            if (normalized.includes('overdue')) statusTypeVal = 'overdue';
-            else if (normalized.includes('due')) statusTypeVal = 'due';
-            else if (normalized.includes('pending')) statusTypeVal = 'due';
+            if (normalized.includes('overdue')) {
+              statusTypeVal = 'overdue';
+            } else if (
+              normalized.includes('due') ||
+              normalized.includes('pending') ||
+              normalized.includes('progress') ||
+              normalized.includes('active') ||
+              normalized.includes('processing') ||
+              normalized.includes('new')
+            ) {
+              statusTypeVal = 'due';
+            } else if (normalized.includes('collected') || normalized.includes('done') || normalized.includes('completed')) {
+              statusTypeVal = 'collected';
+            }
 
             const orderDetails = clientToOrderMap[c.id];
 

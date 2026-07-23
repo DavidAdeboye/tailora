@@ -42,7 +42,7 @@ export default function AddClientModal({ isOpen, onClose, onSaveDraft, onContinu
     if (value === "Custom") {
       setIsCustomOutfit(true);
       setCustomOutfitText("");
-      set("outfitType", "");
+      set("outfitType", "Custom");
     } else {
       setIsCustomOutfit(false);
       set("outfitType", value);
@@ -51,7 +51,7 @@ export default function AddClientModal({ isOpen, onClose, onSaveDraft, onContinu
 
   const handleCustomOutfitChange = (value: string) => {
     setCustomOutfitText(value);
-    set("outfitType", value);
+    set("outfitType", value.trim() ? value : "Custom");
   };
 
   const handleContinue = () => {

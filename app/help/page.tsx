@@ -1,7 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import AppShell from "../../components/AppShell";
 import AppPageHeader from "../../components/AppPageHeader";
+import { supabase } from "../../lib/supabase";
 
 /* ── Icons ── */
 const BellIcon = () => (
@@ -140,6 +141,34 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 function HelpContent() {
   const [search, setSearch] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [displayName, setDisplayName] = useState("there");
+
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('tailora_businessname');
+      if (cached) setDisplayName(cached);
+    } catch {}
+
+    async function loadUser() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('business_name, full_name')
+            .eq('id', userData.user.id)
+            .maybeSingle();
+
+          if (profile?.business_name) {
+            setDisplayName(profile.business_name);
+          } else if (profile?.full_name) {
+            setDisplayName(profile.full_name);
+          }
+        }
+      } catch {}
+    }
+    loadUser();
+  }, []);
 
   const filteredFaq = FAQ_ITEMS.filter(
     (item) =>
@@ -159,7 +188,7 @@ function HelpContent() {
             <div className="tailora-page-header-row" style={{ marginBottom: 24 }}>
               <div className="tailora-page-header-text">
                 <h1 className="tailora-page-title tailora-welcome-title" style={{ margin: "0 0 4px", fontFamily: "var(--font-sora)", fontWeight: 600, fontSize: 24, color: "#121212", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  Hi, Joshua&apos;s Couture
+                  Hi, {displayName}
                   <span style={{ fontSize: 26 }}>🧵</span>
                 </h1>
                 <p className="tailora-page-subtitle" style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#696969", fontFamily: "var(--font-satoshi)" }}>

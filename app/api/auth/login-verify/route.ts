@@ -3,14 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password, otp } = await req.json();
+    const body = await req.json();
+    const identifier = (body.email || body.phone || '').trim().toLowerCase();
+    const { password, otp } = body;
 
-    if (!email || !password || !otp) {
-      return NextResponse.json({ error: 'Email, password, and verification code are required' }, { status: 400 });
+    if (!identifier || !password || !otp) {
+      return NextResponse.json({ error: 'Email/Phone, password, and verification code are required' }, { status: 400 });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanOtp = otp.trim();
+    const cleanEmail = identifier;
+    const cleanOtp = (otp || '').toString().trim();
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;

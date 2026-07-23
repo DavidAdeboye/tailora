@@ -1015,18 +1015,9 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
   const [assignedStaffs, setAssignedStaffs] = useState<string[]>([]);
 
   const isMeasurementsStepValid = () => {
-    const requiredKeys = ["neck", "chestBust", "waist", "hip", "shoulder", "sleeve", "trouserLength"];
-    for (const key of requiredKeys) {
-      if (!measurements[key] || !measurements[key].trim()) {
-        return false;
-      }
-    }
-    for (const cf of customFields) {
-      if (!cf.fieldName.trim() || !cf.value.trim()) {
-        return false;
-      }
-    }
-    return true;
+    const hasStandardValue = Object.values(measurements).some(val => typeof val === 'string' && val.trim().length > 0);
+    const hasCustomValue = customFields.some(cf => cf.fieldName.trim().length > 0 && cf.value.trim().length > 0);
+    return hasStandardValue || hasCustomValue;
   };
 
   const isOrderDetailsStepValid = () => {
@@ -1250,6 +1241,12 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
       if (rpcResult && rpcResult.length > 0) {
         ownerId = rpcResult[0].owner_id;
       }
+
+      // Ensure profiles record exists for ownerId to satisfy FK constraint
+      await supabase.from('profiles').upsert(
+        { id: userData.user.id, updated_at: new Date().toISOString() },
+        { onConflict: 'id', ignoreDuplicates: true }
+      );
 
       // 1. Insert or Update Client
       let clientId = client.id;

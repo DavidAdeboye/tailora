@@ -82,7 +82,7 @@ export default function EditClientModal({ isOpen, onClose, client, onSave }: Edi
     if (value === "Custom") {
       setIsCustomOutfit(true);
       setCustomOutfitText("");
-      set("outfit", "");
+      set("outfit", "Custom");
     } else {
       setIsCustomOutfit(false);
       set("outfit", value);
@@ -91,7 +91,7 @@ export default function EditClientModal({ isOpen, onClose, client, onSave }: Edi
 
   const handleCustomOutfitChange = (value: string) => {
     setCustomOutfitText(value);
-    set("outfit", value);
+    set("outfit", value.trim() ? value : "Custom");
   };
 
   const handleSave = async () => {

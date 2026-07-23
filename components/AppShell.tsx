@@ -128,6 +128,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
         ownerId = rpcResult[0].owner_id;
       }
 
+      // Ensure profiles record exists for user to avoid foreign key constraint errors
+      await supabase.from('profiles').upsert(
+        { id: userData.user.id, updated_at: new Date().toISOString() },
+        { onConflict: 'id', ignoreDuplicates: true }
+      );
+
       await supabase.from('clients').insert({
         user_id: ownerId,
         name: data.name,

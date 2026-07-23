@@ -6,106 +6,92 @@ import { supabase } from "../../lib/supabase";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [step, setStep] = useState<"request" | "success">("request");
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleResetRequest = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanEmail = email.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    
-    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
-      setErrorMsg("Please enter a valid email address.");
+
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setError("Please enter a valid email address.");
       return;
     }
 
     setIsLoading(true);
-    setErrorMsg(null);
+    setError(null);
+    setMessage(null);
 
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: `${window.location.origin}/reset-password`,
+      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+        redirectTo: `${window.location.origin}/login`,
       });
 
-      if (error) {
-        throw error;
+      if (resetErr) {
+        throw resetErr;
       }
 
-      setStep("success");
+      setMessage("Password reset link has been sent to your email address.");
     } catch (err: any) {
-      console.error("Password reset error:", err);
-      setErrorMsg(err.message || "Failed to send password reset email. Please try again.");
+      setError(err.message || "Failed to send password reset email.");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#FDFDFD] font-['Satoshi'] px-4 py-8 text-[#121212]">
-      <div className="w-full max-w-[440px] bg-white rounded-[24px] border border-[#E2E4E9] p-8 shadow-[0px_4px_24px_rgba(0,0,0,0.06)]">
-        
-        <Link href="/login" className="inline-flex items-center text-sm text-[#6C717D] hover:text-[#121212] mb-6 transition-colors">
-          ← Back to Login
+    <main className="flex min-h-screen items-center justify-center bg-[#FDFDFD] font-['Satoshi'] text-[#121212] px-4">
+      <div className="w-full max-w-[440px] bg-white p-8 rounded-[24px] border border-[#E2E4E9] shadow-[0px_4px_16px_rgba(0,0,0,0.06)]">
+        <Link
+          href="/login"
+          className="inline-flex items-center text-sm font-medium text-[#6C717D] hover:text-[#121212] mb-6 transition-colors"
+        >
+          ← Back to Log In
         </Link>
 
-        {step === "request" ? (
-          <>
-            <h1 className="font-['Sora'] font-bold text-[28px] leading-[36px] text-[#121212] mb-2">
-              Reset Your Password
-            </h1>
-            <p className="font-['Satoshi'] font-normal text-[14px] text-[#6C717D] mb-6 leading-[22px]">
-              Enter the registered email address associated with your Tailora account. We'll send you instructions to reset your password.
-            </p>
+        <h1 className="font-['Sora'] font-bold text-[28px] leading-[36px] text-[#121212] mb-2">
+          Reset Password
+        </h1>
+        <p className="font-['Satoshi'] font-normal text-[14px] text-[#6C717D] mb-6">
+          Enter the email address associated with your account and we&apos;ll send you instructions to reset your password.
+        </p>
 
-            <form onSubmit={handleResetRequest} className="flex flex-col gap-4">
-              <div>
-                <label className="font-['Satoshi'] font-medium text-[14px] text-[#283145] leading-[20px] block mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  placeholder="e.g. sarah.adeyemi@gmail.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full h-[44px] bg-[#FFFFFF] border border-[#E2E4E9] rounded-[10px] px-3.5 font-['Inter'] font-normal text-[14px] text-[#525866] outline-none shadow-[0px_1px_2px_rgba(228,229,231,0.24)] focus:border-[#121212] transition-colors"
-                />
-              </div>
-
-              {errorMsg && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
-                  {errorMsg}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full h-[46px] bg-[#121212] text-[#FFFFFF] rounded-full font-['Satoshi'] font-medium text-[14px] hover:bg-black active:scale-[0.98] transition-all flex items-center justify-center disabled:opacity-50 mt-2"
-              >
-                {isLoading ? "Sending..." : "Send Reset Link"}
-              </button>
-            </form>
-          </>
-        ) : (
-          <div className="text-center py-4">
-            <div className="w-[64px] h-[64px] rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto mb-4">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-              </svg>
-            </div>
-            <h2 className="font-['Sora'] font-bold text-[24px] text-[#121212] mb-2">Check Your Email</h2>
-            <p className="font-['Satoshi'] text-[14px] text-[#6C717D] mb-6 leading-[22px]">
-              We have sent a password reset link to <strong className="text-[#121212]">{email}</strong>. Please check your inbox and follow the instructions.
-            </p>
-            <Link
-              href="/login"
-              className="inline-flex w-full h-[46px] bg-[#121212] text-white rounded-full font-['Satoshi'] font-medium text-[14px] items-center justify-center hover:bg-black transition-all"
-            >
-              Return to Login
-            </Link>
+        {message ? (
+          <div className="bg-green-50 border border-green-200 text-green-800 p-4 rounded-xl text-sm mb-6">
+            {message}
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <div>
+              <label htmlFor="reset-email" className="block text-sm font-medium text-[#121212] mb-1.5">
+                Email Address
+              </label>
+              <input
+                id="reset-email"
+                type="email"
+                placeholder="name@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full h-12 px-4 border border-[#E2E4E9] rounded-xl text-sm outline-none focus:border-[#121212] transition-colors"
+                required
+              />
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-12 bg-[#121212] text-white font-medium rounded-full text-sm hover:bg-black active:scale-[0.99] transition-all disabled:opacity-50"
+            >
+              {isLoading ? "Sending Link..." : "Send Reset Link"}
+            </button>
+          </form>
         )}
       </div>
     </main>
