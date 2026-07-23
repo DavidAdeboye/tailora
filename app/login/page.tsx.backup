@@ -294,7 +294,7 @@ export default function SigninPage() {
                     <strong className="text-[#121212] font-medium">
                       General Terms of Use &amp; Privacy Policy
                     </strong>{" "}
-                    of Taliora
+                    of Tailora
                   </p>
                 </>
               )}

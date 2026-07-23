@@ -57,6 +57,10 @@
     const [isLoading, setIsLoading] = useState(false);
     const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     const [authError, setAuthError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [acceptedTerms, setAcceptedTerms] = useState(false);
 
     // Invitation states
     const [invitationToken, setInvitationToken] = useState<string | null>(null);
@@ -157,15 +161,34 @@
         setAuthError(null);
         setStep(3);
       } else if (step === 3) {
-        if (!formData.email.trim() || !formData.email.includes("@")) {
-          setAuthError("A valid email address is required.");
+        const trimmedEmail = formData.email.trim().toLowerCase();
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!trimmedEmail || !emailRegex.test(trimmedEmail)) {
+          setAuthError("Enter a valid email address.");
           return;
         }
+        setFormData((prev) => ({ ...prev, email: trimmedEmail }));
         setAuthError(null);
         setStep(4);
       } else if (step === 4) {
-        if (!formData.password || formData.password.length < 6) {
-          setAuthError("Password must be at least 6 characters.");
+        const pwd = formData.password;
+        if (!pwd || pwd.length < 8) {
+          setAuthError("Password must be at least 8 characters long.");
+          return;
+        }
+        const hasUpper = /[A-Z]/.test(pwd);
+        const hasLower = /[a-z]/.test(pwd);
+        const hasNumOrSpec = /[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd);
+        if (!hasUpper || !hasLower || !hasNumOrSpec) {
+          setAuthError("Password must contain upper and lower case letters, and a number or symbol.");
+          return;
+        }
+        if (confirmPassword && pwd !== confirmPassword) {
+          setAuthError("Passwords do not match.");
+          return;
+        }
+        if (!acceptedTerms) {
+          setAuthError("Please accept the Terms of Use & Privacy Policy to proceed.");
           return;
         }
         setAuthError(null);
@@ -542,8 +565,13 @@
                       <FieldLabel>Business Name</FieldLabel>
                       <input type="text" placeholder="Your Business Name" value={formData.businessName} onChange={handleFormChange("businessName")} disabled={!!invitationData} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={`${inputCls} ${invitationData ? 'opacity-70 cursor-not-allowed bg-gray-100' : ''}`} />
                     </div>
+                    {authError && (
+                      <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                        {authError}
+                      </div>
+                    )}
                     <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
-                    <TermsText />
+                    <TermsText accepted={acceptedTerms} setAccepted={setAcceptedTerms} />
                   </>
                 )}
                 {step === 3 && (
@@ -552,15 +580,56 @@
                       <FieldLabel>Email Address</FieldLabel>
                       <input type="email" placeholder="Your Email Address" value={formData.email} onChange={handleFormChange("email")} disabled={!!invitationData} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={`${inputCls} ${invitationData ? 'opacity-70 cursor-not-allowed bg-gray-100' : ''}`} />
                     </div>
+                    {authError && (
+                      <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
+                        {authError}
+                      </div>
+                    )}
                     <PrimaryButton onClick={goNext}>Continue</PrimaryButton>
-                    <TermsText />
+                    <TermsText accepted={acceptedTerms} setAccepted={setAcceptedTerms} />
                   </>
                 )}
                 {step === 4 && (
                   <>
                     <div>
                       <FieldLabel>Create Password</FieldLabel>
-                      <input type="password" placeholder="Enter Password" value={formData.password} onChange={handleFormChange("password")} onKeyDown={(e) => { if (e.key === "Enter") goNext(); }} className={inputCls} />
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          placeholder="Enter Password"
+                          value={formData.password}
+                          onChange={handleFormChange("password")}
+                          onKeyDown={(e) => { if (e.key === "Enter") goNext(); }}
+                          className={inputCls}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black text-xs font-medium"
+                        >
+                          {showPassword ? "Hide" : "Show"}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <FieldLabel>Confirm Password</FieldLabel>
+                      <div className="relative">
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="Confirm Password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") goNext(); }}
+                          className={inputCls}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black text-xs font-medium"
+                        >
+                          {showConfirmPassword ? "Hide" : "Show"}
+                        </button>
+                      </div>
                     </div>
                     {authError && (
                       <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
@@ -570,7 +639,7 @@
                     <PrimaryButton onClick={goNext} disabled={isLoading}>
                       {isLoading ? "Sending code..." : "Continue"}
                     </PrimaryButton>
-                    <TermsText />
+                    <TermsText accepted={acceptedTerms} setAccepted={setAcceptedTerms} />
                   </>
                 )}
                 {step === 5 && (
@@ -683,11 +752,22 @@
     );
   }
 
-  function TermsText() {
+  function TermsText({ accepted, setAccepted }: { accepted?: boolean; setAccepted?: (val: boolean) => void }) {
     return (
-      <p className="font-['Satoshi'] font-medium text-[14px] leading-[20px] text-[#595653]">
-        By continuing, you agree to the{" "}
-        <strong className="text-[#121212] font-medium">General Terms of Use &amp; Privacy Policy</strong> of Taliora
-      </p>
+      <div className="flex items-start gap-2.5 mt-2">
+        {setAccepted && (
+          <input
+            type="checkbox"
+            id="terms-checkbox"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-black focus:ring-black accent-black cursor-pointer"
+          />
+        )}
+        <label htmlFor="terms-checkbox" className="font-['Satoshi'] font-medium text-[13px] leading-[18px] text-[#595653] cursor-pointer">
+          By continuing, you agree to the{" "}
+          <strong className="text-[#121212] font-medium">General Terms of Use &amp; Privacy Policy</strong> of Tailora
+        </label>
+      </div>
     );
   }

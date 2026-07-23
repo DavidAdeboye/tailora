@@ -110,6 +110,7 @@ export default function SigninPage() {
   const [signinStep, setSigninStep] = useState(1);
   const [signinData, setSigninData] = useState<SigninFormData>({ email: "", password: "" });
   const [signinDone, setSigninDone] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Auth state
   const [isLoading, setIsLoading] = useState(false);
@@ -454,17 +455,41 @@ export default function SigninPage() {
                       placeholder="Your Email Address"
                       value={signinData.email}
                       onChange={(e) => setSigninData((p) => ({ ...p, email: e.target.value }))}
-                      onKeyDown={(e) => { if (e.key === "Enter") setSigninStep(2); }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const trimmed = signinData.email.trim().toLowerCase();
+                          if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+                            setAuthError("Enter a valid email address.");
+                            return;
+                          }
+                          setSigninData((p) => ({ ...p, email: trimmed }));
+                          setAuthError(null);
+                          setSigninStep(2);
+                        }
+                      }}
                       className={inputCls}
                     />
                   </div>
-                  <PrimaryButton onClick={() => setSigninStep(2)}>Continue</PrimaryButton>
+                  <PrimaryButton
+                    onClick={() => {
+                      const trimmed = signinData.email.trim().toLowerCase();
+                      if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+                        setAuthError("Enter a valid email address.");
+                        return;
+                      }
+                      setSigninData((p) => ({ ...p, email: trimmed }));
+                      setAuthError(null);
+                      setSigninStep(2);
+                    }}
+                  >
+                    Continue
+                  </PrimaryButton>
                   <p className="font-['Satoshi'] font-medium text-[14px] leading-[20px] text-[#595653]">
                     By continuing, you agree to the{" "}
                     <strong className="text-[#121212] font-medium">
                       General Terms of Use &amp; Privacy Policy
                     </strong>{" "}
-                    of Taliora
+                    of Tailora
                   </p>
                 </>
               )}
@@ -472,15 +497,29 @@ export default function SigninPage() {
               {signinStep === 2 && (
                 <>
                   <div>
-                    <FieldLabel>Password</FieldLabel>
-                    <input
-                      type="password"
-                      placeholder="Enter Password"
-                      value={signinData.password}
-                      onChange={(e) => setSigninData((p) => ({ ...p, password: e.target.value }))}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleSignIn(); }}
-                      className={inputCls}
-                    />
+                    <div className="flex justify-between items-center mb-1">
+                      <FieldLabel>Password</FieldLabel>
+                      <Link href="/forgot-password" className="font-['Satoshi'] text-[12px] text-[#121212] font-medium hover:underline">
+                        Forgot Password?
+                      </Link>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Enter Password"
+                        value={signinData.password}
+                        onChange={(e) => setSigninData((p) => ({ ...p, password: e.target.value }))}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleSignIn(); }}
+                        className={inputCls}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-black text-xs font-medium"
+                      >
+                        {showPassword ? "Hide" : "Show"}
+                      </button>
+                    </div>
                   </div>
                   {authError && (
                     <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">

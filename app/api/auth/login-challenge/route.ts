@@ -2,6 +2,15 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 
+// In-memory failed login attempts tracker
+interface AttemptRecord {
+  count: number;
+  lockUntil: number;
+}
+const failedAttemptsMap = new Map<string, AttemptRecord>();
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes lockout
+
 export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json();
@@ -11,6 +20,18 @@ export async function POST(req: NextRequest) {
     }
 
     const cleanEmail = email.trim().toLowerCase();
+
+    // Check rate limit / lockout state
+    const record = failedAttemptsMap.get(cleanEmail);
+    const now = Date.now();
+
+    if (record && record.lockUntil > now) {
+      const remainingMinutes = Math.ceil((record.lockUntil - now) / 60000);
+      return NextResponse.json(
+        { error: `Too many failed login attempts. Please try again in ${remainingMinutes} minute${remainingMinutes > 1 ? 's' : ''}.` },
+        { status: 429 }
+      );
+    }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -26,8 +47,27 @@ export async function POST(req: NextRequest) {
     });
 
     if (authError || !authData?.session || !authData?.user) {
+      // Track failed attempt
+      const current = failedAttemptsMap.get(cleanEmail) || { count: 0, lockUntil: 0 };
+      const newCount = (current.lockUntil < now ? 0 : current.count) + 1;
+      
+      if (newCount >= MAX_ATTEMPTS) {
+        failedAttemptsMap.set(cleanEmail, {
+          count: newCount,
+          lockUntil: now + LOCKOUT_MS
+        });
+        return NextResponse.json(
+          { error: 'Too many failed login attempts. Account temporarily locked. Please try again in 15 minutes.' },
+          { status: 429 }
+        );
+      }
+
+      failedAttemptsMap.set(cleanEmail, { count: newCount, lockUntil: 0 });
       return NextResponse.json({ error: authError?.message || 'Invalid email or password' }, { status: 401 });
     }
+
+    // Success — clear lockout record
+    failedAttemptsMap.delete(cleanEmail);
 
     const session = authData.session;
     const user = authData.user;
