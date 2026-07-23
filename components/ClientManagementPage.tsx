@@ -257,6 +257,10 @@ export default function ClientManagementPage() {
       
       if (error) throw error;
 
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("tailora_client_updated"));
+      }
+
       // Update local state
       setClients(prev => prev.map(c => {
         if (c.id === updated.id) {
@@ -303,6 +307,10 @@ export default function ClientManagementPage() {
         .delete()
         .eq('id', deleteTarget.id);
       if (clientErr) throw clientErr;
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("tailora_client_updated"));
+      }
 
       setClients(prev => prev.filter(c => c.id !== deleteTarget.id));
     } catch (err: any) {
@@ -467,7 +475,16 @@ export default function ClientManagementPage() {
       }
     }
     loadClients();
-    return () => { mounted = false; };
+    const handleUpdate = () => loadClients();
+    if (typeof window !== "undefined") {
+      window.addEventListener("tailora_client_updated", handleUpdate);
+    }
+    return () => {
+      mounted = false;
+      if (typeof window !== "undefined") {
+        window.removeEventListener("tailora_client_updated", handleUpdate);
+      }
+    };
   }, []);
 
 

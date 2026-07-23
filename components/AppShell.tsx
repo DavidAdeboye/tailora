@@ -32,7 +32,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  const openAddClient = () => setShowAddClient(true);
+  const openAddClient = () => {
+    setPendingClient(null);
+    setShowAddClient(true);
+  };
   const openInviteCoworker = () => setShowInvite(true);
   const closeAddClient = () => setShowAddClient(false);
   const closeInvite = () => setShowInvite(false);
@@ -136,17 +139,21 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
       await supabase.from('clients').insert({
         user_id: ownerId,
-        name: data.name,
-        phone: data.phone || '',
-        email: data.email || '',
+        name: data.name.trim(),
+        phone: data.phone.trim() || '',
+        email: data.email.trim() || '',
         gender: data.gender || '',
         outfit_type: data.outfitType || '',
         status: 'Pending'
       });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("tailora_client_updated"));
+      }
     } catch (err) {
       console.error("Failed to save client draft:", err);
     } finally {
       closeAddClient();
+      setPendingClient(null);
     }
   };
 
@@ -160,6 +167,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const handleSaveDraft = () => {
     setShowOrderFlow(false);
     setPendingClient(null);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("tailora_client_updated"));
+    }
   };
 
   // Complete the flow → show success
@@ -167,6 +177,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setShowOrderFlow(false);
     setPendingClient(null);
     setShowSuccess(true);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("tailora_client_updated"));
+    }
   };
 
   return (
@@ -229,6 +242,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         onClose={closeAddClient}
         onSaveDraft={handleSaveClientDraft}
         onContinue={handleContinueFromModal}
+        initialData={pendingClient}
       />
 
       <InviteTeamMemberModal isOpen={showInvite} onClose={closeInvite} />

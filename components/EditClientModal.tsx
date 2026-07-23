@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useAppModals } from "./AppModalsContext";
+import { isValidPhoneNumber } from "./AddClientModal";
 
 export interface ClientData {
   id: string;
@@ -95,20 +96,41 @@ export default function EditClientModal({ isOpen, onClose, client, onSave }: Edi
   };
 
   const handleSave = async () => {
-    if (!form.name.trim() || !form.phone.trim() || !form.gender || !form.outfit) {
-      setError("Please fill in client name, phone, gender, and outfit type.");
+    const trimmedName = form.name.trim();
+    const trimmedPhone = form.phone.trim();
+    const trimmedEmail = form.email.trim();
+
+    if (!trimmedName) {
+      setError("Full Name is required.");
       return;
     }
+    if (!trimmedPhone) {
+      setError("Phone Number is required.");
+      return;
+    }
+    if (!isValidPhoneNumber(trimmedPhone)) {
+      setError("Please enter a valid phone number (min 7 digits, no letters).");
+      return;
+    }
+    if (!form.gender) {
+      setError("Please select a gender.");
+      return;
+    }
+    if (!form.outfit || (form.outfit === "Custom" && !customOutfitText.trim())) {
+      setError("Please select or specify an outfit type.");
+      return;
+    }
+
     setError(null);
     setIsSubmitting(true);
     try {
       await onSave({
         ...client,
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim(),
+        name: trimmedName,
+        phone: trimmedPhone,
+        email: trimmedEmail,
         gender: form.gender,
-        outfit: form.outfit,
+        outfit: isCustomOutfit ? customOutfitText.trim() : form.outfit,
         status: form.status
       });
       onClose();

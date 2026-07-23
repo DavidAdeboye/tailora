@@ -1249,15 +1249,19 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
       );
 
       // 1. Insert or Update Client
+      const cleanName = client.name.trim();
+      const cleanPhone = client.phone.trim();
+      const cleanEmail = (client.email || '').trim();
+
       let clientId = client.id;
       if (!clientId) {
         const { data: newClient, error: clientErr } = await supabase
           .from('clients')
           .insert({
             user_id: ownerId,
-            name: client.name,
-            phone: client.phone,
-            email: client.email,
+            name: cleanName,
+            phone: cleanPhone,
+            email: cleanEmail,
             gender: client.gender,
             outfit_type: client.outfitType,
             status: isDraft ? 'Pending' : 'Due'
@@ -1271,9 +1275,9 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
         const { error: clientErr } = await supabase
           .from('clients')
           .update({
-            name: client.name,
-            phone: client.phone,
-            email: client.email,
+            name: cleanName,
+            phone: cleanPhone,
+            email: cleanEmail,
             gender: client.gender,
             outfit_type: client.outfitType,
             status: isDraft ? 'Pending' : 'Due'
@@ -1338,8 +1342,8 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
         const { error: orderErr } = await supabase
           .from('orders')
           .update({
-            client_name: client.name,
-            phone: client.phone,
+            client_name: cleanName,
+            phone: cleanPhone,
             gender: client.gender,
             outfit: client.outfitType,
             status: isDraft ? 'Due' : (orderDetails.paymentStatus === 'Paid' ? 'Collected' : 'Due'),
@@ -1360,8 +1364,8 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
             id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined,
             user_id: ownerId,
             client_id: clientId,
-            client_name: client.name,
-            phone: client.phone,
+            client_name: cleanName,
+            phone: cleanPhone,
             gender: client.gender,
             outfit: client.outfitType,
             status: isDraft ? 'Due' : (orderDetails.paymentStatus === 'Paid' ? 'Collected' : 'Due'),
