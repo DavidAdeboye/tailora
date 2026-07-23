@@ -643,12 +643,14 @@ function ReferenceImageDropzone({ images, setImages }: { images: File[]; setImag
 function MeasurementsStep({
   unit, setUnit, measurements, setMeasurements,
   customFields, setCustomFields,
+  notes, setNotes,
   onKeyDown,
 }: {
   unit: string; setUnit: (u: string) => void;
   measurements: Record<string, string>; setMeasurements: (m: Record<string, string>) => void;
   customFields: Array<{ id: number; fieldName: string; value: string }>;
   setCustomFields: (f: Array<{ id: number; fieldName: string; value: string }>) => void;
+  notes?: string; setNotes?: (n: string) => void;
   onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>;
 }) {
   const w = useWindowWidth();
@@ -715,6 +717,25 @@ function MeasurementsStep({
         >
           <AddPlusIcon /> Add Custom Measurement
         </button>
+
+        {setNotes && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 12 }}>
+            <label style={{ fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif" }}>
+              Measurement Note <span style={{ fontWeight: 400, color: "#667185" }}>(Optional)</span>
+            </label>
+            <textarea
+              placeholder="e.g. Client prefers a looser fit around the waist"
+              value={notes || ""}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={2}
+              style={{
+                width: "100%", padding: "10px 12px", border: "1px solid #E2E4E9", borderRadius: 8,
+                fontSize: 14, color: "#121212", fontFamily: "Satoshi, sans-serif", outline: "none",
+                resize: "none"
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1434,6 +1455,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
               unit={unit} setUnit={setUnit}
               measurements={measurements} setMeasurements={setMeasurements}
               customFields={customFields} setCustomFields={setCustomFields}
+              notes={notes} setNotes={setNotes}
               onKeyDown={handleKeyDown}
             />
           )}

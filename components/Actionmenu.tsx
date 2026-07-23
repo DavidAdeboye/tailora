@@ -6,6 +6,8 @@ import { createPortal } from "react-dom";
 export interface ActionMenuProps {
   onEdit: () => void;
   onDelete: () => void;
+  onTakeMeasurements?: () => void;
+  onViewHistory?: () => void;
   label?: string;
 }
 
@@ -29,6 +31,24 @@ function DeleteIcon() {
   );
 }
 
+function TapeIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M19 3H5C3.89543 3 3 3.89543 3 5V19C3 20.1046 3.89543 21 5 21H19C20.1046 21 21 20.1046 21 19V5C21 3.89543 20.1046 3 19 3Z" stroke="#344054" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M7 7V12M12 7V10M17 7V12" stroke="#344054" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function HistoryIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <path d="M12 8V12L15 15" stroke="#344054" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx="12" cy="12" r="9" stroke="#344054" strokeWidth="1.5"/>
+    </svg>
+  );
+}
+
 function DotsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -39,7 +59,7 @@ function DotsIcon() {
   );
 }
 
-export function ActionMenuButton({ onEdit, onDelete, label = "More actions" }: ActionMenuProps) {
+export function ActionMenuButton({ onEdit, onDelete, onTakeMeasurements, onViewHistory, label = "More actions" }: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -48,8 +68,8 @@ export function ActionMenuButton({ onEdit, onDelete, label = "More actions" }: A
   const openMenu = () => {
     if (!btnRef.current) return;
     const rect = btnRef.current.getBoundingClientRect();
-    const menuW = 172;
-    const menuH = 100;
+    const menuW = 190;
+    const menuH = 160;
     let left = rect.right - menuW;
     let top = rect.bottom + 4;
     if (left < 8) left = 8;
@@ -77,6 +97,24 @@ export function ActionMenuButton({ onEdit, onDelete, label = "More actions" }: A
     };
   }, [open]);
 
+  const menuItemStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "9px 12px",
+    borderRadius: 8,
+    background: "transparent",
+    border: "none",
+    cursor: "pointer",
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#344054",
+    fontFamily: "Satoshi, Inter, sans-serif",
+    textAlign: "left",
+    width: "100%",
+    transition: "background 0.12s",
+  };
+
   const menuEl = open ? (
     <div
       ref={menuRef}
@@ -84,7 +122,7 @@ export function ActionMenuButton({ onEdit, onDelete, label = "More actions" }: A
         position: "fixed",
         top: pos.top,
         left: pos.left,
-        width: 172,
+        width: 190,
         background: "#FFFFFF",
         border: "1px solid #E4E7EC",
         borderRadius: 10,
@@ -98,32 +136,45 @@ export function ActionMenuButton({ onEdit, onDelete, label = "More actions" }: A
       }}
       role="menu"
     >
+      {onTakeMeasurements && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => { setOpen(false); onTakeMeasurements(); }}
+          style={menuItemStyle}
+          onMouseEnter={e => (e.currentTarget.style.background = "#F8F9FC")}
+          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+        >
+          <TapeIcon />
+          Take Measurements
+        </button>
+      )}
+      {onViewHistory && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => { setOpen(false); onViewHistory(); }}
+          style={menuItemStyle}
+          onMouseEnter={e => (e.currentTarget.style.background = "#F8F9FC")}
+          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+        >
+          <HistoryIcon />
+          Measurement History
+        </button>
+      )}
+      {(onTakeMeasurements || onViewHistory) && (
+        <div style={{ height: 1, background: "#F1F1F2", margin: "2px 0" }} />
+      )}
       <button
         type="button"
         role="menuitem"
         onClick={() => { setOpen(false); onEdit(); }}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 12px",
-          borderRadius: 8,
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          fontSize: 14,
-          fontWeight: 500,
-          color: "#344054",
-          fontFamily: "Satoshi, Inter, sans-serif",
-          textAlign: "left",
-          width: "100%",
-          transition: "background 0.12s",
-        }}
+        style={menuItemStyle}
         onMouseEnter={e => (e.currentTarget.style.background = "#F8F9FC")}
         onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
       >
         <EditIcon />
-        Edit
+        Edit Client
       </button>
       <div style={{ height: 1, background: "#F1F1F2", margin: "2px 0" }} />
       <button
@@ -131,27 +182,14 @@ export function ActionMenuButton({ onEdit, onDelete, label = "More actions" }: A
         role="menuitem"
         onClick={() => { setOpen(false); onDelete(); }}
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          padding: "10px 12px",
-          borderRadius: 8,
-          background: "transparent",
-          border: "none",
-          cursor: "pointer",
-          fontSize: 14,
-          fontWeight: 500,
+          ...menuItemStyle,
           color: "#E03137",
-          fontFamily: "Satoshi, Inter, sans-serif",
-          textAlign: "left",
-          width: "100%",
-          transition: "background 0.12s",
         }}
         onMouseEnter={e => (e.currentTarget.style.background = "#FFF0F0")}
         onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
       >
         <DeleteIcon />
-        Delete
+        Delete Client
       </button>
     </div>
   ) : null;

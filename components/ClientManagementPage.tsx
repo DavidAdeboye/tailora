@@ -8,6 +8,8 @@ import { AppPageBody, PageSectionHeader } from "./AppPageBody";
 import PrimaryButton from "./PrimaryButton";
 import { ActionMenuButton, DeleteConfirmModal } from "./Actionmenu";
 import EditClientModal, { type ClientData } from "./EditClientModal";
+import ClientMeasurementsModal from "./ClientMeasurementsModal";
+import ClientMeasurementHistoryModal from "./ClientMeasurementHistoryModal";
 
 type ClientStatusType = "collected" | "overdue" | "due";
 
@@ -113,7 +115,7 @@ function formatClientId(id: string) {
   return `CLI-${part.toUpperCase()}`;
 }
 
-function ClientMobileCard({ client, onEdit, onDelete, showActions = true }: { client: Client; onEdit: () => void; onDelete: () => void; showActions?: boolean }) {
+function ClientMobileCard({ client, onEdit, onDelete, onTakeMeasurements, onViewHistory, showActions = true }: { client: Client; onEdit: () => void; onDelete: () => void; onTakeMeasurements?: () => void; onViewHistory?: () => void; showActions?: boolean }) {
   const st = statusStyles[client.statusType];
   return (
     <article className="tailora-client-card">
@@ -143,6 +145,8 @@ function ClientMobileCard({ client, onEdit, onDelete, showActions = true }: { cl
         <ActionMenuButton
           onEdit={onEdit}
           onDelete={onDelete}
+          onTakeMeasurements={onTakeMeasurements}
+          onViewHistory={onViewHistory}
           label={`Actions for ${client.name}`}
         />
       )}
@@ -165,6 +169,24 @@ export default function ClientManagementPage() {
   const [deleteTarget, setDeleteTarget] = useState<Client | null>(null);
   const [editTarget, setEditTarget] = useState<ClientData | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+
+  // Measurement Modal States
+  const [measTarget, setMeasTarget] = useState<Client | null>(null);
+  const [isMeasOpen, setIsMeasOpen] = useState(false);
+  const [historyTarget, setHistoryTarget] = useState<Client | null>(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<any>(null);
+
+  const handleTakeMeasurements = (c: Client) => {
+    setMeasTarget(c);
+    setEditingRecord(null);
+    setIsMeasOpen(true);
+  };
+
+  const handleViewHistory = (c: Client) => {
+    setHistoryTarget(c);
+    setIsHistoryOpen(true);
+  };
 
   const filteredClients = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -601,6 +623,8 @@ export default function ClientManagementPage() {
                   client={c}
                   onEdit={() => handleEdit(c)}
                   onDelete={() => setDeleteTarget(c)}
+                  onTakeMeasurements={() => handleTakeMeasurements(c)}
+                  onViewHistory={() => handleViewHistory(c)}
                   showActions={isOwnerOrAdmin}
                 />
               ))
@@ -641,6 +665,8 @@ export default function ClientManagementPage() {
                             <ActionMenuButton
                               onEdit={() => handleEdit(c)}
                               onDelete={() => setDeleteTarget(c)}
+                              onTakeMeasurements={() => handleTakeMeasurements(c)}
+                              onViewHistory={() => handleViewHistory(c)}
                               label={`Actions for ${c.name}`}
                             />
                           </div>
@@ -724,6 +750,38 @@ export default function ClientManagementPage() {
         onClose={() => setIsEditOpen(false)}
         client={editTarget}
         onSave={handleSaveEdit}
+      />
+
+      <ClientMeasurementsModal
+        isOpen={isMeasOpen}
+        client={measTarget ? { id: measTarget.id, name: measTarget.name, phone: measTarget.phone, gender: measTarget.gender, outfitType: measTarget.outfit } : null}
+        initialRecord={editingRecord}
+        onClose={() => { setIsMeasOpen(false); setEditingRecord(null); }}
+        onSave={() => {
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new Event("tailora_client_updated"));
+          }
+        }}
+      />
+
+      <ClientMeasurementHistoryModal
+        isOpen={isHistoryOpen}
+        client={historyTarget ? { id: historyTarget.id, name: historyTarget.name, phone: historyTarget.phone, outfitType: historyTarget.outfit } : null}
+        onClose={() => setIsHistoryOpen(false)}
+        onTakeNew={() => {
+          if (historyTarget) {
+            setMeasTarget(historyTarget);
+            setEditingRecord(null);
+            setIsMeasOpen(true);
+          }
+        }}
+        onEditRecord={(rec) => {
+          if (historyTarget) {
+            setMeasTarget(historyTarget);
+            setEditingRecord(rec);
+            setIsMeasOpen(true);
+          }
+        }}
       />
     </div>
   );
