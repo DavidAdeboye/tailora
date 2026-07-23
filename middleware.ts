@@ -7,12 +7,13 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get("sb-access-token")?.value;
 
-  // Allow Next.js internals, static assets, and API routes.
+  // Allow Next.js internals, static assets, API routes, and auth callbacks.
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/static") ||
     pathname.startsWith("/favicon.ico") ||
     pathname.startsWith("/api") ||
+    pathname.startsWith("/auth") ||
     pathname.includes(".")
   ) {
     return;

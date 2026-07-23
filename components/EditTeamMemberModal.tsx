@@ -82,7 +82,7 @@ export default function EditTeamMemberModal({ isOpen, onClose, member, onSave }:
 
   return (
     <div className="tailora-modal-backdrop" onClick={() => onClose()} style={{ position: "fixed", inset: 0, background: "rgba(10,13,18,0.70)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div className="tailora-modal-panel" onClick={(e) => e.stopPropagation()} style={{ position: "relative", width: 514, background: "#fff", borderRadius: 16, overflow: "hidden", fontFamily: "Satoshi, Inter, sans-serif" }}>
+      <div className="tailora-modal-panel" onClick={(e) => e.stopPropagation()} style={{ position: "relative", width: 514, maxHeight: "calc(100vh - 48px)", overflowY: "auto", background: "#fff", borderRadius: 16, fontFamily: "Satoshi, Inter, sans-serif" }}>
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 180, background: "linear-gradient(180deg, #FDF6EC 30%, rgba(253,246,236,0) 100%)", pointerEvents: "none", zIndex: 0 }} />
         <button type="button" onClick={() => onClose()} style={{ position: "absolute", top: 20, right: 20, width: 32, height: 32, borderRadius: "50%", background: "#F5F7F8", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10 }}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M12 4L4 12M4 4L12 12" stroke="#000" strokeWidth="1.8" strokeLinecap="round"/></svg>

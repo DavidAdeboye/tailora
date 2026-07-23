@@ -187,10 +187,22 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session) {
+        document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        if (typeof window !== "undefined" && (window.location.hash.includes("access_token") || window.location.search.includes("code="))) {
+          window.location.href = "/dashboard";
+        }
+      }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      if (session) {
+        document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+        if (event === "SIGNED_IN" && typeof window !== "undefined" && (window.location.hash.includes("access_token") || window.location.search.includes("code="))) {
+          window.location.href = "/dashboard";
+        }
+      }
     });
 
     return () => {
