@@ -5,6 +5,8 @@ import { isValidPhoneNumber } from "./AddClientModal";
 
 export interface ClientData {
   id: string;
+  /** The specific order UUID being edited (DEF-ORD-012). */
+  orderId?: string;
   name: string;
   phone: string;
   email?: string;
@@ -48,7 +50,7 @@ export default function EditClientModal({ isOpen, onClose, client, onSave }: Edi
         email: form.email.trim(),
         gender: form.gender,
         outfitType: form.outfit
-      });
+      }, client.orderId); // DEF-ORD-012: pass the specific order ID for editing
       onClose();
     }
   };

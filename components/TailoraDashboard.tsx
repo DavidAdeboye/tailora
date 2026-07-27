@@ -4,14 +4,19 @@ import { useAppModals } from "./AppModalsContext";
 import PrimaryButton from "./PrimaryButton";
 import AppPageHeader from "./AppPageHeader";
 import { supabase } from "../lib/supabase";
+import { resolveWorkspace } from "../lib/resolveWorkspace";
 import { ActionMenuButton, DeleteConfirmModal } from "./Actionmenu";
 import EditClientModal, { type ClientData } from "./EditClientModal";
 
 type OrderStatusType = "collected" | "overdue" | "due";
 
 interface Order {
+  /** The order's own UUID */
   id: string;
+  /** The client UUID this order belongs to */
   clientId?: string;
+  /** Friendly order ID e.g. #A-1F2A */
+  friendlyOrderId?: string;
   client: string;
   phone: string;
   email?: string;
@@ -260,6 +265,7 @@ export default function TailoraDashboard() {
   const handleEdit = (order: Order) => {
     setEditTarget({
       id: order.clientId || order.id,
+      orderId: order.id, // DEF-ORD-012: track which order is being edited
       name: order.client,
       phone: order.phone,
       email: order.email || "",
@@ -318,19 +324,30 @@ export default function TailoraDashboard() {
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     try {
-      // Delete associated orders first to avoid foreign key constraint violation
-      const { error: ordersErr } = await supabase
-        .from('orders')
-        .delete()
-        .eq('client_id', deleteTarget.id);
-      if (ordersErr) throw ordersErr;
+      // DEF-ORD-012: Delete only this specific order, not all orders for the client.
+      // If the row has a separate orderId (order-centric), delete the order row.
+      // Also delete associated orders by client_id for backward compat with client-only rows.
+      if (deleteTarget.clientId && deleteTarget.id !== deleteTarget.clientId) {
+        // Order-centric row: delete just this order
+        const { error: ordersErr } = await supabase
+          .from('orders')
+          .delete()
+          .eq('id', deleteTarget.id);
+        if (ordersErr) throw ordersErr;
+      } else {
+        // Legacy client-centric row: delete all orders for client then the client
+        const { error: ordersErr } = await supabase
+          .from('orders')
+          .delete()
+          .eq('client_id', deleteTarget.id);
+        if (ordersErr) throw ordersErr;
 
-      // Delete client from clients table
-      const { error: clientErr } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', deleteTarget.id);
-      if (clientErr) throw clientErr;
+        const { error: clientErr } = await supabase
+          .from('clients')
+          .delete()
+          .eq('id', deleteTarget.id);
+        if (clientErr) throw clientErr;
+      }
 
       setOrders(prev => prev.filter(o => o.id !== deleteTarget.id));
     } catch (err: any) {
@@ -355,40 +372,33 @@ export default function TailoraDashboard() {
       let memberRole = "";
 
       try {
-        const { data: userData } = await supabase.auth.getUser();
-        const user = userData?.user;
-        if (user && mounted) {
-          workspaceOwnerId = user.id;
+        const identity = await resolveWorkspace();
+        if (!identity) return;
+        if (!mounted) return;
 
-           // Check if the current user is a team member using RPC (bypasses RLS)
-           const { data: rpcResult, error: rpcErr } = await supabase.rpc('get_my_team_role');
-           if (!rpcErr && rpcResult && rpcResult.length > 0) {
-             const member = rpcResult[0];
-             workspaceOwnerId = member.owner_id;
-             memberName = member.name;
-             memberRole = member.role;
-           }
+        workspaceOwnerId = identity.workspaceOwnerId;
+        memberName = identity.memberDisplayName;
+        memberRole = identity.role;
 
-           const resolvedRole: UserRole = memberRole ? (memberRole as UserRole) : 'Owner';
-           if (mounted) {
-             setUserRole(resolvedRole);
-             setMemberDisplayName(memberName);
-             try { localStorage.setItem('tailora_role', resolvedRole); } catch {}
-           }
+        const resolvedRole: UserRole = identity.role as UserRole;
+        if (mounted) {
+          setUserRole(resolvedRole);
+          setMemberDisplayName(memberName);
+          try { localStorage.setItem('tailora_role', resolvedRole); } catch {}
+        }
 
-          // Load business name from workspace owner profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('business_name')
-            .eq('id', workspaceOwnerId)
-            .maybeSingle();
-            
-          if (profile?.business_name && mounted) {
-            setBusinessName(profile.business_name);
-            try {
-              localStorage.setItem('tailora_businessname', profile.business_name);
-            } catch {}
-          }
+        // Load business name from workspace owner profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('business_name')
+          .eq('id', workspaceOwnerId)
+          .maybeSingle();
+          
+        if (profile?.business_name && mounted) {
+          setBusinessName(profile.business_name);
+          try {
+            localStorage.setItem('tailora_businessname', profile.business_name);
+          } catch {}
         }
       } catch (err) {
         console.error('Error loading business name', err);
@@ -433,49 +443,47 @@ export default function TailoraDashboard() {
         });
       }
 
-      // Fetch assigned team mapping and order dates from orders
-      let clientToOrderMap: Record<string, any> = {};
+      // DEF-ORD-012: Build order-centric list. Fetch orders directly so multiple
+      // orders per client appear as separate rows.
+      let clientMap: Record<string, any> = {};
       try {
-        const { data: teamOrders } = await supabase
-          .from('orders')
-          .select('client_id, assigned_team, measurements')
+        const { data: clientsData } = await supabase
+          .from('clients')
+          .select('id, name, phone, email, gender, outfit_type, status, created_at')
           .eq('user_id', workspaceOwnerId);
-        if (teamOrders) {
-          teamOrders.forEach((o: any) => {
-            if (o.client_id) {
-              clientToOrderMap[o.client_id] = {
-                assignedTeam: o.assigned_team || [],
-                collectionDate: o.measurements?.collectionDate || "",
-                dateReceived: o.measurements?.dateReceived || "",
-              };
-            }
+        if (clientsData) {
+          clientsData.forEach((c: any) => {
+            clientMap[c.id] = c;
           });
         }
       } catch (err) {
-        console.error('Error fetching team orders mapping:', err);
+        console.error('Error fetching clients map:', err);
       }
 
       try {
-        const { data, error } = await supabase
-          .from('clients')
-          .select('id, name, phone, email, gender, outfit_type, status, created_at')
+        const { data: ordersData, error } = await supabase
+          .from('orders')
+          .select('id, client_id, client_name, phone, gender, outfit, status, status_type, measurements, assigned_team, created_at')
           .eq('user_id', workspaceOwnerId)
           .order('created_at', { ascending: false });
-          
+
         if (error) {
-          console.error('Error fetching clients from Supabase:', {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-            error
-          });
+          console.error('Error fetching orders from Supabase:', error);
           return;
         }
-        
-        if (data && mounted) {
-          let ordersList = data.map((c: any) => {
-            const rawStatus = c.status ?? 'Pending';
+
+        if (ordersData && mounted) {
+          // Only include orders whose client exists in the clients table.
+          // This keeps the dashboard consistent with /clients and excludes
+          // stale/orphaned orders that were saved under the wrong user_id.
+          const validOrdersData = ordersData.filter(
+            (o: any) => o.client_id && clientMap[o.client_id]
+          );
+
+          let ordersList = validOrdersData.map((o: any) => {
+            const meas = o.measurements || {};
+            const clientInfo = clientMap[o.client_id];
+            const rawStatus = o.status || clientInfo?.status || 'Due';
             let statusTypeVal: OrderStatusType = 'collected';
             const normalized = rawStatus.toLowerCase();
             if (normalized.includes('overdue')) {
@@ -493,21 +501,20 @@ export default function TailoraDashboard() {
               statusTypeVal = 'collected';
             }
 
-            const orderDetails = clientToOrderMap[c.id];
-
             return {
-              id: c.id,
-              clientId: c.id,
-              client: c.name,
-              phone: c.phone ?? '',
-              email: c.email ?? '',
-              gender: c.gender ?? '',
-              outfit: c.outfit_type ?? '',
+              id: o.id,
+              clientId: o.client_id,
+              friendlyOrderId: meas.friendlyOrderId || '',
+              client: o.client_name || clientInfo?.name || 'Unknown',
+              phone: o.phone || clientInfo?.phone || '',
+              email: clientInfo?.email || '',
+              gender: o.gender || clientInfo?.gender || '',
+              outfit: o.outfit || clientInfo?.outfit_type || '',
               status: rawStatus,
               statusType: statusTypeVal,
-              assignedTeam: orderDetails?.assignedTeam || [],
-              collectionDate: orderDetails?.collectionDate || "",
-              dateReceived: orderDetails?.dateReceived || "",
+              assignedTeam: o.assigned_team || [],
+              collectionDate: meas.collectionDate || '',
+              dateReceived: meas.dateReceived || '',
             };
           });
 
@@ -527,16 +534,56 @@ export default function TailoraDashboard() {
             });
           }
 
+          // DEF-ORD-007: Auto-detect overdue orders by comparing collectionDate to today.
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          ordersList = ordersList.map((o: any) => {
+            if (o.statusType === 'due' && o.collectionDate) {
+              const colDate = new Date(o.collectionDate);
+              colDate.setHours(0, 0, 0, 0);
+              if (colDate < today) {
+                return { ...o, statusType: 'overdue' as OrderStatusType, status: 'Overdue' };
+              }
+            }
+            return o;
+          });
+
+          // Also include clients that have NO orders yet so they still appear
+          const clientIdsWithOrders = new Set(validOrdersData.map((o: any) => o.client_id).filter(Boolean));
+          const orphanClients = Object.values(clientMap).filter((c: any) => !clientIdsWithOrders.has(c.id));
+          orphanClients.forEach((c: any) => {
+            const rawStatus = c.status ?? 'Pending';
+            let statusTypeVal: OrderStatusType = 'due';
+            const normalized = rawStatus.toLowerCase();
+            if (normalized.includes('overdue')) statusTypeVal = 'overdue';
+            else if (normalized.includes('collected') || normalized.includes('done') || normalized.includes('completed')) statusTypeVal = 'collected';
+
+            ordersList.push({
+              id: c.id,
+              clientId: c.id,
+              friendlyOrderId: '',
+              client: c.name,
+              phone: c.phone ?? '',
+              email: c.email ?? '',
+              gender: c.gender ?? '',
+              outfit: c.outfit_type ?? '',
+              status: rawStatus,
+              statusType: statusTypeVal,
+              assignedTeam: [],
+              collectionDate: '',
+              dateReceived: '',
+            });
+          });
+
+          // Update counts
+          if (mounted) {
+            setClientsCount(Object.keys(clientMap).length);
+          }
+
           setOrders(ordersList);
         }
       } catch (err: any) {
-        console.error('Error fetching clients:', {
-          message: err.message,
-          details: err.details,
-          hint: err.hint,
-          code: err.code,
-          error: err
-        });
+        console.error('Error fetching orders:', err);
       }
     }
 

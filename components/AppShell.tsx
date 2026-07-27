@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
+import { resolveWorkspace } from "../lib/resolveWorkspace";
 import AddClientModal, { type ClientFormData } from "./AddClientModal";
 import { AppModalsContext } from "./AppModalsContext";
 import InviteTeamMemberModal from "./InviteTeamMemberModal";
@@ -28,6 +29,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [showOrderFlow, setShowOrderFlow] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [pendingClient, setPendingClient] = useState<ClientFormData | null>(null);
+  /** The order UUID to edit, or undefined for creating a new order (DEF-ORD-012). */
+  const [pendingEditingOrderId, setPendingEditingOrderId] = useState<string | undefined>(undefined);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -41,8 +44,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const closeInvite = () => setShowInvite(false);
   const toggleMobileMenu = () => setMobileMenuOpen((o) => !o);
   const closeMobileMenu = () => setMobileMenuOpen(false);
-  const openOrderFlowForClient = (clientData: ClientFormData) => {
+  const openOrderFlowForClient = (clientData: ClientFormData, editingOrderId?: string) => {
     setPendingClient(clientData);
+    setPendingEditingOrderId(editingOrderId);
     setShowOrderFlow(true);
   };
 
@@ -115,6 +119,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // After client info is filled → open the full-page flow
   const handleContinueFromModal = (data: ClientFormData) => {
     setPendingClient(data);
+    setPendingEditingOrderId(undefined); // new order from Add Client flow
     setShowAddClient(false);
     setShowOrderFlow(true);
   };
@@ -122,18 +127,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
   // Save client draft from the modal directly to Supabase
   const handleSaveClientDraft = async (data: ClientFormData) => {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) return;
+      const identity = await resolveWorkspace();
+      if (!identity) return;
       
-      let ownerId = userData.user.id;
-      const { data: rpcResult } = await supabase.rpc('get_my_team_role');
-      if (rpcResult && rpcResult.length > 0) {
-        ownerId = rpcResult[0].owner_id;
-      }
+      const ownerId = identity.workspaceOwnerId;
 
       // Ensure profiles record exists for user to avoid foreign key constraint errors
       await supabase.from('profiles').upsert(
-        { id: userData.user.id, updated_at: new Date().toISOString() },
+        { id: identity.userId, updated_at: new Date().toISOString() },
         { onConflict: 'id', ignoreDuplicates: true }
       );
 
@@ -167,6 +168,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const handleSaveDraft = () => {
     setShowOrderFlow(false);
     setPendingClient(null);
+    setPendingEditingOrderId(undefined);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("tailora_client_updated"));
     }
@@ -176,6 +178,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const handleOrderFlowComplete = () => {
     setShowOrderFlow(false);
     setPendingClient(null);
+    setPendingEditingOrderId(undefined);
     setShowSuccess(true);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("tailora_client_updated"));
@@ -225,6 +228,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             {showOrderFlow && pendingClient ? (
               <OrderCreationFlow
                 client={pendingClient}
+                editingOrderId={pendingEditingOrderId}
                 onBack={handleBackToModal}
                 onSaveDraft={handleSaveDraft}
                 onComplete={handleOrderFlowComplete}

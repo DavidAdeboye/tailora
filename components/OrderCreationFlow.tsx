@@ -8,6 +8,9 @@ import { useAppModals } from "./AppModalsContext";
 
 interface Props {
   client: ClientFormData;
+  /** When provided, the wizard loads this specific order for editing.
+   *  When absent, the wizard always creates a new order. (DEF-ORD-012) */
+  editingOrderId?: string;
   onBack: () => void;
   onSaveDraft: () => void;
   onComplete: () => void;
@@ -1022,7 +1025,7 @@ function Stepper({ step }: { step: Step }) {
 }
 
 /* ── Main Component ── */
-export default function OrderCreationFlow({ client, onBack, onSaveDraft, onComplete }: Props) {
+export default function OrderCreationFlow({ client, editingOrderId, onBack, onSaveDraft, onComplete }: Props) {
   const [step, setStep] = useState<Step>(1);
   const [unit, setUnit] = useState("inches");
   const [measurements, setMeasurements] = useState<Record<string, string>>({});
@@ -1041,12 +1044,36 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
     return hasStandardValue || hasCustomValue;
   };
 
-  const isOrderDetailsStepValid = () => {
-    return (
-      orderDetails.dateReceived.trim() !== "" &&
-      orderDetails.collectionDate.trim() !== "" &&
-      orderDetails.price.trim() !== ""
-    );
+  /** Strip currency symbols (₦, $, etc.), commas, and whitespace from a price string. */
+  const parsePrice = (raw: string): string => {
+    return raw.replace(/[₦$,\s]/g, '').trim();
+  };
+
+  const isOrderDetailsStepValid = (): string | true => {
+    if (orderDetails.dateReceived.trim() === "") return "Date Received is required.";
+    if (orderDetails.collectionDate.trim() === "") return "Collection Date is required.";
+    if (orderDetails.price.trim() === "") return "Price is required.";
+
+    // DEF-ORD-015: Parse price, stripping currency symbols and commas
+    const cleanPrice = parsePrice(orderDetails.price);
+    // DEF-ORD-010: Validate price is a positive number
+    if (!/^\d+(\.\d{1,2})?$/.test(cleanPrice)) {
+      return "Price must be a valid positive number (e.g. 45000 or 45000.00). Remove currency symbols and letters.";
+    }
+    if (Number(cleanPrice) <= 0) {
+      return "Price must be greater than zero.";
+    }
+
+    // DEF-ORD-013: Collection Date must not be earlier than Date Received
+    if (orderDetails.dateReceived && orderDetails.collectionDate) {
+      const received = new Date(orderDetails.dateReceived);
+      const collection = new Date(orderDetails.collectionDate);
+      if (collection < received) {
+        return "Collection Date cannot be earlier than Date Received.";
+      }
+    }
+
+    return true;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -1065,26 +1092,37 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
   };
 
   const [teamList, setTeamList] = useState<Member[]>([]);
-  // Display-only label shown in the stepper header before save.
-  // The actual stored friendly ID is derived from the DB UUID inside saveOrderAndClient.
-  const [displayOrderId, setDisplayOrderId] = useState(() => `#A-${Math.floor(1000 + Math.random() * 9000)}`);
+  // DEF-ORD-002: Pre-generate a stable order UUID so the friendly ID is consistent
+  // between the stepper header display and the persisted value.
+  const [orderUuid] = useState(() =>
+    typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.floor(Math.random() * 100000)}`
+  );
+  const [displayOrderId, setDisplayOrderId] = useState(() => {
+    const hex = orderUuid.replace(/-/g, '').slice(0, 4).toUpperCase();
+    return `#A-${hex}`;
+  });
   const [isSaving, setIsSaving] = useState(false);
+  // DEF-ORD-014: Synchronous ref-based lock prevents double-click duplicate orders.
+  // React state updates are async, so isSaving alone has a race window.
+  const saveLockRef = useRef(false);
   const [existingOrderId, setExistingOrderId] = useState<string | null>(null);
 
+  // DEF-ORD-012: Only load an existing order when editingOrderId is explicitly provided.
+  // Without editingOrderId, the wizard always starts fresh for a new order —
+  // this allows multiple orders per client.
   useEffect(() => {
-    const clientIdVal = client.id;
-    if (!clientIdVal) return;
+    if (!editingOrderId) return;
     let mounted = true;
-    async function loadExistingOrder(id: string) {
+    async function loadExistingOrder(orderId: string) {
       try {
         const { data, error } = await supabase
           .from('orders')
           .select('id, measurements, assigned_team, notes')
-          .eq('client_id', id)
+          .eq('id', orderId)
           .maybeSingle();
 
         if (error) {
-          console.error("Error loading existing order for client:", error);
+          console.error("Error loading existing order:", error);
           return;
         }
 
@@ -1094,7 +1132,8 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
           if (meas.friendlyOrderId) {
             setDisplayOrderId(meas.friendlyOrderId);
           } else {
-            setDisplayOrderId(`#A-${id.replace(/-/g, '').slice(0, 6).toUpperCase()}`);
+            const hex = data.id.replace(/-/g, '').slice(0, 4).toUpperCase();
+            setDisplayOrderId(`#A-${hex}`);
           }
           if (meas.unit) {
             setUnit(meas.unit);
@@ -1132,9 +1171,9 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
         console.error("Failed to load existing order info:", err);
       }
     }
-    loadExistingOrder(clientIdVal);
+    loadExistingOrder(editingOrderId);
     return () => { mounted = false; };
-  }, [client.id]);
+  }, [editingOrderId]);
 
   // avatarUrl loaded from localStorage (set by AppPageHeader/SettingsPage on login/save)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -1237,6 +1276,9 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
   }, []);
 
   const saveOrderAndClient = async (isDraft: boolean) => {
+    // DEF-ORD-014: Synchronous double-click guard.
+    if (saveLockRef.current) return;
+    saveLockRef.current = true;
     setIsSaving(true);
     setSaveError(null);
     try {
@@ -1245,8 +1287,9 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
         if (!isMeasurementsStepValid()) {
           throw new Error("Please fill in all body measurement fields.");
         }
-        if (!isOrderDetailsStepValid()) {
-          throw new Error("Please fill in all required fields (Date Received, Collection Date, and Price).");
+        const orderValid = isOrderDetailsStepValid();
+        if (orderValid !== true) {
+          throw new Error(orderValid);
         }
       }
 
@@ -1337,8 +1380,13 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
       }
 
       // 3. Insert or Update Order
-      // Derive a collision-free friendly ID from the DB-generated client UUID
-      const friendlyOrderId = `#A-${clientId.replace(/-/g, '').slice(0, 6).toUpperCase()}`;
+      // DEF-ORD-002: Derive the friendly ID from the order UUID (not client UUID)
+      // so each order gets a unique display ID.
+      const actualOrderId = existingOrderId || orderUuid;
+      const friendlyOrderId = `#A-${actualOrderId.replace(/-/g, '').slice(0, 4).toUpperCase()}`;
+
+      // DEF-ORD-015: Clean the price value, stripping currency symbols and commas
+      const cleanedPrice = parsePrice(orderDetails.price);
 
       const measurementsJson = {
         unit,
@@ -1352,52 +1400,61 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
         customFields: customFields.map(f => ({ name: f.fieldName, value: f.value })),
         dateReceived: orderDetails.dateReceived,
         collectionDate: orderDetails.collectionDate,
-        price: orderDetails.price,
+        price: cleanedPrice,
         paymentStatus: orderDetails.paymentStatus,
         friendlyOrderId
       };
 
       const teamAssigned = assignedStaffs.filter(Boolean);
 
-      if (existingOrderId) {
-        const { error: orderErr } = await supabase
-          .from('orders')
-          .update({
-            client_name: cleanName,
-            phone: cleanPhone,
-            gender: client.gender,
-            outfit: client.outfitType,
-            status: isDraft ? 'Due' : (orderDetails.paymentStatus === 'Paid' ? 'Collected' : 'Due'),
-            status_type: isDraft ? 'due' : (orderDetails.paymentStatus === 'Paid' ? 'collected' : 'due'),
-            measurements: measurementsJson,
-            assigned_team: teamAssigned,
-            reference_images: imageUrls,
-            notes: notes || '',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingOrderId);
+      // DEF-ORD-017: When saving a draft, only persist the order row if the user
+      // has entered meaningful order details (at least date received + collection date).
+      // This prevents orphaned partial orders when a user saves a draft on step 1
+      // (measurements only) and then abandons the wizard.
+      const hasOrderDetails = orderDetails.dateReceived.trim() !== '' && orderDetails.collectionDate.trim() !== '';
+      const shouldPersistOrder = !isDraft || hasOrderDetails || existingOrderId;
 
-        if (orderErr) throw orderErr;
-      } else {
-        const { error: orderErr } = await supabase
-          .from('orders')
-          .insert({
-            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined,
-            user_id: ownerId,
-            client_id: clientId,
-            client_name: cleanName,
-            phone: cleanPhone,
-            gender: client.gender,
-            outfit: client.outfitType,
-            status: isDraft ? 'Due' : (orderDetails.paymentStatus === 'Paid' ? 'Collected' : 'Due'),
-            status_type: isDraft ? 'due' : (orderDetails.paymentStatus === 'Paid' ? 'collected' : 'due'),
-            measurements: measurementsJson,
-            assigned_team: teamAssigned,
-            reference_images: imageUrls,
-            notes: notes || '',
-          });
+      if (shouldPersistOrder) {
+        if (existingOrderId) {
+          const { error: orderErr } = await supabase
+            .from('orders')
+            .update({
+              client_name: cleanName,
+              phone: cleanPhone,
+              gender: client.gender,
+              outfit: client.outfitType,
+              status: isDraft ? 'Due' : (orderDetails.paymentStatus === 'Paid' ? 'Collected' : 'Due'),
+              status_type: isDraft ? 'due' : (orderDetails.paymentStatus === 'Paid' ? 'collected' : 'due'),
+              measurements: measurementsJson,
+              assigned_team: teamAssigned,
+              reference_images: imageUrls,
+              notes: notes || '',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingOrderId);
 
-        if (orderErr) throw orderErr;
+          if (orderErr) throw orderErr;
+        } else {
+          const { error: orderErr } = await supabase
+            .from('orders')
+            .insert({
+              id: orderUuid,
+              user_id: ownerId,
+              client_id: clientId,
+              client_name: cleanName,
+              phone: cleanPhone,
+              gender: client.gender,
+              outfit: client.outfitType,
+              status: isDraft ? 'Due' : (orderDetails.paymentStatus === 'Paid' ? 'Collected' : 'Due'),
+              status_type: isDraft ? 'due' : (orderDetails.paymentStatus === 'Paid' ? 'collected' : 'due'),
+              measurements: measurementsJson,
+              assigned_team: teamAssigned,
+              reference_images: imageUrls,
+              notes: notes || '',
+            });
+
+          if (orderErr) throw orderErr;
+        }
       }
 
       if (isDraft) {
@@ -1417,6 +1474,7 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
       setSaveError(err.message || "Failed to save order.");
     } finally {
       setIsSaving(false);
+      saveLockRef.current = false;
     }
   };
 
@@ -1451,13 +1509,32 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
 
           {/* Step content */}
           {step === 1 && (
-            <MeasurementsStep
-              unit={unit} setUnit={setUnit}
-              measurements={measurements} setMeasurements={setMeasurements}
-              customFields={customFields} setCustomFields={setCustomFields}
-              notes={notes} setNotes={setNotes}
-              onKeyDown={handleKeyDown}
-            />
+            <>
+              {/* DEF-ORD-016: Info banner when existing client has no measurements */}
+              {client.id && !existingOrderId && !isMeasurementsStepValid() && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  background: "#FEF6E7", border: "1px solid #F5D590",
+                  borderRadius: 10, padding: "12px 16px", marginBottom: 20,
+                }}>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+                    <circle cx="10" cy="10" r="9" stroke="#B0825A" strokeWidth="1.5" />
+                    <path d="M10 6V11" stroke="#B0825A" strokeWidth="1.5" strokeLinecap="round" />
+                    <circle cx="10" cy="14" r="0.75" fill="#B0825A" />
+                  </svg>
+                  <span style={{ fontSize: 13, color: "#865503", fontFamily: "Satoshi, sans-serif", fontWeight: 500 }}>
+                    This client has no measurements yet — add them below before creating an order.
+                  </span>
+                </div>
+              )}
+              <MeasurementsStep
+                unit={unit} setUnit={setUnit}
+                measurements={measurements} setMeasurements={setMeasurements}
+                customFields={customFields} setCustomFields={setCustomFields}
+                notes={notes} setNotes={setNotes}
+                onKeyDown={handleKeyDown}
+              />
+            </>
           )}
           {step === 2 && (
             <OrderDetailsStep
@@ -1508,8 +1585,9 @@ export default function OrderCreationFlow({ client, onBack, onSaveDraft, onCompl
                     setSaveError("Please fill in all body measurement fields to save.");
                     return;
                   }
-                  if (!isOrderDetailsStepValid()) {
-                    setSaveError("Please fill in all required order details (Date Received, Collection Date, and Price) to save.");
+                  const orderValidResult = isOrderDetailsStepValid();
+                  if (orderValidResult !== true) {
+                    setSaveError(orderValidResult);
                     return;
                   }
                   saveOrderAndClient(false);

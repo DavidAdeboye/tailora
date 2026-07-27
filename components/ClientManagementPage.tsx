@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
+import { resolveWorkspace } from "../lib/resolveWorkspace";
 import { useAppModals } from "./AppModalsContext";
 import AppPageHeader from "./AppPageHeader";
 import { AppPageBody, PageSectionHeader } from "./AppPageBody";
@@ -16,6 +17,8 @@ type ClientStatusType = "collected" | "overdue" | "due";
 interface Client {
   date: string;
   id: string;
+  /** The most recent order ID for this client (DEF-ORD-012). */
+  orderId?: string;
   name: string;
   phone: string;
   email?: string;
@@ -253,6 +256,7 @@ export default function ClientManagementPage() {
   const handleEdit = (client: Client) => {
     setEditTarget({
       id: client.id,
+      orderId: client.orderId, // DEF-ORD-012: pass the order ID for editing
       name: client.name,
       phone: client.phone,
       email: client.email || "",
@@ -348,39 +352,37 @@ export default function ClientManagementPage() {
     async function loadClients() {
       // 1. Load user & role
       let workspaceOwnerId = '';
-      try {
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData?.user && mounted) {
-          workspaceOwnerId = userData.user.id;
-        }
-      } catch (err) {
-        console.error('Error getting user in loadClients:', err);
-      }
-
-      const { data: rpcResult, error: rpcErr } = await supabase.rpc('get_my_team_role');
       let memberName = '';
       let memberRole = '';
-      if (!rpcErr && rpcResult && rpcResult.length > 0 && mounted) {
-        memberName = rpcResult[0].name ?? '';
-        memberRole = rpcResult[0].role ?? '';
-        workspaceOwnerId = rpcResult[0].owner_id;
-        setUserRole(rpcResult[0].role as UserRole);
+
+      try {
+        const identity = await resolveWorkspace();
+        if (!identity || !mounted) return;
+        workspaceOwnerId = identity.workspaceOwnerId;
+        memberName = identity.memberDisplayName;
+        memberRole = identity.role;
+        setUserRole(identity.role as UserRole);
+      } catch (err) {
+        console.error('Error resolving workspace in loadClients:', err);
       }
 
       if (!workspaceOwnerId) return;
 
-      // Fetch associated orders to get collection dates (due dates)
-      let clientToOrderMap: Record<string, { collectionDate: string }> = {};
+      // Fetch associated orders to get collection dates (due dates) and order IDs
+      let clientToOrderMap: Record<string, { collectionDate: string; orderId: string }> = {};
       try {
         const { data: teamOrders } = await supabase
           .from('orders')
-          .select('client_id, measurements')
+          .select('id, client_id, measurements')
           .eq('user_id', workspaceOwnerId);
         if (teamOrders) {
           teamOrders.forEach((o: any) => {
             if (o.client_id) {
+              // DEF-ORD-012: Store the most recent order ID per client.
+              // If multiple orders exist, the last one wins (latest in array).
               clientToOrderMap[o.client_id] = {
                 collectionDate: o.measurements?.collectionDate || "",
+                orderId: o.id,
               };
             }
           });
@@ -440,6 +442,8 @@ export default function ClientManagementPage() {
         }
 
         if (mounted && data) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
           setClients(data.map((c: any) => {
             const rawStatus = c.status ?? 'Collected';
             let statusTypeVal: ClientStatusType = 'collected';
@@ -447,14 +451,25 @@ export default function ClientManagementPage() {
             if (normalized.includes('overdue')) statusTypeVal = 'overdue';
             else if (normalized.includes('due')) statusTypeVal = 'due';
             const orderDetails = clientToOrderMap[c.id];
+            // DEF-ORD-007: Auto-detect overdue based on collection date
+            let finalStatus = rawStatus;
+            if (statusTypeVal === 'due' && orderDetails?.collectionDate) {
+              const colDate = new Date(orderDetails.collectionDate);
+              colDate.setHours(0, 0, 0, 0);
+              if (colDate < today) {
+                statusTypeVal = 'overdue';
+                finalStatus = 'Overdue';
+              }
+            }
             return {
               id: c.id,
+              orderId: orderDetails?.orderId,
               name: c.name,
               phone: c.phone ?? '',
               email: c.email ?? '',
               gender: c.gender ?? '',
               outfit: c.outfit_type ?? '',
-              status: rawStatus,
+              status: finalStatus,
               statusType: statusTypeVal,
               date: (c.created_at ?? '').toString(),
               collectionDate: orderDetails?.collectionDate || "",
@@ -473,6 +488,8 @@ export default function ClientManagementPage() {
           return;
         }
         if (mounted && data) {
+          const today2 = new Date();
+          today2.setHours(0, 0, 0, 0);
           setClients(data.map((c: any) => {
             const rawStatus = c.status ?? 'Collected';
             let statusTypeVal: ClientStatusType = 'collected';
@@ -480,14 +497,25 @@ export default function ClientManagementPage() {
             if (normalized.includes('overdue')) statusTypeVal = 'overdue';
             else if (normalized.includes('due')) statusTypeVal = 'due';
             const orderDetails = clientToOrderMap[c.id];
+            // DEF-ORD-007: Auto-detect overdue based on collection date
+            let finalStatus = rawStatus;
+            if (statusTypeVal === 'due' && orderDetails?.collectionDate) {
+              const colDate = new Date(orderDetails.collectionDate);
+              colDate.setHours(0, 0, 0, 0);
+              if (colDate < today2) {
+                statusTypeVal = 'overdue';
+                finalStatus = 'Overdue';
+              }
+            }
             return {
               id: c.id,
+              orderId: orderDetails?.orderId,
               name: c.name,
               phone: c.phone ?? '',
               email: c.email ?? '',
               gender: c.gender ?? '',
               outfit: c.outfit_type ?? '',
-              status: rawStatus,
+              status: finalStatus,
               statusType: statusTypeVal,
               date: (c.created_at ?? '').toString(),
               collectionDate: orderDetails?.collectionDate || "",
