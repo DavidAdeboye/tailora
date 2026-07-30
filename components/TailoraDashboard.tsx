@@ -606,12 +606,19 @@ export default function TailoraDashboard() {
         if (storedBusiness && mounted) setBusinessName(storedBusiness);
       } catch {}
     }
+
+    function handleClientUpdate() {
+      if (mounted) loadDashboardData();
+    }
+
     window.addEventListener('tailora_profile_updated', handleProfileUpdate);
+    window.addEventListener('tailora_client_updated', handleClientUpdate);
     window.addEventListener('storage', handleProfileUpdate);
 
     return () => {
       mounted = false;
       window.removeEventListener('tailora_profile_updated', handleProfileUpdate);
+      window.removeEventListener('tailora_client_updated', handleClientUpdate);
       window.removeEventListener('storage', handleProfileUpdate);
     };
   }, []);
