@@ -8,6 +8,10 @@ export interface ActionMenuProps {
   onDelete: () => void;
   onTakeMeasurements?: () => void;
   onViewHistory?: () => void;
+  onResendInvite?: () => void;
+  editLabel?: string;
+  deleteLabel?: string;
+  showDelete?: boolean;
   label?: string;
 }
 
@@ -59,7 +63,17 @@ function DotsIcon() {
   );
 }
 
-export function ActionMenuButton({ onEdit, onDelete, onTakeMeasurements, onViewHistory, label = "More actions" }: ActionMenuProps) {
+export function ActionMenuButton({
+  onEdit,
+  onDelete,
+  onTakeMeasurements,
+  onViewHistory,
+  onResendInvite,
+  editLabel,
+  deleteLabel,
+  showDelete = true,
+  label = "More actions"
+}: ActionMenuProps) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -165,6 +179,25 @@ export function ActionMenuButton({ onEdit, onDelete, onTakeMeasurements, onViewH
       {(onTakeMeasurements || onViewHistory) && (
         <div style={{ height: 1, background: "#F1F1F2", margin: "2px 0" }} />
       )}
+      {onResendInvite && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => { setOpen(false); onResendInvite(); }}
+          style={menuItemStyle}
+          onMouseEnter={e => (e.currentTarget.style.background = "#F8F9FC")}
+          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#344054" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline>
+            <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+          </svg>
+          Resend Invitation
+        </button>
+      )}
+      {onResendInvite && (
+        <div style={{ height: 1, background: "#F1F1F2", margin: "2px 0" }} />
+      )}
       <button
         type="button"
         role="menuitem"
@@ -174,23 +207,27 @@ export function ActionMenuButton({ onEdit, onDelete, onTakeMeasurements, onViewH
         onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
       >
         <EditIcon />
-        Edit Client
+        {editLabel || "Edit Client"}
       </button>
-      <div style={{ height: 1, background: "#F1F1F2", margin: "2px 0" }} />
-      <button
-        type="button"
-        role="menuitem"
-        onClick={() => { setOpen(false); onDelete(); }}
-        style={{
-          ...menuItemStyle,
-          color: "#E03137",
-        }}
-        onMouseEnter={e => (e.currentTarget.style.background = "#FFF0F0")}
-        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-      >
-        <DeleteIcon />
-        Delete Client
-      </button>
+      {showDelete && (
+        <>
+          <div style={{ height: 1, background: "#F1F1F2", margin: "2px 0" }} />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => { setOpen(false); onDelete(); }}
+            style={{
+              ...menuItemStyle,
+              color: "#E03137",
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = "#FFF0F0")}
+            onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+          >
+            <DeleteIcon />
+            {deleteLabel || "Delete Client"}
+          </button>
+        </>
+      )}
     </div>
   ) : null;
 

@@ -42,23 +42,63 @@ export async function POST(req: NextRequest) {
 
     const cleanEmail = email.trim().toLowerCase();
 
-    // Fetch inviter profile and check existing member in parallel
+    // Verify email format on server-side as well
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 });
+    }
+
+    // Determine inviter role and workspaceOwnerId via RPC
+    let workspaceOwnerId = user.id;
+    let senderRole = 'Owner';
+
+    const { data: teamRoleData, error: teamRoleErr } = await supabase.rpc('get_my_team_role');
+    if (!teamRoleErr && teamRoleData && teamRoleData.length > 0) {
+      workspaceOwnerId = teamRoleData[0].owner_id;
+      senderRole = teamRoleData[0].role;
+    }
+
+    // Block non-Admins/non-Owners from inviting
+    if (senderRole !== 'Owner' && senderRole !== 'Admin') {
+      return NextResponse.json({ error: 'Forbidden: Only workspace Owners or Admins can invite team members.' }, { status: 403 });
+    }
+
+    // Initialize Supabase Service Role client to bypass RLS for insertions
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseServiceKey) {
+      return NextResponse.json({ error: 'Database service key is not configured' }, { status: 500 });
+    }
+    const supabaseService = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    // Check existing member and fetch inviter profile in parallel using service client
     const [existingMemberRes, inviterProfileRes] = await Promise.all([
-      supabase
+      supabaseService
         .from('team_members')
         .select('id, status')
-        .eq('user_id', user.id)
+        .eq('user_id', workspaceOwnerId)
         .eq('email', cleanEmail)
         .maybeSingle(),
-      supabase
+      supabaseService
         .from('profiles')
-        .select('full_name, business_name')
-        .eq('id', user.id)
+        .select('full_name, business_name, email')
+        .eq('id', workspaceOwnerId)
         .maybeSingle()
     ]);
 
     if (existingMemberRes.error) {
       return NextResponse.json({ error: 'Failed to verify existing team membership' }, { status: 500 });
+    }
+
+    const inviterProfile = inviterProfileRes.data;
+
+    // Block inviting the workspace owner email
+    if (inviterProfile?.email && cleanEmail === inviterProfile.email.trim().toLowerCase()) {
+      return NextResponse.json(
+        { error: 'This email is already an active member of your team.' },
+        { status: 400 }
+      );
     }
 
     const existingMember = existingMemberRes.data;
@@ -76,19 +116,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const inviterProfile = inviterProfileRes.data;
     const inviterName = inviterProfile?.full_name || user.email || 'Your team admin';
     const businessName = inviterProfile?.business_name || 'their workspace';
 
     // Generate secure unique token
     const inviteToken = crypto.randomUUID();
 
-    // Perform database inserts in parallel
+    // Perform database inserts using service client
     const [inviteInsertRes, teamInsertRes] = await Promise.all([
-      supabase
+      supabaseService
         .from('invitations')
         .insert({
-          invited_by: user.id,
+          invited_by: workspaceOwnerId, // Link invite to the workspace owner
           email: cleanEmail,
           role,
           token: inviteToken,
@@ -99,10 +138,10 @@ export async function POST(req: NextRequest) {
           send_attempts: 0,
           next_attempt_at: new Date().toISOString(),
         }),
-      supabase
+      supabaseService
         .from('team_members')
         .insert({
-          user_id: user.id,
+          user_id: workspaceOwnerId, // Link team member to the workspace owner
           name,
           email: cleanEmail,
           role,
@@ -113,10 +152,10 @@ export async function POST(req: NextRequest) {
     ]);
 
     if (inviteInsertRes.error || teamInsertRes.error) {
-      // Cleanup if either insert failed to maintain transactional consistency
+      // Cleanup using service client
       await Promise.all([
-        supabase.from('invitations').delete().eq('token', inviteToken),
-        supabase.from('team_members').delete().eq('user_id', user.id).eq('email', cleanEmail)
+        supabaseService.from('invitations').delete().eq('token', inviteToken),
+        supabaseService.from('team_members').delete().eq('user_id', workspaceOwnerId).eq('email', cleanEmail)
       ]);
       const errorMsg = inviteInsertRes.error?.message || teamInsertRes.error?.message || 'Database insert failed';
       return NextResponse.json({ error: 'Failed to complete invitation setup: ' + errorMsg }, { status: 500 });

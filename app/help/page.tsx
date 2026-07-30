@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import AppShell from "../../components/AppShell";
 import AppPageHeader from "../../components/AppPageHeader";
 import { supabase } from "../../lib/supabase";
@@ -84,8 +84,8 @@ const CONTACT_CARDS = [
       </svg>
     ),
     label: "Email Us",
-    value: "support@tailora.co",
-    action: "mailto:support@tailora.co",
+    value: "support@tailora.ng",
+    action: "mailto:support@tailora.ng",
     actionLabel: "Send email →",
   },
   {
@@ -170,6 +170,66 @@ function HelpContent() {
     loadUser();
   }, []);
 
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [messages, setMessages] = useState<{ id: string; sender: "user" | "support"; text: string; timestamp: Date }[]>([
+    {
+      id: "1",
+      sender: "support",
+      text: "Hello! Welcome to Tailora Support. How can we help you with your tailoring workspace today?",
+      timestamp: new Date(),
+    }
+  ]);
+  const [chatInput, setChatInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isTyping]);
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+
+    const userMsg = {
+      id: Date.now().toString(),
+      sender: "user" as const,
+      text: chatInput,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    const messageText = chatInput;
+    setChatInput("");
+    setIsTyping(true);
+
+    setTimeout(() => {
+      setIsTyping(false);
+      
+      let replyText = "Thanks for reaching out! A support representative will join this chat in a few moments. If you need urgent assistance, you can also reach us via email at support@tailora.ng.";
+      const lower = messageText.toLowerCase();
+      if (lower.includes("billing") || lower.includes("price") || lower.includes("cost") || lower.includes("pay")) {
+        replyText = "Tailora offers standard and premium workspace tiers. For detailed billing inquiries or payment adjustments, our accounts team will contact you directly within 15 minutes.";
+      } else if (lower.includes("measurement") || lower.includes("client")) {
+        replyText = "You can add new clients or record body measurements by navigating to the Client Management panel. Let us know if you encounter any errors there!";
+      } else if (lower.includes("team") || lower.includes("staff") || lower.includes("worker")) {
+        replyText = "To invite team members, go to the Team Collaboration tab. Admins and Assistants have roles tailored to assist you in managing your order queue.";
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          sender: "support" as const,
+          text: replyText,
+          timestamp: new Date(),
+        },
+      ]);
+    }, 1500);
+  };
+
   const filteredFaq = FAQ_ITEMS.filter(
     (item) =>
       item.question.toLowerCase().includes(search.toLowerCase()) ||
@@ -240,6 +300,11 @@ function HelpContent() {
                   ) : (
                     <button
                       type="button"
+                      onClick={() => {
+                        if (card.label === "Live Chat") {
+                          setIsChatOpen(true);
+                        }
+                      }}
                       style={{ fontSize: 13, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", padding: 0 }}
                       onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.6")}
                       onMouseLeave={(e) => (e.currentTarget.style.opacity = "1")}
@@ -280,7 +345,7 @@ function HelpContent() {
                 <div style={{ fontSize: 13, color: "#B6B6B6", fontFamily: "Satoshi, sans-serif" }}>Our support team is ready to assist you directly.</div>
               </div>
               <a
-                href="mailto:support@tailora.co"
+                href="mailto:support@tailora.ng"
                 style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "12px 20px", background: "#FDF6EC", borderRadius: 100, fontSize: 14, fontWeight: 500, color: "#121212", fontFamily: "Satoshi, sans-serif", textDecoration: "none", whiteSpace: "nowrap", flexShrink: 0 }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "#ffe9cc")}
                 onMouseLeave={(e) => (e.currentTarget.style.background = "#FDF6EC")}
@@ -289,6 +354,166 @@ function HelpContent() {
                 <ChevronRightIcon />
               </a>
             </div>
+
+            {/* Live Chat Floating Window */}
+            {isChatOpen && (
+              <div 
+                className="tailora-live-chat-drawer"
+                style={{
+                  position: "fixed",
+                  bottom: 24,
+                  right: 24,
+                  width: 360,
+                  height: 480,
+                  background: "rgba(255, 255, 255, 0.95)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
+                  boxShadow: "0 16px 36px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08)",
+                  borderRadius: 16,
+                  display: "flex",
+                  flexDirection: "column",
+                  zIndex: 1000,
+                  overflow: "hidden",
+                  border: "1px solid rgba(18, 18, 18, 0.08)",
+                  fontFamily: "var(--font-satoshi)",
+                  animation: "tailora-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both"
+                }}
+              >
+                {/* Chat Header */}
+                <div style={{ background: "#121212", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", color: "#FDF6EC" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ position: "relative", width: 32, height: 32, borderRadius: "50%", background: "#FDF6EC", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+                      🧵
+                      <span style={{ position: "absolute", bottom: 0, right: 0, width: 8, height: 8, background: "#10B981", borderRadius: "50%", border: "2px solid #121212" }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, fontFamily: "var(--font-sora)" }}>Tailora Support</div>
+                      <div style={{ fontSize: 11, opacity: 0.85, display: "flex", alignItems: "center", gap: 4 }}>
+                        Active now
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setIsChatOpen(false)}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "#FDF6EC", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.8, transition: "opacity 0.2s" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                    onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.8")}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Message stream */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 14, background: "#F9FAFB" }}>
+                  {messages.map((msg) => (
+                    <div 
+                      key={msg.id} 
+                      style={{ 
+                        display: "flex", 
+                        flexDirection: "column", 
+                        alignItems: msg.sender === "user" ? "flex-end" : "flex-start",
+                        maxWidth: "85%",
+                        alignSelf: msg.sender === "user" ? "flex-end" : "flex-start",
+                        animation: "tailora-fade-up 0.3s ease both"
+                      }}
+                    >
+                      <div 
+                        style={{
+                          background: msg.sender === "user" ? "#121212" : "#FFFFFF",
+                          color: msg.sender === "user" ? "#FDF6EC" : "#1F2937",
+                          padding: "10px 14px",
+                          borderRadius: msg.sender === "user" ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
+                          fontSize: 13,
+                          lineHeight: "18px",
+                          boxShadow: "0 2px 4px rgba(0,0,0,0.02), 0 1px 2px rgba(0,0,0,0.02)",
+                          border: msg.sender === "user" ? "none" : "1px solid #E5E7EB"
+                        }}
+                      >
+                        {msg.text}
+                      </div>
+                      <span style={{ fontSize: 10, color: "#9CA3AF", marginTop: 4, padding: "0 4px" }}>
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  ))}
+
+                  {/* Typing Indicator */}
+                  {isTyping && (
+                    <div 
+                      style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 4, 
+                        background: "#FFFFFF", 
+                        padding: "10px 14px", 
+                        borderRadius: "14px 14px 14px 2px",
+                        alignSelf: "flex-start",
+                        border: "1px solid #E5E7EB",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
+                      }}
+                    >
+                      <span className="tailora-typing-dot" />
+                      <span className="tailora-typing-dot" />
+                      <span className="tailora-typing-dot" />
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+
+                {/* Input form */}
+                <form 
+                  onSubmit={handleSendMessage}
+                  style={{
+                    padding: "12px 16px",
+                    background: "#FFFFFF",
+                    borderTop: "1px solid #E5E7EB",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12
+                  }}
+                >
+                  <input 
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Type a message..."
+                    style={{
+                      flex: 1,
+                      border: "none",
+                      outline: "none",
+                      fontSize: 13,
+                      color: "#1F2937",
+                      fontFamily: "var(--font-satoshi)"
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!chatInput.trim()}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: "50%",
+                      background: chatInput.trim() ? "#121212" : "#F3F4F6",
+                      color: chatInput.trim() ? "#FDF6EC" : "#9CA3AF",
+                      border: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      cursor: chatInput.trim() ? "pointer" : "default",
+                      transition: "all 0.2s"
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+                </form>
+              </div>
+            )}
 
           </div>
         </div>

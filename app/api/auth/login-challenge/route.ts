@@ -38,7 +38,10 @@ export async function POST(req: NextRequest) {
 
     // 1. Authenticate user to verify credentials
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false }
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(8000) })
+      }
     });
 
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -79,6 +82,7 @@ export async function POST(req: NextRequest) {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
+        fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(8000) })
       },
     });
 
@@ -122,7 +126,7 @@ export async function POST(req: NextRequest) {
       }
 
       const resend = new Resend(resendApiKey);
-      const senderEmail = process.env.SENDER_EMAIL || 'otp@mail.tailora.ng';
+      const senderEmail = process.env.SENDER_EMAIL_SECURITY || 'security@mail.tailora.ng';
 
       try {
         await resend.emails.send({

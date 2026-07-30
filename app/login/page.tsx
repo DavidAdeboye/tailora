@@ -135,13 +135,21 @@ export default function SigninPage() {
     // In Supabase v2 the client auto-parses the OAuth hash fragment.
     // We listen for the SIGNED_IN event, persist the cookie for middleware, and redirect.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_IN" && session) {
+      if (session) {
         // Set the cookie so middleware allows protected routes
         document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-        // Use a hard navigation so the browser sends the fresh cookie with the
-        // server request — router.replace() is client-side and the middleware
-        // won't see the cookie in time, causing a redirect loop.
-        window.location.href = "/dashboard";
+        
+        const hash = typeof window !== "undefined" ? window.location.hash : "";
+        const search = typeof window !== "undefined" ? window.location.search : "";
+        
+        if (event === "PASSWORD_RECOVERY" || hash.includes("type=recovery") || search.includes("type=recovery")) {
+          window.location.href = "/reset-password";
+        } else if (event === "SIGNED_IN") {
+          // Use a hard navigation so the browser sends the fresh cookie with the
+          // server request — router.replace() is client-side and the middleware
+          // won't see the cookie in time, causing a redirect loop.
+          window.location.href = "/dashboard";
+        }
       }
     });
 
@@ -205,7 +213,8 @@ export default function SigninPage() {
           email: signinData.email,
           password: signinData.password,
           otp: code
-        })
+        }),
+        signal: AbortSignal.timeout(10000)
       });
 
       const data = await response.json();
@@ -223,7 +232,10 @@ export default function SigninPage() {
       }
       window.location.href = "/dashboard";
     } catch (error: any) {
-      setAuthError(error.message || "Failed to verify 2FA code");
+      const errMsg = error.name === 'TimeoutError' || error.name === 'AbortError'
+        ? "Request timed out. Please check your network connection and try again."
+        : (error.message || "Failed to verify 2FA code");
+      setAuthError(errMsg);
       setIsLoading(false);
     }
   };

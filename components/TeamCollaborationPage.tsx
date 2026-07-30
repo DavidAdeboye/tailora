@@ -58,7 +58,19 @@ const initials = (name: string) => {
   return name.trim().split(/\s+/).map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 };
 
-function MemberCard({ member, onEdit, onDelete }: { member: Member; onEdit: () => void; onDelete: () => void }) {
+function MemberCard({
+  member,
+  onEdit,
+  onDelete,
+  userRole,
+  onResendInvite
+}: {
+  member: Member;
+  onEdit: () => void;
+  onDelete: () => void;
+  userRole: string;
+  onResendInvite?: () => void;
+}) {
   const rb = roleBadge[member.role] || roleBadge.Assistant;
   const isActive = member.status === "Active";
   const statusColor = isActive ? "#036B26" : "#865503";
@@ -98,6 +110,10 @@ function MemberCard({ member, onEdit, onDelete }: { member: Member; onEdit: () =
         <ActionMenuButton
           onEdit={onEdit}
           onDelete={onDelete}
+          editLabel="Edit Member"
+          deleteLabel="Remove Member"
+          showDelete={userRole === 'Owner' || userRole === 'Admin'}
+          onResendInvite={onResendInvite}
           label={`Actions for ${member.name}`}
         />
       </div>
@@ -129,6 +145,7 @@ export default function TeamCollaborationPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
 
   type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
   const [userRole, setUserRole] = useState<UserRole>(() => {
@@ -179,6 +196,8 @@ export default function TeamCollaborationPage() {
           setLoading(false);
           return;
         }
+
+        setCurrentUserEmail(userData.user.email ?? null);
 
         let workspaceOwnerId = userData.user.id;
 
@@ -242,6 +261,11 @@ export default function TeamCollaborationPage() {
 
   const handleEditSave = async (updated: Member) => {
     if (!userId) return;
+    if (updated.email === currentUserEmail && updated.role !== 'Admin') {
+      alert("A workspace must always retain at least one Owner/Admin, preventing an accidental total lockout.");
+      return;
+    }
+
     const { error: updateErr } = await supabase
       .from('team_members')
       .update({
@@ -261,6 +285,12 @@ export default function TeamCollaborationPage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
+    if (deleteTarget.email === currentUserEmail) {
+      alert("A workspace must always retain at least one Owner/Admin, preventing an accidental total lockout.");
+      setDeleteTarget(null);
+      return;
+    }
+
     try {
       const { error: deleteErr } = await supabase
         .from('team_members')
@@ -274,6 +304,35 @@ export default function TeamCollaborationPage() {
     } catch (err: any) {
       console.error(err);
       alert(err.message || "Failed to delete team member.");
+    }
+  };
+
+  const handleResendInvite = async (member: Member) => {
+    try {
+      const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (sessionErr || !token) {
+        throw new Error("You must be logged in to resend invitations.");
+      }
+
+      const response = await fetch('/api/invite/resend', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ email: member.email })
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || "Failed to resend invitation.");
+      }
+
+      alert(`Invitation email resent to ${member.email}!`);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to resend invitation.");
     }
   };
 
@@ -317,7 +376,7 @@ export default function TeamCollaborationPage() {
                   Manage your atelier's team and control who can access, edit, and assign work across your workspace.
                 </p>
               </div>
-              {userRole === 'Owner' && (
+              {(userRole === 'Owner' || userRole === 'Admin') && (
                 <PrimaryButton className="tailora-btn-primary tc-invite-btn" onClick={() => openInviteCoworker()}>
                   <ExportIcon />
                   Invite Member
@@ -371,6 +430,8 @@ export default function TeamCollaborationPage() {
                     member={m}
                     onEdit={() => setEditTarget(m)}
                     onDelete={() => setDeleteTarget(m)}
+                    userRole={userRole}
+                    onResendInvite={m.status === 'Pending' ? () => handleResendInvite(m) : undefined}
                   />
                 ))}
               </div>

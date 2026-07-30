@@ -1,17 +1,58 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "../../lib/supabase";
+import { Suspense } from "react";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  // On mount, verify the token_hash from the URL to establish a recovery session
+  useEffect(() => {
+    async function verifyToken() {
+      const tokenHash = searchParams.get("token_hash");
+      const type = searchParams.get("type");
+
+      if (tokenHash && type === "recovery") {
+        try {
+          const { error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: "recovery",
+          });
+          if (error) {
+            setErrorMsg("This password reset link has expired or is invalid. Please request a new one.");
+            setIsVerifying(false);
+            return;
+          }
+          setSessionReady(true);
+        } catch {
+          setErrorMsg("Failed to verify reset link. Please request a new one.");
+        }
+      } else {
+        // No token_hash — check if there's already an active recovery session
+        // (e.g. user arrived via Supabase's own redirect with hash fragment)
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          setSessionReady(true);
+        } else {
+          setErrorMsg("No valid reset link detected. Please use the link from your email, or request a new password reset.");
+        }
+      }
+      setIsVerifying(false);
+    }
+
+    verifyToken();
+  }, [searchParams]);
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +85,11 @@ export default function ResetPasswordPage() {
       });
 
       if (error) throw error;
+      
+      // Sign out so they log in fresh with the new password
+      await supabase.auth.signOut();
+      document.cookie = "sb-access-token=; path=/; max-age=0;";
+      
       setSuccess(true);
     } catch (err: any) {
       console.error("Failed to update password:", err);
@@ -57,7 +103,12 @@ export default function ResetPasswordPage() {
     <main className="flex min-h-screen items-center justify-center bg-[#FDFDFD] font-['Satoshi'] px-4 py-8 text-[#121212]">
       <div className="w-full max-w-[440px] bg-white rounded-[24px] border border-[#E2E4E9] p-8 shadow-[0px_4px_24px_rgba(0,0,0,0.06)]">
         
-        {success ? (
+        {isVerifying ? (
+          <div className="flex flex-col items-center gap-3 py-8">
+            <div className="w-10 h-10 border-4 border-[#FF7A00] border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-700 font-medium text-sm">Verifying reset link...</p>
+          </div>
+        ) : success ? (
           <div className="text-center py-4">
             <div className="w-[64px] h-[64px] rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto mb-4">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -70,10 +121,30 @@ export default function ResetPasswordPage() {
               Your password has been successfully reset. You can now log in with your new password.
             </p>
             <button
-              onClick={() => router.push("/login")}
+              onClick={() => { window.location.href = "/login"; }}
               className="w-full h-[46px] bg-[#121212] text-white rounded-full font-['Satoshi'] font-medium text-[14px] flex items-center justify-center hover:bg-black transition-all"
             >
               Go to Login
+            </button>
+          </div>
+        ) : !sessionReady ? (
+          <div className="text-center py-4">
+            <div className="w-[64px] h-[64px] rounded-full bg-red-100 text-red-500 flex items-center justify-center mx-auto mb-4">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <h2 className="font-['Sora'] font-bold text-[20px] text-[#121212] mb-2">Link Expired or Invalid</h2>
+            <p className="font-['Satoshi'] text-[14px] text-[#6C717D] mb-6">
+              {errorMsg}
+            </p>
+            <button
+              onClick={() => { window.location.href = "/forgot-password"; }}
+              className="w-full h-[46px] bg-[#121212] text-white rounded-full font-['Satoshi'] font-medium text-[14px] flex items-center justify-center hover:bg-black transition-all"
+            >
+              Request New Reset Link
             </button>
           </div>
         ) : (
@@ -139,5 +210,18 @@ export default function ResetPasswordPage() {
         )}
       </div>
     </main>
+  );
+}
+
+// Wrap in Suspense because useSearchParams() requires it in Next.js App Router
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen items-center justify-center bg-[#FDFDFD]">
+        <div className="w-10 h-10 border-4 border-[#FF7A00] border-t-transparent rounded-full animate-spin" />
+      </main>
+    }>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

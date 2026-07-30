@@ -19,7 +19,10 @@ export async function POST(req: NextRequest) {
 
     // 1. Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false }
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(8000) })
+      }
     });
 
     // 2. Verify OTP code using the RPC

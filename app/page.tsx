@@ -189,8 +189,14 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
       setUser(session?.user ?? null);
       if (session) {
         document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-        if (typeof window !== "undefined" && (window.location.hash.includes("access_token") || window.location.search.includes("code="))) {
-          window.location.href = "/dashboard";
+        if (typeof window !== "undefined") {
+          const hash = window.location.hash;
+          const search = window.location.search;
+          if (hash.includes("type=recovery") || search.includes("type=recovery")) {
+            window.location.href = "/reset-password";
+          } else if (hash.includes("access_token") || search.includes("code=")) {
+            window.location.href = "/dashboard";
+          }
         }
       }
     });
@@ -199,8 +205,14 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
       setUser(session?.user ?? null);
       if (session) {
         document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-        if (event === "SIGNED_IN" && typeof window !== "undefined" && (window.location.hash.includes("access_token") || window.location.search.includes("code="))) {
-          window.location.href = "/dashboard";
+        if (typeof window !== "undefined") {
+          const hash = window.location.hash;
+          const search = window.location.search;
+          if (event === "PASSWORD_RECOVERY" || hash.includes("type=recovery") || search.includes("type=recovery")) {
+            window.location.href = "/reset-password";
+          } else if (event === "SIGNED_IN" && (hash.includes("access_token") || search.includes("code="))) {
+            window.location.href = "/dashboard";
+          }
         }
       }
     });

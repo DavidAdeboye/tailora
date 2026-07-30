@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { supabase } from "../../lib/supabase";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -24,12 +23,15 @@ export default function ForgotPasswordPage() {
     setMessage(null);
 
     try {
-      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
-        redirectTo: `${window.location.origin}/login`,
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail }),
       });
 
-      if (resetErr) {
-        throw resetErr;
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to send password reset email.");
       }
 
       setMessage("Password reset link has been sent to your email address.");

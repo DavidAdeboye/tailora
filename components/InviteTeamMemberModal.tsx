@@ -19,6 +19,11 @@ export default function InviteTeamMemberModal({ isOpen, onClose }: Props) {
       setError("Please fill in both name and email.");
       return;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email.trim().toLowerCase())) {
+      setError("Enter a valid email address.");
+      return;
+    }
     setError(null);
     setIsSubmitting(true);
     try {

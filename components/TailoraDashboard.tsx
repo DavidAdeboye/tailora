@@ -150,6 +150,7 @@ const statusStyles = {
 
 export default function TailoraDashboard() {
   const { openAddClient, openOrderFlowForClient } = useAppModals();
+  const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [editTarget, setEditTarget] = useState<ClientData | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -367,13 +368,17 @@ export default function TailoraDashboard() {
     } catch {}
 
     async function loadDashboardData() {
+      if (mounted) setLoading(true);
       let workspaceOwnerId = "";
       let memberName = "";
       let memberRole = "";
 
       try {
         const identity = await resolveWorkspace();
-        if (!identity) return;
+        if (!identity) {
+          if (mounted) setLoading(false);
+          return;
+        }
         if (!mounted) return;
 
         workspaceOwnerId = identity.workspaceOwnerId;
@@ -404,7 +409,10 @@ export default function TailoraDashboard() {
         console.error('Error loading business name', err);
       }
 
-      if (!workspaceOwnerId) return;
+      if (!workspaceOwnerId) {
+        if (mounted) setLoading(false);
+        return;
+      }
 
       try {
         const { count: cCount } = await supabase
@@ -469,6 +477,7 @@ export default function TailoraDashboard() {
 
         if (error) {
           console.error('Error fetching orders from Supabase:', error);
+          if (mounted) setLoading(false);
           return;
         }
 
@@ -584,6 +593,8 @@ export default function TailoraDashboard() {
         }
       } catch (err: any) {
         console.error('Error fetching orders:', err);
+      } finally {
+        if (mounted) setLoading(false);
       }
     }
 
@@ -642,13 +653,30 @@ export default function TailoraDashboard() {
           </div>
 
   <div className="tailora-stats-grid tailora-dashboard-stats">
-  {stats.map((s, i) => (
+   {stats.map((s, i) => (
     <div key={i} className="tailora-stat-card">
       <div className="tailora-stat-card-top">
         <div className="tailora-stat-card-icon">{s.icon}</div>
         <span className="tailora-stat-card-label">{s.label}</span>
       </div>
-      <div className="tailora-stat-value">{s.value}</div>
+      <div className="tailora-stat-value">
+        {loading ? (
+          <span 
+            className="tailora-skeleton" 
+            style={{ 
+              display: 'inline-block', 
+              width: '60px', 
+              height: '28px', 
+              borderRadius: '6px',
+              background: '#E5E7EB',
+              opacity: 0.6,
+              animation: 'tailora-pulse 1.5s ease-in-out infinite'
+            }}
+          />
+        ) : (
+          s.value
+        )}
+      </div>
     </div>
   ))}
 </div>
@@ -727,36 +755,45 @@ export default function TailoraDashboard() {
 
               {/* Mobile cards */}
               <div className="tailora-m-cards tailora-orders-cards-mobile">
-              {paginatedOrders.map((order) => {
-                  const st = statusStyles[order.statusType];
-                  return (
-                    <div key={order.id} className="tailora-m-card" style={{ position: "relative" }}>
-                      <div className="tailora-m-card-top" style={{ paddingRight: 40 }}>
-                        <span className="tailora-m-card-id">{formatClientId(order.clientId || order.id)}</span>
-                        <span className="tailora-m-card-pill" style={{ background: st.bg, color: st.color }}>{order.status}</span>
-                      </div>
-                      <div className="tailora-m-card-title">{order.client}</div>
-                      <div className="tailora-m-card-meta">
-                        <span>{order.phone}</span>
-                        <span>{order.gender} · {order.outfit}</span>
-                        {order.collectionDate && (
-                          <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#667185" }}>
-                            Delivery: {formatDateString(order.collectionDate)}
-                          </span>
-                        )}
-                      </div>
-                      {isOwnerOrAdmin && (
+                {loading ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0', width: '100%' }}>
+                    <div className="tailora-spinner" />
+                  </div>
+                ) : paginatedOrders.length === 0 ? (
+                  <div style={{ padding: "32px 16px", textAlign: "center", color: "#667185", fontSize: 14, background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 10, width: "100%" }}>
+                    No orders found.
+                  </div>
+                ) : (
+                  paginatedOrders.map((order) => {
+                    const st = statusStyles[order.statusType];
+                    return (
+                      <div key={order.id} className="tailora-m-card" style={{ position: "relative" }}>
+                        <div className="tailora-m-card-top" style={{ paddingRight: 40 }}>
+                          <span className="tailora-m-card-id">{formatClientId(order.clientId || order.id)}</span>
+                          <span className="tailora-m-card-pill" style={{ background: st.bg, color: st.color }}>{order.status}</span>
+                        </div>
+                        <div className="tailora-m-card-title">{order.client}</div>
+                        <div className="tailora-m-card-meta">
+                          <span>{order.phone}</span>
+                          <span>{order.gender} · {order.outfit}</span>
+                          {order.collectionDate && (
+                            <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#667185" }}>
+                              Delivery: {formatDateString(order.collectionDate)}
+                            </span>
+                          )}
+                        </div>
                         <div style={{ position: "absolute", top: 12, right: 12 }}>
                           <ActionMenuButton
                             onEdit={() => handleEdit(order)}
                             onDelete={() => setDeleteTarget(order)}
+                            showDelete={isOwnerOrAdmin}
                             label={`Actions for order ${order.id}`}
                           />
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
               {/* Desktop table */}
@@ -764,39 +801,54 @@ export default function TailoraDashboard() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ background: "#F8F8F8" }}>
-                      {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Delivery Date", "Status", ...(isOwnerOrAdmin ? [""] : [])].map((h, i) => (
+                      {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Delivery Date", "Status", ""].map((h, i) => (
                         <th key={i} style={{ padding: "12px 24px", textAlign: h === "" ? "center" : "left", fontSize: 12, fontWeight: 500, color: "#344054", borderBottom: "1px solid #E4E7EC", whiteSpace: "nowrap" }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                  {paginatedOrders.map((order) => {
-                      const st = statusStyles[order.statusType];
-                      return (
-                        <tr key={order.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
-                          <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{formatClientId(order.clientId || order.id)}</td>
-                          <td style={{ padding: "16px 24px" }}><span style={{ fontSize: 14, fontWeight: 500, color: "#101928" }}>{order.client}</span></td>
-                          <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.phone}</td>
-                          <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.gender}</td>
-                          <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.outfit}</td>
-                          <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", whiteSpace: "nowrap" }}>{formatDateString(order.collectionDate)}</td>
-                          <td style={{ padding: "16px 24px" }}>
-                            <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, background: st.bg, color: st.color }}>{order.status}</span>
-                          </td>
-                          {isOwnerOrAdmin && (
+                    {loading ? (
+                      <tr>
+                        <td colSpan={8} style={{ padding: "40px 0", textAlign: "center" }}>
+                          <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <div className="tailora-spinner" />
+                          </div>
+                        </td>
+                      </tr>
+                    ) : paginatedOrders.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} style={{ padding: "42px 24px", textAlign: "center", color: "#667185", fontSize: 14 }}>
+                          No orders found matching the filter criteria.
+                        </td>
+                      </tr>
+                    ) : (
+                      paginatedOrders.map((order) => {
+                        const st = statusStyles[order.statusType];
+                        return (
+                          <tr key={order.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
+                            <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{formatClientId(order.clientId || order.id)}</td>
+                            <td style={{ padding: "16px 24px" }}><span style={{ fontSize: 14, fontWeight: 500, color: "#101928" }}>{order.client}</span></td>
+                            <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.phone}</td>
+                            <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.gender}</td>
+                            <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.outfit}</td>
+                            <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", whiteSpace: "nowrap" }}>{formatDateString(order.collectionDate)}</td>
+                            <td style={{ padding: "16px 24px" }}>
+                              <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, background: st.bg, color: st.color }}>{order.status}</span>
+                            </td>
                             <td style={{ padding: "16px 24px", textAlign: "center" }}>
                               <div style={{ display: "flex", justifyContent: "center" }}>
                                 <ActionMenuButton
                                   onEdit={() => handleEdit(order)}
                                   onDelete={() => setDeleteTarget(order)}
+                                  showDelete={isOwnerOrAdmin}
                                   label={`Actions for ${order.id}`}
                                 />
                               </div>
                             </td>
-                          )}
-                        </tr>
-                      );
-                    })}
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>

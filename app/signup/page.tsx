@@ -214,7 +214,8 @@
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ email: formData.email.trim() })
+          body: JSON.stringify({ email: formData.email.trim() }),
+          signal: AbortSignal.timeout(10000)
         });
         
         const resData = await response.json();
@@ -231,7 +232,10 @@
         }
       } catch (err: any) {
         console.error("Failed to send OTP:", err);
-        setAuthError(err.message || "Failed to send verification code.");
+        const errMsg = err.name === 'TimeoutError' || err.name === 'AbortError' 
+          ? "Request timed out. Please check your network connection and try again."
+          : (err.message || "Failed to send verification code.");
+        setAuthError(errMsg);
       } finally {
         setIsLoading(false);
       }
@@ -256,7 +260,8 @@
           body: JSON.stringify({
             email: formData.email.trim(),
             otp: enteredOtp
-          })
+          }),
+          signal: AbortSignal.timeout(10000)
         });
 
         const verifyData = await verifyResponse.json();
@@ -332,7 +337,10 @@
         // the cookie in time, causing a redirect loop back to /login.
         window.location.href = "/dashboard";
       } catch (error: any) {
-        setAuthError(error.message || "Failed to sign up");
+        const errMsg = error.name === 'TimeoutError' || error.name === 'AbortError'
+          ? "Request timed out. Please check your network connection and try again."
+          : (error.message || "Failed to sign up");
+        setAuthError(errMsg);
         setIsLoading(false);
       }
     };

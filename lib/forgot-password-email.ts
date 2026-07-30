@@ -1,22 +1,12 @@
 /**
- * Builds the branded HTML body for a Tailora team invitation email.
- * Kept in a shared module so both /api/invite (future preview) and
- * the /api/cron/send-invites worker use the exact same template.
+ * Builds the branded HTML body for a Tailora password reset email.
  */
-export function buildInviteEmailHtml({
-  recipientName,
-  inviterName,
-  businessName,
-  role,
+export function buildForgotPasswordEmailHtml({
   recipientEmail,
-  signupLink,
+  resetLink,
 }: {
-  recipientName: string;
-  inviterName: string;
-  businessName: string;
-  role: string;
   recipientEmail: string;
-  signupLink: string;
+  resetLink: string;
 }): string {
   const year = new Date().getFullYear();
 
@@ -25,7 +15,7 @@ export function buildInviteEmailHtml({
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>You're invited to join ${businessName} on Tailora</title>
+  <title>Reset your Tailora password</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color:#f4f4f5;padding:40px 16px;">
@@ -43,36 +33,33 @@ export function buildInviteEmailHtml({
           <!-- Body -->
           <tr>
             <td style="padding:40px 40px 32px;">
-              <p style="margin:0 0 8px 0;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Team Invitation</p>
+              <p style="margin:0 0 8px 0;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.08em;font-weight:600;">Password Recovery</p>
               <h1 style="margin:0 0 24px 0;font-size:22px;font-weight:700;color:#111827;line-height:1.3;">
-                ${inviterName} invited you to join ${businessName}
+                Reset Your Password
               </h1>
 
-              <p style="margin:0 0 16px 0;font-size:15px;color:#374151;line-height:1.6;">Hi ${recipientName},</p>
+              <p style="margin:0 0 16px 0;font-size:15px;color:#374151;line-height:1.6;">Hello,</p>
               <p style="margin:0 0 16px 0;font-size:15px;color:#374151;line-height:1.6;">
-                <strong>${inviterName}</strong> has invited you to join their team workspace as a <strong>${role}</strong>.
-              </p>
-              <p style="margin:0 0 24px 0;font-size:15px;color:#374151;line-height:1.6;">
-                <strong>What is Tailora?</strong> Tailora is a modern workspace for professional tailors and designers to organize client measurements, track orders, assign responsibilities, and collaborate together seamlessly.
+                We received a request to reset the password for your Tailora account. 
               </p>
               <p style="margin:0 0 28px 0;font-size:15px;color:#374151;line-height:1.6;">
-                Please click the black <strong>"Accept Invitation"</strong> button below to join the team and access your workspace:
+                Please click the button below to reset your password. This link will expire shortly:
               </p>
 
               <!-- CTA Button -->
               <table cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom:32px;">
                 <tr>
                   <td style="background-color:#121212;border-radius:999px;">
-                    <a href="${signupLink}"
+                    <a href="${resetLink}"
                        style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;letter-spacing:-0.1px;">
-                      Accept Invitation &rarr;
+                      Reset Password &rarr;
                     </a>
                   </td>
                 </tr>
               </table>
 
               <p style="margin:0;font-size:13px;color:#9ca3af;line-height:1.5;">
-                This invitation was sent to <strong>${recipientEmail}</strong>. If you weren't expecting this, you can safely ignore it.
+                This link was requested for <strong>${recipientEmail}</strong>. If you did not make this request, you can safely ignore this email.
               </p>
             </td>
           </tr>
@@ -81,7 +68,7 @@ export function buildInviteEmailHtml({
           <tr>
             <td style="padding:0 40px 24px;">
               <p style="margin:0 0 4px 0;font-size:12px;color:#d1d5db;">Or copy this link into your browser:</p>
-              <p style="margin:0;font-size:12px;color:#9ca3af;word-break:break-all;">${signupLink}</p>
+              <p style="margin:0;font-size:12px;color:#9ca3af;word-break:break-all;">${resetLink}</p>
             </td>
           </tr>
 

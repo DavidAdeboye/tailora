@@ -1024,6 +1024,26 @@ function Stepper({ step }: { step: Step }) {
   );
 }
 
+function formatDateLocal(date: Date) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function addWorkingDays(startDate: Date, days: number): Date {
+  const date = new Date(startDate.getTime());
+  let added = 0;
+  while (added < days) {
+    date.setDate(date.getDate() + 1);
+    const day = date.getDay();
+    if (day !== 0 && day !== 6) { // 0 = Sunday, 6 = Saturday
+      added++;
+    }
+  }
+  return date;
+}
+
 /* ── Main Component ── */
 export default function OrderCreationFlow({ client, editingOrderId, onBack, onSaveDraft, onComplete }: Props) {
   const [step, setStep] = useState<Step>(1);
@@ -1172,8 +1192,55 @@ export default function OrderCreationFlow({ client, editingOrderId, onBack, onSa
       }
     }
     loadExistingOrder(editingOrderId);
+  }, [editingOrderId]);
+
+  // Pre-fill dateReceived and collectionDate for new orders using workspace settings
+  useEffect(() => {
+    if (editingOrderId) return;
+    let mounted = true;
+    async function loadWorkspaceDeadline() {
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData?.user) return;
+        let ownerId = userData.user.id;
+
+        const { data: rpcResult } = await supabase.rpc('get_my_team_role');
+        if (rpcResult && rpcResult.length > 0) {
+          ownerId = rpcResult[0].owner_id;
+        }
+
+        const { data, error } = await supabase
+          .from('workspace_settings')
+          .select('standard_deadline_days')
+          .eq('user_id', ownerId)
+          .maybeSingle();
+
+        if (error) {
+          console.error("Error fetching workspace deadline settings:", error);
+        }
+
+        const stdDays = data?.standard_deadline_days ?? 14;
+
+        if (mounted) {
+          const today = new Date();
+          const receivedStr = formatDateLocal(today);
+          const collectionDateObj = addWorkingDays(today, stdDays);
+          const collectionStr = formatDateLocal(collectionDateObj);
+
+          setOrderDetails(prev => ({
+            ...prev,
+            dateReceived: receivedStr,
+            collectionDate: collectionStr,
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to load workspace settings for deadline:", err);
+      }
+    }
+    loadWorkspaceDeadline();
     return () => { mounted = false; };
   }, [editingOrderId]);
+
 
   // avatarUrl loaded from localStorage (set by AppPageHeader/SettingsPage on login/save)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);

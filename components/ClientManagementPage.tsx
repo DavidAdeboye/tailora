@@ -118,7 +118,7 @@ function formatClientId(id: string) {
   return `CLI-${part.toUpperCase()}`;
 }
 
-function ClientMobileCard({ client, onEdit, onDelete, onTakeMeasurements, onViewHistory, showActions = true }: { client: Client; onEdit: () => void; onDelete: () => void; onTakeMeasurements?: () => void; onViewHistory?: () => void; showActions?: boolean }) {
+function ClientMobileCard({ client, onEdit, onDelete, onTakeMeasurements, onViewHistory, showActions = true, showDelete = true }: { client: Client; onEdit: () => void; onDelete: () => void; onTakeMeasurements?: () => void; onViewHistory?: () => void; showActions?: boolean; showDelete?: boolean }) {
   const st = statusStyles[client.statusType];
   return (
     <article className="tailora-client-card">
@@ -150,6 +150,7 @@ function ClientMobileCard({ client, onEdit, onDelete, onTakeMeasurements, onView
           onDelete={onDelete}
           onTakeMeasurements={onTakeMeasurements}
           onViewHistory={onViewHistory}
+          showDelete={showDelete}
           label={`Actions for ${client.name}`}
         />
       )}
@@ -252,6 +253,8 @@ export default function ClientManagementPage() {
   });
 
   const isOwnerOrAdmin = userRole === 'Owner' || userRole === 'Admin';
+  const showActions = userRole === 'Owner' || userRole === 'Admin' || userRole === 'Assistant';
+  const canDelete = userRole === 'Owner' || userRole === 'Admin';
 
   const handleEdit = (client: Client) => {
     setEditTarget({
@@ -391,7 +394,7 @@ export default function ClientManagementPage() {
         console.error('Error fetching team orders mapping:', err);
       }
 
-      const isRestrictedRole = memberRole === 'Tailor' || memberRole === 'Assistant';
+      const isRestrictedRole = memberRole === 'Tailor';
 
       if (isRestrictedRole && memberName) {
         // For Tailors/Assistants: fetch orders assigned to this member, then resolve client_ids
@@ -653,7 +656,8 @@ export default function ClientManagementPage() {
                   onDelete={() => setDeleteTarget(c)}
                   onTakeMeasurements={() => handleTakeMeasurements(c)}
                   onViewHistory={() => handleViewHistory(c)}
-                  showActions={isOwnerOrAdmin}
+                  showActions={showActions}
+                  showDelete={canDelete}
                 />
               ))
             )}
@@ -664,7 +668,7 @@ export default function ClientManagementPage() {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "#F8F8F8" }}>
-                  {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Delivery Date", "Status", ...(isOwnerOrAdmin ? [""] : [])].map((h, i) => (
+                  {["ID", "Client Name", "Phone Number", "Gender", "Outfit Type", "Delivery Date", "Status", ...(showActions ? [""] : [])].map((h, i) => (
                     <th key={h || "actions"} style={{ padding: "12px 24px", textAlign: h === "" ? "center" : "left", fontSize: 12, fontWeight: 500, color: "#344054", borderBottom: "1px solid #E4E7EC", whiteSpace: "nowrap", fontFamily: i === 0 ? "Inter, sans-serif" : "Satoshi, var(--font-satoshi), sans-serif" }}>
                       {h}
                     </th>
@@ -687,7 +691,7 @@ export default function ClientManagementPage() {
                           {c.status}
                         </span>
                       </td>
-                      {isOwnerOrAdmin && (
+                      {showActions && (
                         <td style={{ padding: "16px 24px", textAlign: "center" }}>
                           <div style={{ display: "flex", justifyContent: "center" }}>
                             <ActionMenuButton
@@ -695,6 +699,7 @@ export default function ClientManagementPage() {
                               onDelete={() => setDeleteTarget(c)}
                               onTakeMeasurements={() => handleTakeMeasurements(c)}
                               onViewHistory={() => handleViewHistory(c)}
+                              showDelete={canDelete}
                               label={`Actions for ${c.name}`}
                             />
                           </div>

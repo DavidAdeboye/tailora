@@ -31,26 +31,7 @@ export async function resolveWorkspace(): Promise<WorkspaceIdentity | null> {
 
   const userId = user.id;
 
-  // 1. Check if this user owns a workspace (has a profile row)
-  const { data: profile, error: profileErr } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", userId)
-    .maybeSingle();
-
-
-  if (profile) {
-    // User has their own profile → they are an Owner.
-    // They should always see their own workspace on the dashboard.
-    return {
-      userId,
-      workspaceOwnerId: userId,
-      role: "Owner",
-      memberDisplayName: "",
-    };
-  }
-
-  // 2. No own profile → check if they are a team member elsewhere
+  // 1. Check if they are a team member elsewhere via RPC
   const { data: rpcResult, error: rpcErr } = await supabase.rpc(
     "get_my_team_role"
   );
@@ -62,6 +43,24 @@ export async function resolveWorkspace(): Promise<WorkspaceIdentity | null> {
       workspaceOwnerId: member.owner_id,
       role: (member.role as WorkspaceIdentity["role"]) || "Tailor",
       memberDisplayName: member.name || "",
+    };
+  }
+
+  // 2. Check if this user owns a workspace (has a profile row)
+  const { data: profile, error: profileErr } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (profile) {
+    // User has their own profile → they are an Owner.
+    // They should always see their own workspace on the dashboard.
+    return {
+      userId,
+      workspaceOwnerId: userId,
+      role: "Owner",
+      memberDisplayName: "",
     };
   }
 

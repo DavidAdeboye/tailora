@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
   );
 
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const senderEmail = process.env.SENDER_EMAIL || 'invites@mail.tailora.ng';
+  const senderEmail = process.env.SENDER_EMAIL_INVITES || 'invites@mail.tailora.ng';
 
   // Derive app origin (used for signup links in emails)
   // In production this is the deployed URL; locally it's http://localhost:3000

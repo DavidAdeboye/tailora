@@ -447,6 +447,10 @@ useEffect(() => {
   function navigate(label: string) {
     const href = PAGE_ROUTES[label];
     if (!href || href === pathname) return;
+    if (typeof window !== "undefined" && (window as any).tailora_settings_is_dirty) {
+      const confirmLeave = window.confirm("You have unsaved changes in settings. Are you sure you want to leave and discard them?");
+      if (!confirmLeave) return;
+    }
     onNavigate?.();
     router.push(href);
   }
@@ -608,7 +612,7 @@ useEffect(() => {
                 onClick={() => onAddClient?.()}
               />
             )}
-            {userRole === 'Owner' && (
+            {(userRole === 'Owner' || userRole === 'Admin') && (
               <NavBtn
                 label="Invite Co-worker"
                 icon={InviteIcon}

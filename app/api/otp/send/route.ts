@@ -19,7 +19,10 @@ export async function POST(req: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false }
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(8000) })
+      }
     });
 
     // Save the OTP to the database using the RPC function we created
@@ -47,7 +50,7 @@ export async function POST(req: NextRequest) {
     }
 
     const resend = new Resend(resendApiKey);
-    const senderEmail = process.env.SENDER_EMAIL || 'otp@mail.tailora.ng';
+    const senderEmail = process.env.SENDER_EMAIL_SECURITY || 'security@mail.tailora.ng';
 
     try {
       await resend.emails.send({

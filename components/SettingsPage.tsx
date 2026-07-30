@@ -117,7 +117,7 @@ function SectionDivider() {
 }
 
 /* ── PROFILE TAB ── */
-function ProfileTab() {
+function ProfileTab({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }) {
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [email, setEmail] = useState("");
@@ -131,6 +131,11 @@ function ProfileTab() {
   // Track initial (saved) values for dirty detection
   const [initialValues, setInitialValues] = useState({ fullName: "", businessName: "", email: "", address: "" });
   const isDirty = fullName !== initialValues.fullName || businessName !== initialValues.businessName || email !== initialValues.email || address !== initialValues.address;
+
+  useEffect(() => {
+    onDirtyChange(isDirty);
+  }, [isDirty, onDirtyChange]);
+
   useEffect(() => {
     let mounted = true;
     async function loadProfile() {
@@ -281,6 +286,87 @@ function ProfileTab() {
     }
   }
 
+  async function handleExportData() {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) {
+        alert("You must be logged in to export data.");
+        return;
+      }
+      
+      // Fetch profile
+      const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+      // Fetch workspace settings
+      const { data: workspace } = await supabase.from('workspace_settings').select('*').eq('user_id', user.id).maybeSingle();
+      // Fetch clients
+      const { data: clients } = await supabase.from('clients').select('*').eq('user_id', user.id);
+      // Fetch orders
+      const { data: orders } = await supabase.from('orders').select('*').eq('user_id', user.id);
+      
+      const exportPayload = {
+        exported_at: new Date().toISOString(),
+        user: {
+          id: user.id,
+          email: user.email,
+          created_at: user.created_at,
+        },
+        profile: profile || null,
+        workspace_settings: workspace || null,
+        clients: clients || [],
+        orders: orders || [],
+      };
+      
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `tailora_data_export_${user.id}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      alert("Data exported successfully!");
+    } catch (err) {
+      console.error("Export data error", err);
+      alert("Failed to export data.");
+    }
+  }
+
+  async function handleDeleteAccount() {
+    const firstConfirm = window.confirm(
+      "WARNING: This action is permanent and complies with GDPR/NDPR deletion rights. All your profile data, client lists, measurements, and orders will be immediately queued for deletion.\n\nAre you sure you want to proceed?"
+    );
+    if (!firstConfirm) return;
+
+    const finalConfirm = prompt(
+      "To confirm deletion, please type the word 'DELETE' below:"
+    );
+    if (finalConfirm !== "DELETE") {
+      alert("Confirmation mismatch. Account deletion aborted.");
+      return;
+    }
+
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) return;
+
+      // Delete user's data in the correct dependency order
+      await supabase.from('orders').delete().eq('user_id', user.id);
+      await supabase.from('clients').delete().eq('user_id', user.id);
+      await supabase.from('workspace_settings').delete().eq('user_id', user.id);
+      await supabase.from('profiles').delete().eq('id', user.id);
+      
+      // Log out
+      await supabase.auth.signOut();
+      document.cookie = "sb-access-token=; path=/; max-age=0";
+      alert("Your account and all associated data have been deleted successfully. You have been logged out.");
+      window.location.href = "/login";
+    } catch (err) {
+      console.error("Delete account error", err);
+      alert("Failed to complete account deletion. Please contact support@tailora.ng.");
+    }
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
       {/* Profile photo section */}
@@ -418,12 +504,82 @@ function ProfileTab() {
           </div>
         </div>
       </div>
+
+      <SectionDivider />
+
+      {/* GDPR/NDPR compliance section */}
+      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
+        {/* Left */}
+        <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Data Privacy & Compliance</span>
+          <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif", lineHeight: "22px" }}>
+            Under GDPR and NDPR guidelines, you have the right to request a copy of your personal data or ask for permanent account deletion.
+          </span>
+        </div>
+
+        {/* Right */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16, width: "100%", minWidth: 0 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            <button
+              type="button"
+              onClick={handleExportData}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "8px 16px",
+                height: 36,
+                background: "#fff",
+                border: "1px solid #121212",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#121212",
+                fontFamily: "Satoshi, sans-serif",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#F5F5F5")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+            >
+              Export Account Data
+            </button>
+            <button
+              type="button"
+              onClick={handleDeleteAccount}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "8px 16px",
+                height: 36,
+                background: "#fff",
+                border: "1px solid #D92D20",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#D92D20",
+                fontFamily: "Satoshi, sans-serif",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#FEF3F2")}
+              onMouseLeave={e => (e.currentTarget.style.background = "#fff")}
+            >
+              Delete Account & Data
+            </button>
+          </div>
+          <p style={{ margin: 0, fontSize: 13, color: "#667185", fontFamily: "Satoshi, sans-serif", lineHeight: "18px" }}>
+            If you have questions about our privacy policy or want to submit a request offline, please contact us at{" "}
+            <a href="mailto:support@tailora.ng" style={{ color: "#121212", textDecoration: "underline", fontWeight: 500 }}>
+              support@tailora.ng
+            </a>.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
 
-/* ── WORKSPACE TAB ── */
-function WorkspaceTab() {
+function WorkspaceTab({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }) {
   const [standardDays, setStandardDays] = useState("14");
   const [expressDays, setExpressDays] = useState("5");
   const [savingWorkspace, setSavingWorkspace] = useState(false);
@@ -431,6 +587,11 @@ function WorkspaceTab() {
   // Track initial (saved) values for dirty detection
   const [initialWs, setInitialWs] = useState({ standardDays: "14", expressDays: "5" });
   const isWsDirty = standardDays !== initialWs.standardDays || expressDays !== initialWs.expressDays;
+
+  useEffect(() => {
+    onDirtyChange(isWsDirty);
+  }, [isWsDirty, onDirtyChange]);
+
   useEffect(() => {
     let mounted = true;
     async function loadWorkspace() {
@@ -438,6 +599,7 @@ function WorkspaceTab() {
         const { data: userData } = await supabase.auth.getUser();
         const user = (userData as any)?.user;
         const userId = user?.id;
+
         if (!userId) return;
         const { data, error } = await supabase.from('workspace_settings').select('standard_deadline_days, express_deadline_days').eq('user_id', userId).maybeSingle();
         if (error) return;
@@ -522,8 +684,7 @@ function WorkspaceTab() {
   );
 }
 
-/* ── NOTIFICATIONS TAB ── */
-function NotificationsTab() {
+function NotificationsTab({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }) {
   const [deliveryReminders, setDeliveryReminders] = useState(true);
   const [deadlineAlerts, setDeadlineAlerts] = useState(false);
   const [teamActivity, setTeamActivity] = useState(false);
@@ -541,10 +702,15 @@ function NotificationsTab() {
                   teamActivity !== initialPrefs.teamActivity;
 
   useEffect(() => {
+    onDirtyChange(isDirty);
+  }, [isDirty, onDirtyChange]);
+
+  useEffect(() => {
     let mounted = true;
     async function loadNotifications() {
       try {
         const { data: userData } = await supabase.auth.getUser();
+
         const userId = userData?.user?.id;
         if (!userId) return;
 
@@ -777,8 +943,8 @@ function SettingsBadge() {
 <path d="M30.616 12.5285C30.7461 12.421 30.87 12.3092 30.9953 12.1985C31.0234 11.7868 31.0268 11.3732 31.0055 10.9597C30.9122 11.0413 30.8204 11.1249 30.7243 11.2042C24.8978 16.0129 16.1101 15.3426 11.1359 9.71149C10.6406 9.15147 10.204 8.56188 9.82131 7.95117C9.70088 8.27742 9.59792 8.60836 9.51245 8.94305C9.94125 9.67206 10.4434 10.3734 11.0276 11.0352C16.0023 16.6683 24.79 17.3372 30.616 12.5285Z" fill="#740D23"/>
 <path d="M30.7256 11.2059C30.8217 11.1261 30.9135 11.0426 31.0067 10.9614C30.9873 10.5844 30.949 10.2084 30.8878 9.83569C30.8693 9.85024 30.8523 9.86761 30.8334 9.88263C25.0069 14.6913 16.2197 14.022 11.245 8.39082C10.8642 7.95896 10.5199 7.50878 10.2048 7.04688C10.0625 7.34402 9.93478 7.64632 9.8226 7.95379C10.2053 8.56451 10.6423 9.15409 11.1372 9.71411C16.1119 15.3448 24.8991 16.0146 30.7256 11.2059Z" fill="#E60F3F"/>
 <path d="M30.833 9.88249C30.8519 9.86794 30.8689 9.85056 30.8874 9.83554C30.8296 9.4816 30.7538 9.12955 30.6572 8.7803C24.8327 13.3416 16.2474 12.6079 11.3524 7.06693C11.1052 6.78716 10.876 6.49846 10.6565 6.20508C10.4918 6.48016 10.3418 6.76087 10.2039 7.04674C10.5186 7.50865 10.8629 7.95881 11.2441 8.39067C16.2192 14.0218 25.0065 14.6912 30.833 9.88249Z" fill="#740D23"/>
-<path d="M30.6565 8.77764C30.5647 8.44295 30.4555 8.11107 30.3282 7.78388C24.5178 11.9767 16.2341 11.1449 11.46 5.74004C11.3638 5.63113 11.2725 5.51895 11.1807 5.40723C10.9923 5.66588 10.819 5.93156 10.6563 6.20195C10.8753 6.49533 11.105 6.78402 11.3522 7.0638C16.2467 12.6053 24.8315 13.339 30.6565 8.77764Z" fill="#E60F3F"/>
-<path d="M30.3278 7.78434C30.2025 7.46091 30.0597 7.14265 29.9004 6.82908C24.2153 10.5403 16.4435 9.68219 11.7869 4.65332C11.5712 4.89836 11.3687 5.14951 11.1798 5.40769C11.2716 5.51941 11.3629 5.63159 11.4591 5.7405C16.2332 11.1454 24.5174 11.9772 30.3278 7.78434Z" fill="#740D23"/>
+<path d="M30.6565 8.77764C30.5647 8.44295 30.4555 8.11107 30.3282 7.78388C24.5178 11.9767 16.2341 11.1449 11.46 5.74004C11.3638 5.63113 11.2725 5.51895 11.1807 5.40723C10.9923 5.66588 10.819 5.93156 10.6563 6.20195C10.8753 6.49533 11.105 6.78402 11.3522 7.0638C16.2467 12.6053 24.8315 13.339 30.6565 8.77764" fill="#E60F3F"/>
+<path d="M30.3278 7.78434C30.2025 7.46091 30.0597 7.14265 29.9004 6.82908C24.2153 10.5403 16.4435 9.68219 11.7869 4.65332C11.5712 4.89836 11.3687 5.14951 11.1798 5.40769C11.2716 5.51941 11.3629 5.63159 11.4591 5.7405C16.2332 11.1454 24.5174 11.9772 30.3278 7.78434" fill="#740D23"/>
 </svg>
     </span>
   );
@@ -787,6 +953,7 @@ function SettingsBadge() {
 /* ── MAIN SETTINGS PAGE ── */
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("Profile");
+  const [isTabDirty, setIsTabDirty] = useState(false);
 
   type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
   const [userRole, setUserRole] = useState<UserRole>(() => {
@@ -810,6 +977,42 @@ export default function SettingsPage() {
     loadRole();
     return () => { mounted = false; };
   }, []);
+
+  // Sync dirty status to window object for Sidebar link interception
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      (window as any).tailora_settings_is_dirty = isTabDirty;
+    }
+    return () => {
+      if (typeof window !== "undefined") {
+        (window as any).tailora_settings_is_dirty = false;
+      }
+    };
+  }, [isTabDirty]);
+
+  // Alert browser beforeunload if page is dirty
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isTabDirty) {
+        e.preventDefault();
+        e.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+        return e.returnValue;
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isTabDirty]);
+
+  const handleTabChange = (newTab: Tab) => {
+    if (isTabDirty) {
+      const confirmLeave = window.confirm("You have unsaved changes. Do you want to discard them and switch tabs?");
+      if (!confirmLeave) return;
+    }
+    setIsTabDirty(false);
+    setActiveTab(newTab);
+  };
 
   if (userRole !== 'Owner') {
     return (
@@ -841,7 +1044,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-           {/* Tab bar — segmented button group matching Figma */}
+            {/* Tab bar — segmented button group matching Figma */}
 <div
   className="tailora-settings-tabs"
   style={{
@@ -863,7 +1066,7 @@ export default function SettingsPage() {
       <button
         type="button"
         key={tab}
-        onClick={() => setActiveTab(tab)}
+        onClick={() => handleTabChange(tab)}
         style={{
           padding: "10px 16px",
           height: 42,
@@ -901,9 +1104,9 @@ export default function SettingsPage() {
               overflow: "hidden",
               maxWidth: 1052,
             }}>
-              {activeTab === "Profile" && <ProfileTab />}
-              {activeTab === "Workspace" && <WorkspaceTab />}
-              {activeTab === "Notifications" && <NotificationsTab />}
+              {activeTab === "Profile" && <ProfileTab onDirtyChange={setIsTabDirty} />}
+              {activeTab === "Workspace" && <WorkspaceTab onDirtyChange={setIsTabDirty} />}
+              {activeTab === "Notifications" && <NotificationsTab onDirtyChange={setIsTabDirty} />}
               {activeTab === "Security" && <SecurityTab />}
             </div>
           </div>
