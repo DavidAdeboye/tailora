@@ -241,8 +241,8 @@
       }
     };
 
-    const handleVerifyAndSignUp = async () => {
-      const enteredOtp = otpVals.join("");
+    const handleVerifyAndSignUp = async (overrideCode?: string) => {
+      const enteredOtp = overrideCode || otpVals.join("");
       if (enteredOtp.length < 6) {
         setAuthError("Please enter the complete 6-digit verification code.");
         return;
@@ -375,6 +375,11 @@
         
         if (index < 5) {
           otpInputsRef.current[index + 1]?.focus();
+        } else {
+          const fullCode = newVals.join("");
+          if (fullCode.length === 6 && !isLoading) {
+            setTimeout(() => handleVerifyAndSignUp(fullCode), 50);
+          }
         }
       } else {
         newVals[index] = "";
@@ -383,6 +388,14 @@
     };
 
     const handleOtpKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const fullCode = otpVals.join("");
+        if (fullCode.length === 6 && !isLoading) {
+          handleVerifyAndSignUp(fullCode);
+        }
+        return;
+      }
       if (e.key === "Backspace") {
         if (!otpVals[index] && index > 0) {
           const newVals = [...otpVals];
@@ -409,6 +422,9 @@
         const newVals = pasteData.split("");
         setOtpVals(newVals);
         otpInputsRef.current[5]?.focus();
+        if (!isLoading) {
+          setTimeout(() => handleVerifyAndSignUp(pasteData), 50);
+        }
       }
     };
 

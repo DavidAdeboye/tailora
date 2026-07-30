@@ -66,8 +66,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function checkAuth() {
       try {
-        const { data, error } = await supabase.auth.getUser();
-        if (error || !data?.user) {
+        let { data, error } = await supabase.auth.getUser();
+        let user = data?.user;
+
+        if (error || !user) {
+          // Fallback check session if getUser client cache is refreshing
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData?.session?.user) {
+            user = sessionData.session.user;
+            error = null;
+          }
+        }
+
+        if (error || !user) {
           // Clear cookie to prevent middleware redirect loop
           document.cookie = "sb-access-token=; path=/; max-age=0";
           router.replace("/login");
@@ -78,15 +89,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('id')
-          .eq('id', data.user.id)
+          .eq('id', user.id)
           .maybeSingle();
 
         if (!profile && !profileError) {
-          const email = data.user.email;
-          const fullName = data.user.user_metadata?.full_name || email?.split('@')[0] || "User";
-          const businessName = data.user.user_metadata?.business_name || "My Workspace";
+          const email = user.email;
+          const fullName = user.user_metadata?.full_name || email?.split('@')[0] || "User";
+          const businessName = user.user_metadata?.business_name || "My Workspace";
           const { error: insertError } = await supabase.from('profiles').insert({
-            id: data.user.id,
+            id: user.id,
             email: email,
             full_name: fullName,
             business_name: businessName

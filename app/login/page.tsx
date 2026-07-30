@@ -179,6 +179,7 @@ export default function SigninPage() {
       if (data.twoFactorRequired) {
         setSigninStep(3);
         setCooldown(60);
+        setIsLoading(false);
       } else {
         if (data.session) {
           document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
@@ -195,8 +196,8 @@ export default function SigninPage() {
     }
   };
 
-  const handleVerify2FA = async () => {
-    const code = otpVals.join("");
+  const handleVerify2FA = async (overrideCode?: string) => {
+    const code = overrideCode || otpVals.join("");
     if (code.length < 6) {
       setAuthError("Please enter all 6 digits.");
       return;
@@ -225,10 +226,14 @@ export default function SigninPage() {
 
       if (data.session) {
         document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-        await supabase.auth.setSession({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-        });
+        try {
+          await supabase.auth.setSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+        } catch (sErr) {
+          console.warn("setSession warning:", sErr);
+        }
       }
       window.location.href = "/dashboard";
     } catch (error: any) {
@@ -283,6 +288,11 @@ export default function SigninPage() {
       
       if (index < 5) {
         otpInputsRef.current[index + 1]?.focus();
+      } else {
+        const fullCode = newVals.join("");
+        if (fullCode.length === 6 && !isLoading) {
+          setTimeout(() => handleVerify2FA(fullCode), 50);
+        }
       }
     } else {
       newVals[index] = "";
@@ -291,6 +301,14 @@ export default function SigninPage() {
   };
 
   const handleOtpKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const fullCode = otpVals.join("");
+      if (fullCode.length === 6 && !isLoading) {
+        handleVerify2FA(fullCode);
+      }
+      return;
+    }
     if (e.key === "Backspace") {
       if (!otpVals[index] && index > 0) {
         const newVals = [...otpVals];
@@ -317,6 +335,9 @@ export default function SigninPage() {
       const newVals = pasteData.split("");
       setOtpVals(newVals);
       otpInputsRef.current[5]?.focus();
+      if (!isLoading) {
+        setTimeout(() => handleVerify2FA(pasteData), 50);
+      }
     }
   };
 
