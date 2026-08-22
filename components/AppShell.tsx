@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import { resolveWorkspace } from "../lib/resolveWorkspace";
 import AddClientModal, { type ClientFormData } from "./AddClientModal";
@@ -21,30 +21,50 @@ const PATH_TO_MENU: Record<string, string> = {
 
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
-  const router = useRouter();
   const activeMenu = PATH_TO_MENU[pathname] ?? "Dashboard";
 
   const [showAddClient, setShowAddClient] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showOrderFlow, setShowOrderFlow] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [pendingClient, setPendingClient] = useState<ClientFormData | null>(null);
-  /** The order UUID to edit, or undefined for creating a new order (DEF-ORD-012). */
-  const [pendingEditingOrderId, setPendingEditingOrderId] = useState<string | undefined>(undefined);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [pendingClient, setPendingClient] =
+    useState<ClientFormData | null>(null);
+
+  const [pendingEditingOrderId, setPendingEditingOrderId] =
+    useState<string | undefined>(undefined);
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const openAddClient = () => {
     setPendingClient(null);
     setShowAddClient(true);
   };
-  const openInviteCoworker = () => setShowInvite(true);
-  const closeAddClient = () => setShowAddClient(false);
-  const closeInvite = () => setShowInvite(false);
-  const toggleMobileMenu = () => setMobileMenuOpen((o) => !o);
-  const closeMobileMenu = () => setMobileMenuOpen(false);
-  const openOrderFlowForClient = (clientData: ClientFormData, editingOrderId?: string) => {
+
+  const openInviteCoworker = () => {
+    setShowInvite(true);
+  };
+
+  const closeAddClient = () => {
+    setShowAddClient(false);
+  };
+
+  const closeInvite = () => {
+    setShowInvite(false);
+  };
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen((open) => !open);
+  };
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+  };
+
+  const openOrderFlowForClient = (
+    clientData: ClientFormData,
+    editingOrderId?: string
+  ) => {
     setPendingClient(clientData);
     setPendingEditingOrderId(editingOrderId);
     setShowOrderFlow(true);
@@ -56,108 +76,52 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!mobileMenuOpen) return;
-    const prev = document.body.style.overflow;
+
+    const previousOverflow = document.body.style.overflow;
+
     document.body.style.overflow = "hidden";
+
     return () => {
-      document.body.style.overflow = prev;
+      document.body.style.overflow = previousOverflow;
     };
   }, [mobileMenuOpen]);
 
-  useEffect(() => {
-    async function checkAuth() {
-      try {
-        let { data, error } = await supabase.auth.getUser();
-        let user = data?.user;
-
-        if (error || !user) {
-          // Fallback check session if getUser client cache is refreshing
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (sessionData?.session?.user) {
-            user = sessionData.session.user;
-            error = null;
-          }
-        }
-
-        if (error || !user) {
-          // Clear cookie to prevent middleware redirect loop
-          document.cookie = "sb-access-token=; path=/; max-age=0";
-          router.replace("/login");
-          return;
-        }
-
-        // Ensure user has a profile record to avoid foreign key violations (e.g., for OAuth/Google signups)
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', user.id)
-          .maybeSingle();
-
-        if (!profile && !profileError) {
-          const email = user.email;
-          const fullName = user.user_metadata?.full_name || email?.split('@')[0] || "User";
-          const businessName = user.user_metadata?.business_name || "My Workspace";
-          const { error: insertError } = await supabase.from('profiles').insert({
-            id: user.id,
-            email: email,
-            full_name: fullName,
-            business_name: businessName
-          });
-          if (insertError) {
-            console.error("Failed to auto-create profile:", insertError);
-          }
-        }
-
-        setIsCheckingAuth(false);
-      } catch (err) {
-        console.error("Auth check failed:", err);
-        // Clear cookie to prevent middleware redirect loop
-        document.cookie = "sb-access-token=; path=/; max-age=0";
-        router.replace("/login");
-      }
-    }
-
-    checkAuth();
-  }, [router]);
-
-  if (isCheckingAuth) {
-    return (
-      <div className="tailora-auth-check" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div>Checking authentication…</div>
-      </div>
-    );
-  }
-
-  // After client info is filled → open the full-page flow
   const handleContinueFromModal = (data: ClientFormData) => {
     setPendingClient(data);
-    setPendingEditingOrderId(undefined); // new order from Add Client flow
+    setPendingEditingOrderId(undefined);
     setShowAddClient(false);
     setShowOrderFlow(true);
   };
 
-  // Save client draft from the modal directly to Supabase
   const handleSaveClientDraft = async (data: ClientFormData) => {
     try {
       const identity = await resolveWorkspace();
+
       if (!identity) return;
-      
+
       const ownerId = identity.workspaceOwnerId;
 
-      // Ensure profiles record exists for user to avoid foreign key constraint errors
-      await supabase.from('profiles').upsert(
-        { id: identity.userId, updated_at: new Date().toISOString() },
-        { onConflict: 'id', ignoreDuplicates: true }
+      await supabase.from("profiles").upsert(
+        {
+          id: identity.userId,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "id",
+          ignoreDuplicates: true,
+        }
       );
 
-      await supabase.from('clients').insert({
+      await supabase.from("clients").insert({
         user_id: ownerId,
         name: data.name.trim(),
-        phone: data.phone.trim() || '',
-        email: data.email.trim() || '',
-        gender: data.gender || '',
-        outfit_type: data.outfitType || '',
-        status: 'Pending'
+        phone: data.phone.trim() || "",
+        email: data.email.trim() || "",
+        gender: data.gender || "",
+        outfit_type: data.outfitType || "",
+        status: "Pending",
       });
+
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("tailora_client_updated"));
       }
@@ -169,35 +133,42 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   };
 
-  // "Back" from the flow → re-open the modal so user can edit client info
   const handleBackToModal = () => {
     setShowOrderFlow(false);
     setShowAddClient(true);
   };
 
-  // Save draft from the flow
   const handleSaveDraft = () => {
     setShowOrderFlow(false);
     setPendingClient(null);
     setPendingEditingOrderId(undefined);
+
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("tailora_client_updated"));
     }
   };
 
-  // Complete the flow → show success
   const handleOrderFlowComplete = () => {
     setShowOrderFlow(false);
     setPendingClient(null);
     setPendingEditingOrderId(undefined);
     setShowSuccess(true);
+
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("tailora_client_updated"));
     }
   };
 
   return (
-    <AppModalsContext.Provider value={{ openAddClient, openInviteCoworker, toggleMobileMenu, closeMobileMenu, openOrderFlowForClient }}>
+    <AppModalsContext.Provider
+      value={{
+        openAddClient,
+        openInviteCoworker,
+        toggleMobileMenu,
+        closeMobileMenu,
+        openOrderFlowForClient,
+      }}
+    >
       <div
         className="tailora-app-shell"
         style={{
@@ -211,11 +182,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {mobileMenuOpen && (
           <button
             type="button"
-            className={`tailora-sidebar-overlay${mobileMenuOpen ? " tailora-sidebar-overlay--visible" : ""}`}
+            className="tailora-sidebar-overlay tailora-sidebar-overlay--visible"
             aria-label="Close menu"
             onClick={closeMobileMenu}
           />
         )}
+
         <Sidebar
           activeMenu={activeMenu}
           onAddClient={() => {
@@ -230,11 +202,27 @@ export default function AppShell({ children }: { children: ReactNode }) {
           onNavigate={closeMobileMenu}
           onCloseMobile={closeMobileMenu}
         />
-        <div className="tailora-app-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+
+        <div
+          className="tailora-app-main"
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            minWidth: 0,
+          }}
+        >
           <div
-            key={pathname}
             className="tailora-route-enter"
-            style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, width: "100%" }}
+            style={{
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              minWidth: 0,
+              width: "100%",
+            }}
           >
             {showOrderFlow && pendingClient ? (
               <OrderCreationFlow
@@ -251,7 +239,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </div>
       </div>
 
-      {/* Step 1: Client info modal (small) */}
       <AddClientModal
         isOpen={showAddClient}
         onClose={closeAddClient}
@@ -260,8 +247,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
         initialData={pendingClient}
       />
 
-      <InviteTeamMemberModal isOpen={showInvite} onClose={closeInvite} />
-      <SuccessModal isOpen={showSuccess} onAction={() => setShowSuccess(false)} />
+      <InviteTeamMemberModal
+        isOpen={showInvite}
+        onClose={closeInvite}
+      />
+
+      <SuccessModal
+        isOpen={showSuccess}
+        onAction={() => setShowSuccess(false)}
+      />
     </AppModalsContext.Provider>
   );
 }
