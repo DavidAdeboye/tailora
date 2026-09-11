@@ -688,6 +688,43 @@ export default function TailoraDashboard() {
   ))}
 </div>
 
+          {/* Quick Actions Bar (IMP-001) */}
+          <div style={{ margin: "20px 0", background: "#fff", border: "1px solid #E2E4E9", borderRadius: 14, padding: "16px 20px" }}>
+            <h3 style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#64748B", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "Satoshi, sans-serif" }}>
+              Quick Actions Hub
+            </h3>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => openAddClient()}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: "1px solid #E2E4E9", background: "#121212", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                👤 Add New Client
+              </button>
+              <button
+                type="button"
+                onClick={() => (window.location.href = "/clients")}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: "1px solid #E2E4E9", background: "#F8FAFC", color: "#0F172A", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                📐 Take Measurements
+              </button>
+              <button
+                type="button"
+                onClick={() => (window.location.href = "/notes")}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: "1px solid #E2E4E9", background: "#F8FAFC", color: "#0F172A", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                📝 Take Quick Note
+              </button>
+              <button
+                type="button"
+                onClick={() => (window.location.href = "/analytics")}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: "1px solid #E2E4E9", background: "#FEF6E7", color: "#865503", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+              >
+                📊 Financial Reports
+              </button>
+            </div>
+          </div>
+
           <div className="tailora-orders-section">
             <div className="tailora-recent-orders-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 15, gap: 12 }}>
               <h2 style={{ margin: 0, fontFamily: "Sora, sans-serif", fontWeight: 400, fontSize: 18, color: "#121212" }}>

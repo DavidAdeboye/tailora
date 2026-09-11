@@ -541,6 +541,58 @@ export default function ClientManagementPage() {
   }, []);
 
 
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  const handleExportCSV = () => {
+    const headers = ["Client ID", "Name", "Phone", "Email", "Gender", "Outfit Type", "Status", "Delivery Date"];
+    const rows = filteredClients.map(c => [
+      formatClientId(c.id),
+      `"${c.name}"`,
+      `"${c.phone}"`,
+      `"${c.email || ''}"`,
+      `"${c.gender}"`,
+      `"${c.outfit}"`,
+      `"${c.status}"`,
+      `"${formatDateString(c.collectionDate)}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Tailora_Clients_Export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setShowExportMenu(false);
+  };
+
+  const handleExportPDF = () => {
+    window.print();
+    setShowExportMenu(false);
+  };
+
+  const handleExportNotion = () => {
+    let md = "# Tailora Client Directory\n\n";
+    md += "| Client ID | Name | Phone | Gender | Outfit | Status |\n";
+    md += "| --- | --- | --- | --- | --- | --- |\n";
+    filteredClients.forEach(c => {
+      md += `| ${formatClientId(c.id)} | ${c.name} | ${c.phone} | ${c.gender} | ${c.outfit} | ${c.status} |\n`;
+    });
+    navigator.clipboard.writeText(md);
+    alert("Formatted Notion Markdown copied to clipboard! Paste directly into Notion.");
+    setShowExportMenu(false);
+  };
+
+  const handleExportAppleNotes = () => {
+    let notesText = "Tailora Client Directory\n=======================\n\n";
+    filteredClients.forEach(c => {
+      notesText += `• ${c.name} (${formatClientId(c.id)})\n  Phone: ${c.phone}\n  Gender: ${c.gender}\n  Outfit: ${c.outfit}\n  Status: ${c.status}\n\n`;
+    });
+    navigator.clipboard.writeText(notesText);
+    alert("Apple Notes directory copied to clipboard! Paste directly into Apple Notes.");
+    setShowExportMenu(false);
+  };
+
   return (
     <div className="tailora-page-view" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
       <AppPageHeader title="Client Management" />
@@ -556,12 +608,99 @@ export default function ClientManagementPage() {
             ? "Check out the most recent list of clients."
             : "Clients assigned to your orders."
           }
-          action={isOwnerOrAdmin ? (
-            <PrimaryButton className="tailora-clients-add-btn" onClick={() => openAddClient()}>
-              <AddIcon />
-              Add Client
-            </PrimaryButton>
-          ) : undefined
+          action={
+            <div style={{ display: "flex", gap: 10, alignItems: "center", position: "relative" }}>
+              <div style={{ position: "relative" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowExportMenu(o => !o)}
+                  style={{
+                    padding: "10px 16px",
+                    borderRadius: 999,
+                    border: "1px solid #D0D5DD",
+                    background: "#fff",
+                    color: "#344054",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  📥 Export / Sync ▾
+                </button>
+                {showExportMenu && (
+                  <>
+                    <div
+                      onClick={() => setShowExportMenu(false)}
+                      style={{ position: "fixed", inset: 0, zIndex: 100 }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: "110%",
+                        background: "#fff",
+                        border: "1px solid #EAECF0",
+                        borderRadius: 12,
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+                        zIndex: 101,
+                        width: 220,
+                        padding: 6,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 2,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={handleExportCSV}
+                        style={{ textAlign: "left", padding: "8px 12px", background: "none", border: "none", borderRadius: 6, fontSize: 13, color: "#1D2939", fontWeight: 500, cursor: "pointer" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#F8FAFC"}
+                        onMouseLeave={e => e.currentTarget.style.background = "none"}
+                      >
+                        📊 Export as Excel / CSV
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleExportPDF}
+                        style={{ textAlign: "left", padding: "8px 12px", background: "none", border: "none", borderRadius: 6, fontSize: 13, color: "#1D2939", fontWeight: 500, cursor: "pointer" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#F8FAFC"}
+                        onMouseLeave={e => e.currentTarget.style.background = "none"}
+                      >
+                        📄 Export as PDF
+                      </button>
+                      <div style={{ height: 1, background: "#EAECF0", margin: "4px 0" }} />
+                      <button
+                        type="button"
+                        onClick={handleExportNotion}
+                        style={{ textAlign: "left", padding: "8px 12px", background: "none", border: "none", borderRadius: 6, fontSize: 13, color: "#1D2939", fontWeight: 500, cursor: "pointer" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#F8FAFC"}
+                        onMouseLeave={e => e.currentTarget.style.background = "none"}
+                      >
+                        📝 Copy for Notion (Markdown)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleExportAppleNotes}
+                        style={{ textAlign: "left", padding: "8px 12px", background: "none", border: "none", borderRadius: 6, fontSize: 13, color: "#1D2939", fontWeight: 500, cursor: "pointer" }}
+                        onMouseEnter={e => e.currentTarget.style.background = "#F8FAFC"}
+                        onMouseLeave={e => e.currentTarget.style.background = "none"}
+                      >
+                        📱 Export to Apple Notes
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              {isOwnerOrAdmin && (
+                <PrimaryButton className="tailora-clients-add-btn" onClick={() => openAddClient()}>
+                  <AddIcon />
+                  Add Client
+                </PrimaryButton>
+              )}
+            </div>
           }
         />
 

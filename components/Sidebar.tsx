@@ -68,6 +68,24 @@ function SettingsIcon({ color = "#B6B6B6" }: { color?: string }) {
   );
 }
 
+function AnalyticsIcon({ color = "#B6B6B6" }: { color?: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M21.6699 6.9499C21.0299 4.7799 19.2199 2.9699 17.0499 2.3299C15.3999 1.8499 14.2599 1.8899 13.4699 2.4799C12.5199 3.1899 12.4099 4.4699 12.4099 5.3799V7.8699C12.4099 10.3299 13.5299 11.5799 15.7299 11.5799H18.5999C19.4999 11.5799 20.7899 11.4699 21.4999 10.5199C22.1099 9.7399 22.1599 8.5999 21.6699 6.9499Z" fill={color}/>
+      <path opacity="0.4" d="M18.9101 13.3597C18.6501 13.0597 18.2701 12.8897 17.8801 12.8897H14.3001C12.5401 12.8897 11.1101 11.4597 11.1101 9.69966V6.11966C11.1101 5.72966 10.9401 5.34966 10.6401 5.08966C10.3501 4.82966 9.95014 4.70966 9.57014 4.75966C7.22014 5.05966 5.06014 6.34966 3.65014 8.28966C2.23014 10.2397 1.71014 12.6197 2.16014 14.9997C2.81014 18.4397 5.56014 21.1897 9.01014 21.8397C9.56014 21.9497 10.1101 21.9997 10.6601 21.9997C12.4701 21.9997 14.2201 21.4397 15.7101 20.3497C17.6501 18.9397 18.9401 16.7797 19.2401 14.4297C19.2901 14.0397 19.1701 13.6497 18.9101 13.3597Z" fill={color}/>
+    </svg>
+  );
+}
+
+function NotesIcon({ color = "#B6B6B6" }: { color?: string }) {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path opacity="0.4" d="M8 2H16C19 2 20 3 20 6V18C20 21 19 22 16 22H8C5 22 4 21 4 18V6C4 3 5 2 8 2Z" fill={color}/>
+      <path d="M8 7H16M8 12H13M8 17H11" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 function HelpIcon({ color = "#B6B6B6" }: { color?: string }) {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
@@ -202,6 +220,8 @@ const PAGE_ROUTES: Record<string, string> = {
   Dashboard: "/dashboard",
   "Client Management": "/clients",
   "Team Collaboration": "/team",
+  Analytics: "/analytics",
+  Notes: "/notes",
   Settings: "/settings",
   "Help & Support": "/help",
 };
@@ -574,6 +594,20 @@ useEffect(() => {
                 onClick={() => navigate("Team Collaboration")}
               />
             )}
+            <NavBtn
+              label="Analytics & Reports"
+              icon={AnalyticsIcon}
+              active={activeMenu === "Analytics"}
+              collapsed={isCollapsed}
+              onClick={() => navigate("Analytics")}
+            />
+            <NavBtn
+              label="Notes"
+              icon={NotesIcon}
+              active={activeMenu === "Notes"}
+              collapsed={isCollapsed}
+              onClick={() => navigate("Notes")}
+            />
           </div>
         </div>
 

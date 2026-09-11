@@ -829,7 +829,7 @@ function OrderDetailsStep({
             >
               <span style={{ color: assignedStaffs.length > 0 ? "#121212" : "#98A2B3" }}>
                 {assignedStaffs.length === 0
-                  ? "Select staff members..."
+                  ? "Unassigned (No staff assigned)"
                   : assignedStaffs.length === 1
                     ? `${assignedStaffs[0]}`
                     : `${assignedStaffs.length} staff members selected`}
@@ -854,6 +854,42 @@ function OrderDetailsStep({
                     maxHeight: 200, overflowY: "auto", padding: 4
                   }}
                 >
+                  <div
+                    onClick={() => {
+                      setAssignedStaffs([]);
+                      setShowStaffDropdown(false);
+                    }}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "8px 12px", borderRadius: 6, cursor: "pointer",
+                      background: assignedStaffs.length === 0 ? "#FDF6EC" : "transparent",
+                      transition: "background 0.1s", borderBottom: "1px solid #F0F2F5",
+                      marginBottom: 4
+                    }}
+                    onMouseEnter={(e) => {
+                      if (assignedStaffs.length > 0) e.currentTarget.style.background = "#F5F5F5";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (assignedStaffs.length > 0) e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{
+                        width: 24, height: 24, borderRadius: "50%",
+                        background: "#E2E4E9", color: "#667185",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 10, fontWeight: 700
+                      }}>
+                        🚫
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "#667185" }}>Unassigned (Leave unassigned)</span>
+                    </div>
+                    {assignedStaffs.length === 0 && (
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path d="M3 8L6.5 11.5L13 4.5" stroke="#121212" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
                   {teamMembers.length > 0 ? (
                     teamMembers.map(m => {
                       const isSelected = assignedStaffs.includes(m.name);
@@ -900,9 +936,7 @@ function OrderDetailsStep({
                         </div>
                       );
                     })
-                  ) : (
-                    <div style={{ padding: "8px 12px", fontSize: 13, color: "#B0B0B0" }}>No staff members available</div>
-                  )}
+                  ) : null}
                 </div>
               </>
             )}

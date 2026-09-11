@@ -394,6 +394,93 @@ export default function ClientMeasurementsModal({
               </div>
             </div>
 
+            {/* Keyboard Navigation Toolbar (IMP-009) */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justify: "space-between",
+                background: "#F8FAFC",
+                border: "1px solid #E2E8F0",
+                borderRadius: 10,
+                padding: "8px 14px",
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  Keyboard Navigation
+                </span>
+                <span style={{ fontSize: 11, color: "#64748B" }}>
+                  (Use buttons or Tab / Shift+Tab)
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof document !== "undefined") {
+                      const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(".tailora-nav-input"));
+                      const active = document.activeElement as HTMLInputElement;
+                      const idx = inputs.indexOf(active);
+                      if (idx > 0) {
+                        inputs[idx - 1].focus();
+                        inputs[idx - 1].select();
+                      } else if (inputs.length > 0) {
+                        inputs[inputs.length - 1].focus();
+                      }
+                    }
+                  }}
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: 6,
+                    border: "1px solid #CBD5E1",
+                    background: "#fff",
+                    color: "#1E293B",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  ◄ Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof document !== "undefined") {
+                      const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(".tailora-nav-input"));
+                      const active = document.activeElement as HTMLInputElement;
+                      const idx = inputs.indexOf(active);
+                      if (idx >= 0 && idx < inputs.length - 1) {
+                        inputs[idx + 1].focus();
+                        inputs[idx + 1].select();
+                      } else if (inputs.length > 0) {
+                        inputs[0].focus();
+                      }
+                    }
+                  }}
+                  style={{
+                    padding: "5px 12px",
+                    borderRadius: 6,
+                    border: "1px solid #CBD5E1",
+                    background: "#1E293B",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 4,
+                  }}
+                >
+                  Next ►
+                </button>
+              </div>
+            </div>
+
             {/* Predefined Fields Grid */}
             <div className="tailora-measurements-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
               {PREDEFINED_FIELDS.map((f) => (
@@ -405,6 +492,7 @@ export default function ClientMeasurementsModal({
                     <input
                       type="text"
                       inputMode="decimal"
+                      className="tailora-nav-input"
                       placeholder={`0 ${unit}`}
                       value={values[f.key] ?? ""}
                       onChange={(e) => handleFieldChange(f.key, e.target.value)}
@@ -429,23 +517,28 @@ export default function ClientMeasurementsModal({
               ))}
             </div>
 
-            {/* Custom Fields (MEAS_002) */}
+            {/* Custom Fields (MEAS_002 / IMP-004: Flexible Title Editing & Deletion) */}
             {customFields.length > 0 && (
               <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 12 }}>
-                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#121212" }}>Custom Fields</h4>
+                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#121212", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span>Custom Fields</span>
+                  <span style={{ fontSize: 12, fontWeight: 400, color: "#667185" }}>Editable title & deletable</span>
+                </h4>
                 {customFields.map((cf) => (
                   <div key={cf.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <input
                       type="text"
-                      placeholder="Field Name (e.g. Bicep)"
+                      className="tailora-nav-input"
+                      placeholder="Title (e.g. Bicep, Wrist)"
                       value={cf.fieldName}
                       onChange={(e) => handleCustomFieldChange(cf.id, "fieldName", e.target.value)}
-                      style={{ ...inputStyle, flex: 1 }}
+                      style={{ ...inputStyle, flex: 1, borderColor: cf.fieldName ? "#E2E4E9" : "#FFA82B" }}
                     />
                     <div style={{ position: "relative", flex: 1 }}>
                       <input
                         type="text"
                         inputMode="decimal"
+                        className="tailora-nav-input"
                         placeholder={`Value in ${unit}`}
                         value={cf.value}
                         onChange={(e) => handleCustomFieldChange(cf.id, "value", e.target.value)}
@@ -468,16 +561,20 @@ export default function ClientMeasurementsModal({
                     </div>
                     <button
                       type="button"
+                      title="Delete custom field"
                       onClick={() => handleRemoveCustomField(cf.id)}
                       style={{
-                        background: "none",
+                        background: "#FEE2E2",
                         border: "none",
+                        borderRadius: 6,
                         color: "#9E0A05",
                         cursor: "pointer",
-                        padding: "6px 8px",
+                        padding: "8px 10px",
+                        fontSize: 12,
+                        fontWeight: 700,
                       }}
                     >
-                      ✕
+                      Delete
                     </button>
                   </div>
                 ))}

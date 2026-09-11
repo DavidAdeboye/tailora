@@ -15,25 +15,39 @@ export async function POST(req: NextRequest) {
     // Generate a random 6-digit OTP code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Create Supabase client with the service or anon key to execute RPC
+    // Create Supabase client with service role key (preferred for server-side RPC) or anon key fallback
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: {
-        fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(8000) })
+        fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(15000) })
       }
     });
 
-    // Save the OTP to the database using the RPC function we created
-    const { error: dbErr } = await supabase.rpc('create_signup_otp', {
-      p_email: cleanEmail,
-      p_otp: otpCode
-    });
+    // Save the OTP to the database using the RPC function with retry on Gateway Timeout
+    let dbErr: any = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const { error } = await supabase.rpc('create_signup_otp', {
+        p_email: cleanEmail,
+        p_otp: otpCode
+      });
+      dbErr = error;
+      if (!error) break;
+
+      if (attempt === 1 && (error.message?.includes('Gateway Timeout') || (error as any).status === 504)) {
+        console.warn('[Signup OTP] Supabase returned Gateway Timeout on attempt 1. Retrying in 2 seconds...');
+        await new Promise((res) => setTimeout(res, 2000));
+      }
+    }
 
     if (dbErr) {
       console.error('Database OTP insertion error:', dbErr);
-      return NextResponse.json({ error: 'Failed to generate verification code: ' + dbErr.message }, { status: 500 });
+      const isTimeout = dbErr.message?.includes('Gateway Timeout') || (dbErr as any).status === 504;
+      const errorMessage = isTimeout
+        ? 'Database connection timed out (Gateway Timeout). Your Supabase project may be paused in the Supabase Dashboard.'
+        : 'Failed to generate verification code: ' + dbErr.message;
+      return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 
     console.log(`[Signup OTP] Generated code ${otpCode} for ${cleanEmail}`);

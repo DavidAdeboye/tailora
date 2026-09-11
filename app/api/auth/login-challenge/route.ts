@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: {
-        fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(8000) })
+        fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(15000) })
       }
     });
 
@@ -102,14 +102,32 @@ export async function POST(req: NextRequest) {
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
       // Save OTP using service/anon level client so we can execute the RPC
-      const { error: dbErr } = await supabase.rpc('create_signup_otp', {
-        p_email: cleanEmail,
-        p_otp: otpCode
+      const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
+      const adminSupabase = createClient(supabaseUrl, adminKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { fetch: (url, options) => fetch(url, { ...options, signal: AbortSignal.timeout(15000) }) }
       });
+
+      let dbErr: any = null;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const { error } = await adminSupabase.rpc('create_signup_otp', {
+          p_email: cleanEmail,
+          p_otp: otpCode
+        });
+        dbErr = error;
+        if (!error) break;
+        if (attempt === 1 && (error.message?.includes('Gateway Timeout') || (error as any).status === 504)) {
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
 
       if (dbErr) {
         console.error('Database OTP insertion error on 2FA:', dbErr);
-        return NextResponse.json({ error: 'Failed to generate 2FA code: ' + dbErr.message }, { status: 500 });
+        const isTimeout = dbErr.message?.includes('Gateway Timeout') || (dbErr as any).status === 504;
+        const errorMessage = isTimeout
+          ? 'Database connection timed out (Gateway Timeout). Your Supabase project may be paused in the Supabase Dashboard.'
+          : 'Failed to generate 2FA code: ' + dbErr.message;
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
       }
 
       console.log(`[2FA OTP] Generated code ${otpCode} for ${cleanEmail}`);

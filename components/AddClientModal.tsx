@@ -9,6 +9,8 @@ export interface ClientFormData {
   email: string;
   gender: string;
   outfitType: string;
+  birthday?: string;
+  avatarUrl?: string;
 }
 
 interface AddClientModalProps {
@@ -41,7 +43,7 @@ export default function AddClientModal({
   initialData,
   existingClients = []
 }: AddClientModalProps) {
-  const [form, setForm] = useState<ClientFormData>({ name: "", phone: "", email: "", gender: "", outfitType: "" });
+  const [form, setForm] = useState<ClientFormData>({ name: "", phone: "", email: "", gender: "", outfitType: "", birthday: "", avatarUrl: "" });
   const [isCustomOutfit, setIsCustomOutfit] = useState(false);
   const [customOutfitText, setCustomOutfitText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -340,6 +342,46 @@ export default function AddClientModal({
                 onFocus={e => (e.currentTarget.style.borderColor = "#121212")}
                 onBlur={e => (e.currentTarget.style.borderColor = "#E2E4E9")}
               />
+            </div>
+            {/* Birthday (IMP-008) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: "#283145" }}>Client Birthday <span style={{ fontSize: 12, color: "#667185" }}>(Optional)</span></label>
+              <input
+                type="date"
+                value={form.birthday || ""}
+                onChange={e => set("birthday", e.target.value)}
+                style={inputStyle}
+                onFocus={e => (e.currentTarget.style.borderColor = "#121212")}
+                onBlur={e => (e.currentTarget.style.borderColor = "#E2E4E9")}
+              />
+            </div>
+            {/* Profile Photo (IMP-008) */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              <label style={{ fontSize: 14, fontWeight: 500, color: "#283145" }}>Profile Photo <span style={{ fontSize: 12, color: "#667185" }}>(Optional)</span></label>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {form.avatarUrl ? (
+                  <img src={form.avatarUrl} alt="Avatar Preview" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: "1px solid #E2E4E9" }} />
+                ) : (
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#F2F4F7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#667185", fontWeight: 700 }}>
+                    👤
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        if (ev.target?.result) set("avatarUrl", ev.target.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  style={{ fontSize: 13, color: "#475569" }}
+                />
+              </div>
             </div>
             {/* Gender */}
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

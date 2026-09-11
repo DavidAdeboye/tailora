@@ -13,6 +13,8 @@ export interface ClientData {
   gender: string;
   outfit: string;
   status: string;
+  birthday?: string;
+  avatarUrl?: string;
 }
 
 interface EditClientModalProps {
@@ -33,7 +35,9 @@ export default function EditClientModal({ isOpen, onClose, client, onSave }: Edi
     email: "",
     gender: "",
     outfit: "",
-    status: ""
+    status: "",
+    birthday: "",
+    avatarUrl: ""
   });
   const [isCustomOutfit, setIsCustomOutfit] = useState(false);
   const [customOutfitText, setCustomOutfitText] = useState("");
@@ -49,7 +53,9 @@ export default function EditClientModal({ isOpen, onClose, client, onSave }: Edi
         phone: form.phone.trim(),
         email: form.email.trim(),
         gender: form.gender,
-        outfitType: form.outfit
+        outfitType: form.outfit,
+        birthday: form.birthday,
+        avatarUrl: form.avatarUrl
       }, client.orderId); // DEF-ORD-012: pass the specific order ID for editing
       onClose();
     }
@@ -66,7 +72,9 @@ export default function EditClientModal({ isOpen, onClose, client, onSave }: Edi
         email: client.email || "",
         gender: client.gender || "",
         outfit: client.outfit || "",
-        status: client.status || "Due"
+        status: client.status || "Due",
+        birthday: client.birthday || "",
+        avatarUrl: client.avatarUrl || ""
       });
       if (!isPreset && client.outfit) {
         setIsCustomOutfit(true);
