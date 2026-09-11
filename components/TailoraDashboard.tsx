@@ -179,16 +179,55 @@ export default function TailoraDashboard() {
   });
   const [memberDisplayName, setMemberDisplayName] = useState('');
 
+  const hasActiveFilters = useMemo(() => {
+    return Boolean(
+      searchQuery.trim() ||
+      filterGender ||
+      filterStatus ||
+      filterOutfit ||
+      filterDateFrom ||
+      filterDateTo
+    );
+  }, [searchQuery, filterGender, filterStatus, filterOutfit, filterDateFrom, filterDateTo]);
+
+  const resetAllFilters = () => {
+    setSearchQuery("");
+    setFilterGender("");
+    setFilterStatus("");
+    setFilterOutfit("");
+    setFilterDateFrom("");
+    setFilterDateTo("");
+    setFilterPanelOpen(false);
+    setDatePanelOpen(false);
+  };
+
   const filteredOrders = useMemo(() => {
     return orders.filter(item => {
       const q = searchQuery.trim().toLowerCase();
       const matchSearch = !q || [item.id, item.client, item.phone, item.gender, item.outfit, item.status].some(v => v.toLowerCase().includes(q));
-      const matchGender = !filterGender || item.gender === filterGender;
-      const matchStatus = !filterStatus || item.statusType === filterStatus;
-      const matchOutfit = !filterOutfit || item.outfit === filterOutfit;
-      return matchSearch && matchGender && matchStatus && matchOutfit;
+      const matchGender = !filterGender || item.gender.toLowerCase() === filterGender.toLowerCase();
+      const matchStatus = !filterStatus || item.statusType.toLowerCase() === filterStatus.toLowerCase();
+      const matchOutfit = !filterOutfit || item.outfit.toLowerCase().includes(filterOutfit.toLowerCase());
+
+      let matchDate = true;
+      if (filterDateFrom || filterDateTo) {
+        const itemDateStr = item.collectionDate || item.dateReceived;
+        if (itemDateStr) {
+          const itemTime = new Date(itemDateStr).getTime();
+          if (!isNaN(itemTime)) {
+            if (filterDateFrom && itemTime < new Date(filterDateFrom).getTime()) matchDate = false;
+            if (filterDateTo && itemTime > new Date(filterDateTo).getTime() + 86400000) matchDate = false;
+          } else {
+            matchDate = false;
+          }
+        } else {
+          matchDate = false;
+        }
+      }
+
+      return matchSearch && matchGender && matchStatus && matchOutfit && matchDate;
     });
-  }, [searchQuery, filterGender, filterStatus, filterOutfit, orders]);
+  }, [searchQuery, filterGender, filterStatus, filterOutfit, filterDateFrom, filterDateTo, orders]);
 
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
 
@@ -699,28 +738,53 @@ export default function TailoraDashboard() {
                 onClick={() => openAddClient()}
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: "1px solid #E2E4E9", background: "#121212", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
               >
-                👤 Add New Client
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="8.5" cy="7" r="4"/>
+                  <line x1="20" y1="8" x2="20" y2="14"/>
+                  <line x1="17" y1="11" x2="23" y2="11"/>
+                </svg>
+                <span>Add New Client</span>
               </button>
               <button
                 type="button"
                 onClick={() => (window.location.href = "/clients")}
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: "1px solid #E2E4E9", background: "#F8FAFC", color: "#0F172A", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
               >
-                📐 Take Measurements
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.3 15.3l-7.6-7.6c-.4-.4-1-.4-1.4 0l-7 7c-.4.4-.4 1 0 1.4l7.6 7.6c.4.4 1 .4 1.4 0l7-7c.4-.4.4-1 0-1.4z" />
+                  <path d="M14.5 9.5l-1 1" />
+                  <path d="M12 12l-1 1" />
+                  <path d="M9.5 14.5l-1 1" />
+                  <path d="M7 17l-1 1" />
+                </svg>
+                <span>Take Measurements</span>
               </button>
               <button
                 type="button"
                 onClick={() => (window.location.href = "/notes")}
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: "1px solid #E2E4E9", background: "#F8FAFC", color: "#0F172A", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
               >
-                📝 Take Quick Note
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                  <line x1="16" y1="13" x2="8" y2="13"/>
+                  <line x1="16" y1="17" x2="8" y2="17"/>
+                  <line x1="10" y1="9" x2="8" y2="9"/>
+                </svg>
+                <span>Take Quick Note</span>
               </button>
               <button
                 type="button"
                 onClick={() => (window.location.href = "/analytics")}
                 style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", borderRadius: 10, border: "1px solid #E2E4E9", background: "#FEF6E7", color: "#865503", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
               >
-                📊 Financial Reports
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="20" x2="18" y2="10"/>
+                  <line x1="12" y1="20" x2="12" y2="4"/>
+                  <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+                <span>Financial Reports</span>
               </button>
             </div>
           </div>
@@ -804,8 +868,24 @@ export default function TailoraDashboard() {
                     <div className="tailora-spinner" />
                   </div>
                 ) : paginatedOrders.length === 0 ? (
-                  <div style={{ padding: "32px 16px", textAlign: "center", color: "#667185", fontSize: 14, background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 10, width: "100%" }}>
-                    No orders found.
+                  <div style={{ padding: "32px 16px", textAlign: "center", color: "#475569", fontSize: 14, background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 10, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                    {hasActiveFilters ? (
+                      <>
+                        <div style={{ fontWeight: 700, color: "#1E293B" }}>No orders match your active filters</div>
+                        <div style={{ fontSize: 13, color: "#64748B" }}>Try clearing search or filter options.</div>
+                        <button type="button" onClick={resetAllFilters} style={{ padding: "8px 16px", background: "#1E293B", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                          Reset All Filters
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div style={{ fontWeight: 700, color: "#1E293B" }}>No orders found</div>
+                        <div style={{ fontSize: 13, color: "#64748B" }}>Add your first client to start taking orders.</div>
+                        <button type="button" onClick={() => openAddClient()} style={{ padding: "8px 16px", background: "#121212", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                          + Add New Client
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   paginatedOrders.map((order) => {
@@ -861,8 +941,60 @@ export default function TailoraDashboard() {
                       </tr>
                     ) : paginatedOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={8} style={{ padding: "42px 24px", textAlign: "center", color: "#667185", fontSize: 14 }}>
-                          No orders found matching the filter criteria.
+                        <td colSpan={8} style={{ padding: "48px 24px", textAlign: "center", color: "#667185", fontSize: 14 }}>
+                          {hasActiveFilters ? (
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                              <div style={{ fontSize: 15, fontWeight: 700, color: "#1E293B" }}>
+                                No orders match your active filter criteria
+                              </div>
+                              <div style={{ fontSize: 13, color: "#64748B", maxWidth: 400 }}>
+                                Try adjusting your search query, status, gender, outfit, or date range filters.
+                              </div>
+                              <button
+                                type="button"
+                                onClick={resetAllFilters}
+                                style={{
+                                  marginTop: 6,
+                                  padding: "8px 18px",
+                                  background: "#1E293B",
+                                  color: "#FFFFFF",
+                                  border: "none",
+                                  borderRadius: 8,
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  cursor: "pointer"
+                                }}
+                              >
+                                Reset All Filters
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+                              <div style={{ fontSize: 15, fontWeight: 700, color: "#1E293B" }}>
+                                No orders recorded yet
+                              </div>
+                              <div style={{ fontSize: 13, color: "#64748B", maxWidth: 400 }}>
+                                Start by adding a client profile to manage measurements, orders, and delivery schedules.
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => openAddClient()}
+                                style={{
+                                  marginTop: 6,
+                                  padding: "8px 18px",
+                                  background: "#121212",
+                                  color: "#FFFFFF",
+                                  border: "none",
+                                  borderRadius: 8,
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  cursor: "pointer"
+                                }}
+                              >
+                                + Add New Client
+                              </button>
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ) : (

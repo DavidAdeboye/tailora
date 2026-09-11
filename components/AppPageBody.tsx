@@ -46,7 +46,7 @@ export function PageSectionHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="tailora-page-header-row" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
+    <div className="tailora-page-header-row" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32, position: "relative", zIndex: 50 }}>
       <div className="tailora-page-header-text" style={{ minWidth: 0 }}>
         <h1 className="tailora-page-title" style={{ margin: "0 0 8px", fontFamily: "var(--font-sora)", fontWeight: 600, fontSize: 24, color: "#121212" }}>
           {title}

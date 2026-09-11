@@ -362,8 +362,11 @@ export default function AddClientModal({
                 {form.avatarUrl ? (
                   <img src={form.avatarUrl} alt="Avatar Preview" style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover", border: "1px solid #E2E4E9" }} />
                 ) : (
-                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#F2F4F7", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: "#667185", fontWeight: 700 }}>
-                    👤
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#F2F4F7", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748B" }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
                   </div>
                 )}
                 <input
