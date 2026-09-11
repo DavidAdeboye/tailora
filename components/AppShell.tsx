@@ -17,11 +17,18 @@ const PATH_TO_MENU: Record<string, string> = {
   "/team": "Team Collaboration",
   "/settings": "Settings",
   "/help": "Help & Support",
+  "/analytics": "Analytics",
+  "/notes": "Notes",
 };
 
-export default function AppShell({ children }: { children: ReactNode }) {
+interface AppShellProps {
+  children: ReactNode;
+  activeItem?: string;
+}
+
+export default function AppShell({ children, activeItem }: AppShellProps) {
   const pathname = usePathname() ?? "";
-  const activeMenu = PATH_TO_MENU[pathname] ?? "Dashboard";
+  const activeMenu = activeItem ?? PATH_TO_MENU[pathname] ?? "Dashboard";
 
   const [showAddClient, setShowAddClient] = useState(false);
   const [showInvite, setShowInvite] = useState(false);

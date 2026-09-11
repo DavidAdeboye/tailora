@@ -399,7 +399,7 @@ export default function ClientMeasurementsModal({
               style={{
                 display: "flex",
                 alignItems: "center",
-                justify: "space-between",
+                justifyContent: "space-between",
                 background: "#F8FAFC",
                 border: "1px solid #E2E8F0",
                 borderRadius: 10,
