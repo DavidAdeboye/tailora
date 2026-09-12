@@ -235,6 +235,7 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
 
   return (
     <section
+      id="home"
       className={`tailora-landing-hero w-full rounded-t-none rounded-b-[100px] mq800:rounded-b-[60px] mq450:rounded-b-[40px] bg-[#ffedd4] flex flex-col items-center pt-6 px-0 pb-20 mq800:pb-14 mq450:pb-10 box-border relative isolate gap-0 max-w-full overflow-hidden ${className}`}
     >
       {/* Keyframes injected inline — keeps animation self-contained */}
@@ -352,10 +353,19 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
 
             {/* Nav links */}
             <div className="flex items-center gap-6 mq960:hidden mq800:hidden">
-              {["Home", "Features", "Pricing", "How It Works"].map((item) => (
-                <div key={item} className="flex items-center justify-center py-0 px-2 cursor-pointer">
-                  <div className="relative leading-[22px] font-medium">{item}</div>
-                </div>
+              {[
+                { label: "Home", href: "#home" },
+                { label: "Features", href: "#features" },
+                { label: "Pricing", href: "#pricing" },
+                { label: "How It Works", href: "#how-it-works" },
+              ].map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  className="flex items-center justify-center py-0 px-2 cursor-pointer no-underline text-foundation-gray-darker hover:text-foundation-primary-normal transition-colors"
+                >
+                  <span className="relative leading-[22px] font-medium">{item.label}</span>
+                </a>
               ))}
             </div>
 
@@ -373,7 +383,7 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
               ) : (
                 <>
                   <div className="flex items-center justify-center py-0 px-2 cursor-pointer mq960:hidden mq800:hidden">
-                    <div className="relative leading-[22px] font-medium"><a href="/login">Sign in </a></div>
+                    <div className="relative leading-[22px] font-medium"><a href="/login" className="no-underline text-foundation-gray-darker hover:text-foundation-primary-normal transition-colors">Sign in</a></div>
                   </div>
                   <Button property1="Default" className="mq960:hidden mq800:hidden" />
                 </>
@@ -392,9 +402,19 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
           {/* Mobile menu dropdown */}
           <div className={`w-full overflow-hidden transition-all duration-300 ease-in-out hidden mq960:block ${isMobileMenuOpen ? "max-h-[400px] opacity-100" : "max-h-0 opacity-0"}`}>
             <div className="pt-3 pb-2 px-1 flex flex-col gap-1">
-              {["Home", "Features", "Pricing", "How It Works"].map((item) => (
-                <a key={item} href="#" className="flex items-center px-4 py-3 rounded-xl text-sm font-medium font-[Satoshi] text-foundation-gray-darker hover:bg-foundation-gray-lightest transition-colors">
-                  {item}
+              {[
+                { label: "Home", href: "#home" },
+                { label: "Features", href: "#features" },
+                { label: "Pricing", href: "#pricing" },
+                { label: "How It Works", href: "#how-it-works" },
+              ].map((item) => (
+                <a
+                  key={item.label}
+                  href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center px-4 py-3 rounded-xl text-sm font-medium font-[Satoshi] text-foundation-gray-darker hover:bg-foundation-gray-lightest transition-colors"
+                >
+                  {item.label}
                 </a>
               ))}
               <div className="h-px bg-foundation-gray-light mx-2 my-1" />
@@ -418,24 +438,24 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
       </div>
 
       {/* Floating decorative icons — desktop */}
-      <Image className="absolute top-[219px] left-[207px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-14@2x.png" style={{ transform: "rotate(30.11deg)" }} />
-      <Image className="absolute top-[334px] left-[179px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-15@2x.png" style={{ transform: "rotate(-42.28deg)" }} />
-      <Image className="absolute top-[445px] left-[257px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-24@2x.png" style={{ transform: "rotate(-27.72deg)" }} />
-      <Image className="absolute top-[219px] right-[207px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-12@2x.png" />
-      <Image className="absolute top-[333px] right-[167px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-18@2x.png" style={{ transform: "rotate(-26.51deg)" }} />
-      <Image className="absolute top-[445px] right-[256px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-21@2x.png" />
+      <Image className="tailora-float-1 absolute top-[219px] left-[207px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-14@2x.png" />
+      <Image className="tailora-float-2 absolute top-[334px] left-[179px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-15@2x.png" />
+      <Image className="tailora-float-3 absolute top-[445px] left-[257px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-24@2x.png" />
+      <Image className="tailora-float-4 absolute top-[219px] right-[207px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-12@2x.png" />
+      <Image className="tailora-float-5 absolute top-[333px] right-[167px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-18@2x.png" />
+      <Image className="tailora-float-6 absolute top-[445px] right-[256px] w-[60px] h-[60px] object-contain z-[1] opacity-20 pointer-events-none mq1125:hidden" loading="lazy" width={60} height={60} sizes="100vw" alt="" src="/image-21@2x.png" />
 
       {/* Floating decorative icons — mobile / tablet hero */}
       <div
         className="hidden mq1125:block absolute left-0 right-0 top-[68px] h-[340px] mq800:top-[60px] mq800:h-[300px] mq450:top-[52px] mq450:h-[280px] pointer-events-none z-[1]"
         aria-hidden
       >
-        <Image className="absolute top-2 left-3 w-12 h-12 object-contain opacity-30 mq450:w-11 mq450:h-11 mq450:left-2" loading="lazy" width={48} height={48} sizes="48px" alt="" src="/image-14@2x.png" style={{ transform: "rotate(30.11deg)" }} />
-        <Image className="absolute top-[92px] left-5 w-11 h-11 object-contain opacity-30 mq450:top-[80px] mq450:left-3" loading="lazy" width={44} height={44} sizes="44px" alt="" src="/image-15@2x.png" style={{ transform: "rotate(-42.28deg)" }} />
-        <Image className="absolute top-[172px] left-2 w-10 h-10 object-contain opacity-30 mq450:top-[156px]" loading="lazy" width={40} height={40} sizes="40px" alt="" src="/image-24@2x.png" style={{ transform: "rotate(-27.72deg)" }} />
-        <Image className="absolute top-2 right-3 w-12 h-12 object-contain opacity-30 mq450:w-11 mq450:h-11 mq450:right-2" loading="lazy" width={48} height={48} sizes="48px" alt="" src="/image-12@2x.png" />
-        <Image className="absolute top-[92px] right-5 w-11 h-11 object-contain opacity-30 mq450:top-[80px] mq450:right-3" loading="lazy" width={44} height={44} sizes="44px" alt="" src="/image-18@2x.png" style={{ transform: "rotate(-26.51deg)" }} />
-        <Image className="absolute top-[172px] right-2 w-10 h-10 object-contain opacity-30 mq450:top-[156px]" loading="lazy" width={40} height={40} sizes="40px" alt="" src="/image-21@2x.png" />
+        <Image className="tailora-float-1 absolute top-2 left-3 w-12 h-12 object-contain opacity-30 mq450:w-11 mq450:h-11 mq450:left-2" loading="lazy" width={48} height={48} sizes="48px" alt="" src="/image-14@2x.png" />
+        <Image className="tailora-float-2 absolute top-[92px] left-5 w-11 h-11 object-contain opacity-30 mq450:top-[80px] mq450:left-3" loading="lazy" width={44} height={44} sizes="44px" alt="" src="/image-15@2x.png" />
+        <Image className="tailora-float-3 absolute top-[172px] left-2 w-10 h-10 object-contain opacity-30 mq450:top-[156px]" loading="lazy" width={40} height={40} sizes="40px" alt="" src="/image-24@2x.png" />
+        <Image className="tailora-float-4 absolute top-2 right-3 w-12 h-12 object-contain opacity-30 mq450:w-11 mq450:h-11 mq450:right-2" loading="lazy" width={48} height={48} sizes="48px" alt="" src="/image-12@2x.png" />
+        <Image className="tailora-float-5 absolute top-[92px] right-5 w-11 h-11 object-contain opacity-30 mq450:top-[80px] mq450:right-3" loading="lazy" width={44} height={44} sizes="44px" alt="" src="/image-18@2x.png" />
+        <Image className="tailora-float-6 absolute top-[172px] right-2 w-10 h-10 object-contain opacity-30 mq450:top-[156px]" loading="lazy" width={40} height={40} sizes="40px" alt="" src="/image-21@2x.png" />
       </div>
 
       {/* ── Hero content ── */}
@@ -443,7 +463,7 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
         {/* Badge */}
         <div className="rounded-[10px] bg-[#fdf6ec] border-[#ffa82b] border-solid border-[0.5px] flex items-center justify-center py-0 px-[7px]">
           <div className="flex items-center gap-1">
-            <div className="h-1.5 w-1.5 rounded-[50%] bg-[#ffa82b]" />
+            <div className="tailora-badge-dot h-1.5 w-1.5 rounded-[50%] bg-[#ffa82b]" />
             <div className="relative text-xs leading-5 font-medium font-[Satoshi] text-foundation-primary-normal">{`FASHION CRM`}</div>
           </div>
         </div>
@@ -683,6 +703,7 @@ const Desktop3 = ({ className = "" }: { className?: string }) => {
 
   return (
     <section
+      id="features"
       className={`bg-foundation-secondary-light-active overflow-hidden flex flex-col items-center py-[100px] px-[184px] box-border max-w-full text-center text-xs text-foundation-primary-normal font-[Satoshi] mq1125:px-[80px] mq1125:pt-[65px] mq1125:pb-[65px] mq960:px-10 mq800:py-[60px] mq450:px-4 mq450:py-[48px] ${className}`}
     >
       <div className="w-full max-w-[1072px] flex flex-col items-center gap-10 mq800:gap-6 mq450:gap-5">
@@ -729,6 +750,7 @@ const Desktop3 = ({ className = "" }: { className?: string }) => {
 const Desktop2 = ({ className = "" }: { className?: string }) => {
   return (
     <main
+      id="how-it-works"
       className={`w-full bg-foundation-secondary-light-active overflow-hidden flex flex-col items-start py-[100px] px-[113px] box-border max-w-full text-center text-xs text-foundation-primary-normal font-[Satoshi] mq800:py-[60px] mq800:px-10 mq450:px-4 mq450:py-[48px] mq1350:pt-[65px] mq1350:pb-[65px] mq1350:box-border ${className}`}
     >
       <div className="self-stretch flex flex-col items-center gap-[62px] max-w-full mq800:gap-8 mq450:gap-6">
@@ -954,163 +976,168 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
 
 // Desktop - Pricing Section
 const Desktop = ({ className = "" }: { className?: string }) => {
-  const CheckIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
-      <circle cx="11" cy="11" r="11" fill="#E57301" />
-      <path d="M6.5 11L9.5 14L15.5 8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+  const DarkTickIcon = () => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+      <path opacity="0.4" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill="#121212" />
+      <path d="M10.58 15.5801C10.38 15.5801 10.19 15.5001 10.05 15.3601L7.22 12.5301C6.93 12.2401 6.93 11.7601 7.22 11.4701C7.51 11.1801 7.99 11.1801 8.28 11.4701L10.58 13.7701L15.72 8.6301C16.01 8.3401 16.49 8.3401 16.78 8.6301C17.07 8.9201 17.07 9.4001 16.78 9.6901L11.11 15.3601C10.97 15.5001 10.78 15.5801 10.58 15.5801Z" fill="#121212" />
     </svg>
   );
 
   return (
     <section
-      className={`self-stretch bg-[#FDF6EC] overflow-hidden flex flex-col items-center justify-center pt-[100px] pb-[60px] px-5 mq800:pt-[60px] mq800:pb-10 ${className}`}
+      id="pricing"
+      className={`self-stretch bg-[#FEFCF9] overflow-hidden flex flex-col items-center justify-center pt-[90px] pb-[60px] px-5 mq1125:px-10 mq1440:px-[263px] box-border max-w-full text-center ${className}`}
     >
-      <div className="w-full max-w-[1052px] mx-auto flex flex-col items-center gap-10 mq800:gap-8">
-        {/* Section Header */}
-        <div className="flex flex-col items-center gap-3 text-center">
-          {/* Satoshi Medium 12px */}
-          <span
-            className="bg-[#FDF6EC] border border-[#E57301] rounded-full px-3.5 py-1 text-xs font-medium text-[#121212] uppercase tracking-[0.02em] transition-transform duration-200 hover:scale-105"
-            style={{ fontFamily: "Satoshi, sans-serif" }}
-          >
-            PRICING
-          </span>
-          {/* Sora Bold 48px */}
-          <h2
-            className="m-0 text-[48px] leading-[56px] font-bold text-[#121212] mq800:text-[32px] mq800:leading-[40px] mq450:text-[24px] mq450:leading-[32px]"
-            style={{ fontFamily: "Sora, sans-serif" }}
-          >
-            Simple <span className="text-[#E57301]" style={{ fontFamily: "Sora, sans-serif" }}>pricing</span> for every fashion business
+      <div className="w-full max-w-[1440px] mx-auto flex flex-col items-center gap-9 mq800:gap-8">
+        {/* Header Block (648px max-width) */}
+        <div className="w-[648px] max-w-full flex flex-col items-center gap-4 text-center">
+          {/* Badge */}
+          <div className="rounded-[10px] bg-[#FDF6EC] border border-[rgba(229,115,1,0.8)] border-solid flex items-center justify-center py-0.5 px-3">
+            <div className="flex items-center gap-1.5">
+              <div className="h-1.5 w-1.5 rounded-full bg-[rgba(229,115,1,0.8)]" />
+              <div className="relative text-xs leading-5 font-medium font-[Satoshi] text-[#121212]">
+                Pricing
+              </div>
+            </div>
+          </div>
+
+          {/* Heading */}
+          <h2 className="m-0 self-stretch text-[40px] leading-[48px] font-bold font-[Sora] text-[#121212] mq800:text-[32px] mq800:leading-[38px] mq450:text-2xl mq450:leading-[30px]">
+            <span>Atelier-Ready </span>
+            <span className="text-[rgba(229,115,1,0.8)]">Pricing</span>
           </h2>
+
+          {/* Subheading */}
+          <p className="m-0 self-stretch text-base leading-6 font-normal font-[Satoshi] text-[#696969]">
+            Simple, transparent plans for every scale of fashion business.
+          </p>
         </div>
 
-        {/* Pricing Cards Row — 1052px max container, 324px cards */}
-        <div className="flex flex-row justify-center items-stretch gap-6 w-full max-w-[1052px] mq960:flex-col mq960:items-center text-left">
+        {/* Cards Row (276px fixed cards, slightly wider 52px gap between cards) */}
+        <div className="flex flex-row justify-center items-stretch gap-[52px] w-full max-w-[1052px] mq800:flex-col mq800:items-center text-left">
           {/* Card 1 — Starter */}
-          <div className="tailora-reveal-item bg-[#FFFFFF] border border-[#D8D8D8] rounded-[28px] py-8 px-6 w-[324px] max-w-full flex flex-col justify-between shadow-sm shrink-0 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-            <div>
-              {/* Sora SemiBold 18px */}
-              <h3 className="text-lg font-semibold text-[#121212] m-0" style={{ fontFamily: "Sora, sans-serif" }}>Starter</h3>
-              {/* Satoshi Regular 12px */}
-              <p className="text-xs font-normal text-[#696969] mt-1.5 mb-5 leading-relaxed min-h-[36px]" style={{ fontFamily: "Satoshi, sans-serif" }}>
-                Ideal for individual fashion designers.
-              </p>
-              <div className="flex items-baseline gap-1 my-5">
-                {/* Sora Bold 32px */}
-                <span className="text-[32px] font-bold text-[#121212] tracking-tight" style={{ fontFamily: "Sora, sans-serif" }}>₦5,000</span>
-                {/* Sora Regular 14px */}
-                <span className="text-sm font-normal text-[#8E8E93]" style={{ fontFamily: "Sora, sans-serif" }}>/month</span>
-              </div>
-              <a href="/signup" className="block w-full mb-6">
-                {/* Satoshi Medium 14px */}
-                <button
-                  className="w-full cursor-pointer bg-[#121212] text-white border-none rounded-full py-2.5 text-sm font-medium transition-all duration-150 hover:bg-[#2a2a2a] hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.96] active:duration-[40ms]"
-                  style={{ fontFamily: "Satoshi, sans-serif" }}
-                >
-                  Get started
-                </button>
-              </a>
-              <div className="flex flex-col gap-3">
-                {["Up to 50 clients", "Unlimited measurements", "Basic order tracking", "Email support", "1 team member"].map((item) => (
-                  /* Satoshi Regular 12px */
-                  <div key={item} className="flex items-center gap-2.5 text-xs font-normal text-[#2C2C2E]" style={{ fontFamily: "Satoshi, sans-serif" }}>
-                    <CheckIcon />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Card 2 — Professional (Most popular) */}
-          <div className="tailora-reveal-item bg-[#121212] border-2 border-[#E57301] rounded-[28px] py-8 px-6 w-[324px] max-w-full flex flex-col justify-between relative shadow-lg shrink-0 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
-            {/* Satoshi Medium 12px */}
-            <span
-              className="absolute -top-[13px] left-1/2 -translate-x-1/2 bg-[#E57301] text-white text-xs font-medium px-3.5 py-0.5 rounded-full shadow-sm whitespace-nowrap transition-transform duration-200 hover:scale-105"
-              style={{ fontFamily: "Satoshi, sans-serif" }}
+          <div className="tailora-reveal-item w-[276px] max-w-full shrink-0 border border-[#121212] rounded-[24px] overflow-hidden flex flex-col justify-between bg-[#FEFCF9] transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+            {/* Gradient Header */}
+            <div
+              className="py-[22px] px-[23px] border-b border-[#121212] flex flex-col items-start gap-1 text-left font-[Sora]"
+              style={{
+                background: "linear-gradient(228.95deg, rgba(253, 246, 236, 0) 29.3%, #FDF6EC 108.4%)",
+              }}
             >
-              Most popular
-            </span>
-            <div>
-              {/* Sora SemiBold 18px */}
-              <h3 className="text-lg font-semibold text-white m-0" style={{ fontFamily: "Sora, sans-serif" }}>Professional</h3>
-              {/* Satoshi Regular 12px */}
-              <p className="text-xs font-normal text-[#A1A1A1] mt-1.5 mb-5 leading-relaxed min-h-[36px]" style={{ fontFamily: "Satoshi, sans-serif" }}>
-                Perfect for growing tailoring businesses.
-              </p>
-              <div className="flex items-baseline gap-1 my-5">
-                {/* Sora Bold 32px */}
-                <span className="text-[32px] font-bold text-white tracking-tight" style={{ fontFamily: "Sora, sans-serif" }}>₦10,000</span>
-                {/* Sora Regular 14px */}
-                <span className="text-sm font-normal text-[#A1A1A1]" style={{ fontFamily: "Sora, sans-serif" }}>/month</span>
+              <div className="self-stretch text-base font-normal text-[#121212]">
+                Starter
               </div>
-              <a href="/signup" className="block w-full mb-6">
-                {/* Satoshi Medium 14px */}
+              <div className="self-stretch flex flex-col items-start gap-1 text-[32px]">
+                <div className="self-stretch relative leading-[48px] text-[#121212]">
+                  <b className="font-bold">₦5,000</b>
+                  <span className="text-base font-normal"> /month</span>
+                </div>
+                <div className="self-stretch text-xs font-medium font-[Satoshi] text-[#696969]">
+                  Basic features for everyone
+                </div>
+              </div>
+            </div>
+
+            {/* Body — compact gap-8 (32px) for balanced height */}
+            <div className="pt-6 px-[23px] pb-[22px] flex flex-col justify-between flex-1 gap-8 text-sm mq450:gap-6">
+              <div className="flex flex-col items-start gap-3">
+                <div className="flex flex-col items-start gap-1">
+                  <div className="self-stretch text-sm font-normal font-[Sora] text-[#121212]">
+                    Features
+                  </div>
+                  <div className="self-stretch text-xs font-normal font-[Satoshi] text-[#555960]">
+                    <span>Everything in </span>
+                    <b className="font-bold text-[#121212]">Starter plan</b>
+                  </div>
+                </div>
+
+                <div className="self-stretch flex flex-col items-start gap-3 text-xs font-[Satoshi] text-[#121212]">
+                  {[
+                    "Up to 20 clients",
+                    "Unlimited measurements",
+                    "Core measurement tools",
+                    "Basic order tracking",
+                    "1 team member",
+                  ].map((item) => (
+                    <div key={item} className="self-stretch flex items-center gap-3">
+                      <DarkTickIcon />
+                      <div className="relative leading-5 font-normal">{item}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <a href="/signup" className="block w-full">
                 <button
-                  className="w-full cursor-pointer bg-[#E57301] text-white border-none rounded-full py-2.5 text-sm font-medium transition-all duration-150 hover:bg-[#d06700] hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:scale-[0.96] active:duration-[40ms]"
-                  style={{ fontFamily: "Satoshi, sans-serif" }}
+                  className="w-full cursor-pointer border border-[#121212] py-2.5 px-4 bg-[#121212] text-white rounded-[40px] flex items-center justify-center text-sm font-medium font-[Satoshi] transition-all duration-150 hover:bg-[#2a2a2a] active:scale-[0.96] active:duration-[40ms]"
                 >
-                  Get started
+                  Choose starter
                 </button>
               </a>
-              <div className="flex flex-col gap-3">
-                {[
-                  "Up to 500 clients",
-                  "Advanced order tracking",
-                  "Priority support",
-                  "Up to 10 team members",
-                  "Smart scheduling",
-                  "Business insights dashboard",
-                ].map((item) => (
-                  /* Satoshi Regular 12px */
-                  <div key={item} className="flex items-center gap-2.5 text-xs font-normal text-[#D1D1D1]" style={{ fontFamily: "Satoshi, sans-serif" }}>
-                    <CheckIcon />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
 
-          {/* Card 3 — Business */}
-          <div className="tailora-reveal-item bg-[#FFFFFF] border border-[#D8D8D8] rounded-[28px] py-8 px-6 w-[324px] max-w-full flex flex-col justify-between shadow-sm shrink-0 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-            <div>
-              {/* Sora SemiBold 18px */}
-              <h3 className="text-lg font-semibold text-[#121212] m-0" style={{ fontFamily: "Sora, sans-serif" }}>Business</h3>
-              {/* Satoshi Regular 12px */}
-              <p className="text-xs font-normal text-[#696969] mt-1.5 mb-5 leading-relaxed min-h-[36px]" style={{ fontFamily: "Satoshi, sans-serif" }}>
-                Designed for fashion houses and larger teams.
-              </p>
-              <div className="flex items-baseline gap-1 my-5">
-                {/* Sora Bold 32px */}
-                <span className="text-[32px] font-bold text-[#121212] tracking-tight" style={{ fontFamily: "Sora, sans-serif" }}>₦50,000</span>
-                {/* Sora Regular 14px */}
-                <span className="text-sm font-normal text-[#8E8E93]" style={{ fontFamily: "Sora, sans-serif" }}>/month</span>
+          {/* Card 2 — Professional */}
+          <div className="tailora-reveal-item w-[276px] max-w-full shrink-0 border border-[#121212] rounded-[24px] overflow-hidden flex flex-col justify-between bg-[#FEFCF9] transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+            {/* Gradient Header */}
+            <div
+              className="py-[22px] px-[23px] border-b border-[#121212] flex flex-col items-start gap-1 text-left font-[Sora]"
+              style={{
+                background: "linear-gradient(228.95deg, rgba(253, 246, 236, 0) 29.3%, #FDF6EC 108.4%)",
+              }}
+            >
+              <div className="self-stretch text-base font-normal text-[#121212]">
+                Professional
               </div>
-              <a href="/signup" className="block w-full mb-6">
-                {/* Satoshi Medium 14px */}
+              <div className="self-stretch flex flex-col items-start gap-1 text-[32px]">
+                <div className="self-stretch relative leading-[48px] text-[#121212]">
+                  <b className="font-bold">₦10,000</b>
+                  <span className="text-base font-normal"> /month</span>
+                </div>
+                <div className="self-stretch text-xs font-medium font-[Satoshi] text-[#696969]">
+                  Professional features for everyone
+                </div>
+              </div>
+            </div>
+
+            {/* Body — compact gap-8 (32px) for balanced height */}
+            <div className="pt-6 px-[23px] pb-[22px] flex flex-col justify-between flex-1 gap-8 text-sm mq450:gap-6">
+              <div className="flex flex-col items-start gap-3">
+                <div className="flex flex-col items-start gap-1">
+                  <div className="self-stretch text-sm font-normal font-[Sora] text-[#121212]">
+                    Features
+                  </div>
+                  <div className="self-stretch text-xs font-normal font-[Satoshi] text-[#555960]">
+                    <span>Everything in </span>
+                    <b className="font-bold text-[#121212]">Professional plan</b>
+                  </div>
+                </div>
+
+                <div className="self-stretch flex flex-col items-start gap-3 text-xs font-[Satoshi] text-[#121212]">
+                  {[
+                    "Up to 50 clients",
+                    "Unlimited measurements",
+                    "Advanced order tracking",
+                    "Core measurement tools",
+                    "Smart scheduling",
+                    "Basic order tracking",
+                    "5 team members",
+                  ].map((item) => (
+                    <div key={item} className="self-stretch flex items-center gap-3">
+                      <DarkTickIcon />
+                      <div className="relative leading-5 font-normal">{item}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <a href="/signup" className="block w-full">
                 <button
-                  className="w-full cursor-pointer bg-[#121212] text-white border-none rounded-full py-2.5 text-sm font-medium transition-all duration-150 hover:bg-[#2a2a2a] hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.96] active:duration-[40ms]"
-                  style={{ fontFamily: "Satoshi, sans-serif" }}
+                  className="w-full max-w-[217px] mx-auto cursor-pointer border border-[#121212] py-2.5 px-6 bg-transparent text-[#121212] rounded-[40px] flex items-center justify-center text-sm font-normal font-[Satoshi] transition-all duration-150 hover:bg-[#121212] hover:text-white active:scale-[0.96] active:duration-[40ms]"
                 >
-                  Get started
+                  Choose professional
                 </button>
               </a>
-              <div className="flex flex-col gap-3">
-                {[
-                  "Unlimited clients",
-                  "Full order management",
-                  "Dedicated support",
-                  "Advanced analytics",
-                  "Custom integrations",
-                ].map((item) => (
-                  /* Satoshi Regular 12px */
-                  <div key={item} className="flex items-center gap-2.5 text-xs font-normal text-[#2C2C2E]" style={{ fontFamily: "Satoshi, sans-serif" }}>
-                    <CheckIcon />
-                    <span>{item}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
@@ -1245,7 +1272,7 @@ export default function Page() {
           }
         });
       },
-      { threshold: 0.12, rootMargin: "0px 0px -40px 0px" }
+      { threshold: 0.05, rootMargin: "0px 0px -20px 0px" }
     );
 
     reveals.forEach((el) => observer.observe(el));

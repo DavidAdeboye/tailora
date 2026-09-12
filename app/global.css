@@ -12,6 +12,11 @@
   --font-inter: "Inter", system-ui, sans-serif;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 90px;
+}
+
 body {
   @apply leading-[normal] m-0;
   font-family: var(--font-satoshi);
