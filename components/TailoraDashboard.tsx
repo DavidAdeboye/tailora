@@ -46,6 +46,19 @@ function formatClientId(id: string) {
   return `CLI-${part.toUpperCase()}`;
 }
 
+function getInitials(name: string) {
+  if (!name) return "?";
+  return name.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]).join("").toUpperCase();
+}
+
+function PhoneIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M6.5 3.5H9.1L10.2 7.3L8.4 8.4C9.2 10.4 10.6 11.8 12.6 12.6L13.7 10.8L17.5 11.9V14.5C17.5 15 17.1 15.4 16.6 15.4C10.9 15.9 6.1 11.1 6.6 5.4C6.6 4.9 7 4.5 7.5 4.5H6.5V3.5Z" stroke="#667185" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 // initialOrders removed: will load from Supabase at runtime
 
 
@@ -318,7 +331,7 @@ export default function TailoraDashboard() {
 
   const handleSaveEdit = async (updated: ClientData) => {
     try {
-      const { error } = await supabase
+      const { error: clientErr } = await supabase
         .from('clients')
         .update({
           name: updated.name,
@@ -330,18 +343,47 @@ export default function TailoraDashboard() {
         })
         .eq('id', updated.id);
       
-      if (error) throw error;
+      if (clientErr) throw clientErr;
+
+      let statusTypeVal: OrderStatusType = 'collected';
+      const normalized = updated.status.toLowerCase();
+      if (normalized.includes('overdue')) statusTypeVal = 'overdue';
+      else if (normalized.includes('due') || normalized.includes('pending') || normalized.includes('progress')) statusTypeVal = 'due';
+
+      // Update orders table so dashboard orders and clients remain in sync
+      if (updated.orderId) {
+        await supabase
+          .from('orders')
+          .update({
+            client_name: updated.name,
+            phone: updated.phone,
+            gender: updated.gender,
+            outfit: updated.outfit,
+            status: updated.status,
+            status_type: statusTypeVal
+          })
+          .eq('id', updated.orderId);
+      } else {
+        await supabase
+          .from('orders')
+          .update({
+            client_name: updated.name,
+            phone: updated.phone,
+            gender: updated.gender,
+            outfit: updated.outfit,
+            status: updated.status,
+            status_type: statusTypeVal
+          })
+          .eq('client_id', updated.id);
+      }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("tailora_client_updated"));
+      }
 
       // Update local state
       setOrders(prev => prev.map(o => {
-        if (o.id === updated.id) {
-          const rawStatus = updated.status;
-          let statusTypeVal: OrderStatusType = 'collected';
-          const normalized = rawStatus.toLowerCase();
-          if (normalized.includes('overdue')) statusTypeVal = 'overdue';
-          else if (normalized.includes('due')) statusTypeVal = 'due';
-          else if (normalized.includes('pending')) statusTypeVal = 'due';
-
+        if (o.id === updated.id || o.clientId === updated.id || o.id === updated.orderId) {
           return {
             ...o,
             client: updated.name,
@@ -349,7 +391,7 @@ export default function TailoraDashboard() {
             email: updated.email,
             gender: updated.gender,
             outfit: updated.outfit,
-            status: rawStatus,
+            status: updated.status,
             statusType: statusTypeVal
           };
         }
@@ -531,7 +573,7 @@ export default function TailoraDashboard() {
           let ordersList = validOrdersData.map((o: any) => {
             const meas = o.measurements || {};
             const clientInfo = clientMap[o.client_id];
-            const rawStatus = o.status || clientInfo?.status || 'Due';
+            const rawStatus = clientInfo?.status || o.status || 'Collected';
             let statusTypeVal: OrderStatusType = 'collected';
             const normalized = rawStatus.toLowerCase();
             if (normalized.includes('overdue')) {
@@ -600,10 +642,11 @@ export default function TailoraDashboard() {
           const clientIdsWithOrders = new Set(validOrdersData.map((o: any) => o.client_id).filter(Boolean));
           const orphanClients = Object.values(clientMap).filter((c: any) => !clientIdsWithOrders.has(c.id));
           orphanClients.forEach((c: any) => {
-            const rawStatus = c.status ?? 'Pending';
-            let statusTypeVal: OrderStatusType = 'due';
+            const rawStatus = c.status ?? 'Collected';
+            let statusTypeVal: OrderStatusType = 'collected';
             const normalized = rawStatus.toLowerCase();
             if (normalized.includes('overdue')) statusTypeVal = 'overdue';
+            else if (normalized.includes('due') || normalized.includes('pending') || normalized.includes('progress')) statusTypeVal = 'due';
             else if (normalized.includes('collected') || normalized.includes('done') || normalized.includes('completed')) statusTypeVal = 'collected';
 
             ordersList.push({
@@ -798,127 +841,143 @@ export default function TailoraDashboard() {
             </div>
 
             <div className="tailora-data-panel tailora-orders-card" style={{ background: "#FFFFFF", border: "1px solid #E4E7EC", borderRadius: 10, boxShadow: "0px 4px 4px -2px rgba(0,0,0,0.04)", overflow: "hidden", maxWidth: "100%" }}>
-            <div className="tailora-table-toolbar" style={{ padding: 16, borderBottom: "1px solid #E4E7EC" }}>
-  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-    <div className="tailora-table-search" style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", width: 291, boxShadow: "0px 2px 4px -2px rgba(0,0,0,0.04)" }}>
-      <SearchIcon />
-      <input
-        type="search"
-        placeholder="Search here..."
-        value={searchQuery}
-        onChange={e => setSearchQuery(e.target.value)}
-        style={{ border: "none", outline: "none", fontSize: 14, color: "#1A1A1A", background: "transparent", flex: 1 }}
-      />
-    </div>
-    <button type="button" className="tailora-table-filter-btn" onClick={() => { setFilterPanelOpen(o => !o); setDatePanelOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#FFFFFF", border: "1px solid #D0D5DD", borderRadius: 8, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#344054" }}>
-      <FilterIcon />Filter
-      {(filterGender || filterStatus || filterOutfit) && (
-        <span style={{ background: "#EB5017", color: "#fff", borderRadius: 10, padding: "0 6px", fontSize: 11, fontWeight: 700 }}>
-          {[filterGender, filterStatus, filterOutfit].filter(Boolean).length}
-        </span>
-      )}
-    </button>
-    <button type="button" onClick={() => { setDatePanelOpen(o => !o); setFilterPanelOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: "#FFFFFF", border: "1px solid #D0D5DD", borderRadius: 6, cursor: "pointer", fontSize: 14, fontWeight: 700, color: "#344054" }}>
-      <CalendarIcon /><span>Select dates</span><ChevronDownIcon />
-    </button>
-  </div>
+            <div className="tailora-table-toolbar tailora-clients-toolbar">
+              <label className="tailora-table-search tailora-clients-search">
+                <SearchIcon />
+                <input
+                  type="search"
+                  className="tailora-clients-search-input"
+                  placeholder="Search here..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  aria-label="Search orders"
+                />
+              </label>
+              <div className="tailora-clients-toolbar-actions">
+                <button type="button" className="tailora-table-filter-btn tailora-clients-filter-btn" onClick={() => { setFilterPanelOpen(o => !o); setDatePanelOpen(false); }}>
+                  <FilterIcon />
+                  Filter
+                  {(filterGender || filterStatus || filterOutfit) && (
+                    <span style={{ background: "#EB5017", color: "#fff", borderRadius: 10, padding: "0 6px", fontSize: 11, fontWeight: 700, marginLeft: 4 }}>
+                      {[filterGender, filterStatus, filterOutfit].filter(Boolean).length}
+                    </span>
+                  )}
+                </button>
+                <button type="button" className="tailora-clients-date-btn" onClick={() => { setDatePanelOpen(o => !o); setFilterPanelOpen(false); }}>
+                  <CalendarIcon />
+                  <span className="tailora-clients-date-label">Select dates</span>
+                  <ChevronDownIcon />
+                </button>
+              </div>
 
-  {datePanelOpen && (
-    <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "12px 0 4px", flexWrap: "wrap" }}>
-      <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#344054" }} />
-      <span style={{ color: "#667185", fontSize: 13 }}>to</span>
-      <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#344054" }} />
-      <button onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); }} style={{ padding: "8px 12px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#344054" }}>Clear</button>
-    </div>
-  )}
+              {datePanelOpen && (
+                <div style={{ display: "flex", gap: 10, alignItems: "center", padding: "12px 16px", borderTop: "1px solid #F0F0F0", flexWrap: "wrap", width: "100%" }}>
+                  <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#344054" }} />
+                  <span style={{ color: "#667185", fontSize: 13 }}>to</span>
+                  <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 10px", fontSize: 13, color: "#344054" }} />
+                  <button onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); }} style={{ padding: "8px 12px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#344054" }}>Clear</button>
+                </div>
+              )}
 
-  {filterPanelOpen && (
-    <div style={{ background: "#fff", border: "1px solid #E4E7EC", borderRadius: 10, padding: 16, marginTop: 8, boxShadow: "0 4px 12px rgba(0,0,0,.08)" }}>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-        <select value={filterGender} onChange={e => setFilterGender(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
-          <option value="">All Genders</option>
-          <option>Male</option>
-          <option>Female</option>
-        </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
-          <option value="">All Status</option>
-          <option value="collected">Collected</option>
-          <option value="overdue">Overdue</option>
-          <option value="due">Due</option>
-        </select>
-        <select value={filterOutfit} onChange={e => setFilterOutfit(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
-          <option value="">All Outfits</option>
-          <option>Wedding gown</option>
-          <option>Suit</option>
-          <option>Senator</option>
-        </select>
-      </div>
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid #F0F0F0", paddingTop: 12 }}>
-        <button onClick={() => { setFilterGender(""); setFilterStatus(""); setFilterOutfit(""); }} style={{ padding: "8px 14px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 8, fontSize: 13, color: "#344054", cursor: "pointer" }}>Reset</button>
-        <button onClick={() => setFilterPanelOpen(false)} style={{ padding: "8px 18px", background: "#EB5017", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Done</button>
-      </div>
-    </div>
-  )}
-</div>
-
-              {/* Mobile cards */}
-              <div className="tailora-m-cards tailora-orders-cards-mobile">
-                {loading ? (
-                  <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0', width: '100%' }}>
-                    <div className="tailora-spinner" />
+              {filterPanelOpen && (
+                <div style={{ background: "#fff", border: "1px solid #E4E7EC", borderRadius: 10, padding: 16, margin: "0 16px 12px", boxShadow: "0 4px 12px rgba(0,0,0,.08)", width: "100%" }}>
+                  <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+                    <select value={filterGender} onChange={e => setFilterGender(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
+                      <option value="">All Genders</option>
+                      <option>Male</option>
+                      <option>Female</option>
+                    </select>
+                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
+                      <option value="">All Status</option>
+                      <option value="collected">Collected</option>
+                      <option value="overdue">Overdue</option>
+                      <option value="due">Due</option>
+                    </select>
+                    <select value={filterOutfit} onChange={e => setFilterOutfit(e.target.value)} style={{ border: "1px solid #D0D5DD", borderRadius: 6, padding: "8px 12px", fontSize: 13, color: "#344054", background: "#fff" }}>
+                      <option value="">All Outfits</option>
+                      <option>Wedding gown</option>
+                      <option>Suit</option>
+                      <option>Senator</option>
+                    </select>
                   </div>
-                ) : paginatedOrders.length === 0 ? (
-                  <div style={{ padding: "32px 16px", textAlign: "center", color: "#475569", fontSize: 14, background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 10, width: "100%", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                    {hasActiveFilters ? (
-                      <>
-                        <div style={{ fontWeight: 700, color: "#1E293B" }}>No orders match your active filters</div>
-                        <div style={{ fontSize: 13, color: "#64748B" }}>Try clearing search or filter options.</div>
-                        <button type="button" onClick={resetAllFilters} style={{ padding: "8px 16px", background: "#1E293B", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                          Reset All Filters
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <div style={{ fontWeight: 700, color: "#1E293B" }}>No orders found</div>
-                        <div style={{ fontSize: 13, color: "#64748B" }}>Add your first client to start taking orders.</div>
-                        <button type="button" onClick={() => openAddClient()} style={{ padding: "8px 16px", background: "#121212", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                          + Add New Client
-                        </button>
-                      </>
-                    )}
+                  <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", borderTop: "1px solid #F0F0F0", paddingTop: 12 }}>
+                    <button onClick={() => { setFilterGender(""); setFilterStatus(""); setFilterOutfit(""); }} style={{ padding: "8px 14px", background: "#fff", border: "1px solid #D0D5DD", borderRadius: 8, fontSize: 13, color: "#344054", cursor: "pointer" }}>Reset</button>
+                    <button onClick={() => setFilterPanelOpen(false)} style={{ padding: "8px 18px", background: "#EB5017", border: "none", borderRadius: 8, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Done</button>
                   </div>
-                ) : (
-                  paginatedOrders.map((order) => {
-                    const st = statusStyles[order.statusType];
-                    return (
-                      <div key={order.id} className="tailora-m-card" style={{ position: "relative" }}>
-                        <div className="tailora-m-card-top" style={{ paddingRight: 40 }}>
-                          <span className="tailora-m-card-id">{formatClientId(order.clientId || order.id)}</span>
-                          <span className="tailora-m-card-pill" style={{ background: st.bg, color: st.color }}>{order.status}</span>
-                        </div>
-                        <div className="tailora-m-card-title">{order.client}</div>
-                        <div className="tailora-m-card-meta">
-                          <span>{order.phone}</span>
-                          <span>{order.gender} · {order.outfit}</span>
+                </div>
+              )}
+            </div>
+
+            <p className="tailora-clients-results-count" aria-live="polite">
+              {filteredOrders.length} {filteredOrders.length === 1 ? "order" : "orders"}
+              {searchQuery.trim() ? ` matching "${searchQuery.trim()}"` : ""}
+            </p>
+
+            {/* Mobile cards */}
+            <div className="tailora-m-cards tailora-orders-cards-mobile">
+              {loading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0', width: '100%' }}>
+                  <div className="tailora-spinner" />
+                </div>
+              ) : paginatedOrders.length === 0 ? (
+                <div className="tailora-clients-empty" style={{ width: "100%" }}>
+                  {hasActiveFilters ? (
+                    <>
+                      <p className="tailora-clients-empty-title">No orders match your active filters</p>
+                      <p className="tailora-clients-empty-text">Try adjusting your search query, status, gender, or date range.</p>
+                      <PrimaryButton onClick={resetAllFilters} style={{ width: "auto", minWidth: 160 }}>
+                        Reset All Filters
+                      </PrimaryButton>
+                    </>
+                  ) : (
+                    <>
+                      <p className="tailora-clients-empty-title">No orders found</p>
+                      <p className="tailora-clients-empty-text">Add your first client to start taking orders.</p>
+                      <PrimaryButton onClick={() => openAddClient()} style={{ width: "auto", minWidth: 160 }}>
+                        <AddIcon />
+                        Add New Client
+                      </PrimaryButton>
+                    </>
+                  )}
+                </div>
+              ) : (
+                paginatedOrders.map((order) => {
+                  const st = statusStyles[order.statusType];
+                  return (
+                    <article key={order.id} className="tailora-client-card">
+                      <div className="tailora-client-card-main">
+                        <div className="tailora-client-card-avatar" aria-hidden>{getInitials(order.client)}</div>
+                        <div className="tailora-client-card-body">
+                          <div className="tailora-client-card-head">
+                            <div className="tailora-client-card-name-wrap">
+                              <h3 className="tailora-client-card-name">{order.client}</h3>
+                              <span className="tailora-client-card-id">{formatClientId(order.clientId || order.id)}</span>
+                            </div>
+                            <span className="tailora-client-card-status" style={{ background: st.bg, color: st.color }}>{order.status}</span>
+                          </div>
+                          {order.phone && <div className="tailora-client-card-phone"><PhoneIcon /><span>{order.phone}</span></div>}
                           {order.collectionDate && (
-                            <span style={{ display: "block", marginTop: 4, fontSize: 12, color: "#667185" }}>
-                              Delivery: {formatDateString(order.collectionDate)}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#667185", marginTop: 4, fontFamily: "var(--font-satoshi)" }}>
+                              <span>Delivery: {formatDateString(order.collectionDate)}</span>
+                            </div>
                           )}
-                        </div>
-                        <div style={{ position: "absolute", top: 12, right: 12 }}>
-                          <ActionMenuButton
-                            onEdit={() => handleEdit(order)}
-                            onDelete={() => setDeleteTarget(order)}
-                            showDelete={isOwnerOrAdmin}
-                            label={`Actions for order ${order.id}`}
-                          />
+                          <div className="tailora-client-card-tags" style={{ marginTop: 6 }}>
+                            {order.gender && <span className="tailora-client-card-tag">{order.gender}</span>}
+                            {order.outfit && <span className="tailora-client-card-tag tailora-client-card-tag--outfit">{order.outfit}</span>}
+                          </div>
                         </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
+                      <ActionMenuButton
+                        onEdit={() => handleEdit(order)}
+                        onDelete={() => setDeleteTarget(order)}
+                        showDelete={isOwnerOrAdmin}
+                        label={`Actions for order ${order.id}`}
+                      />
+                    </article>
+                  );
+                })
+              )}
+            </div>
 
               {/* Desktop table */}
               <div className="tailora-data-table-desktop tailora-table-scroll tailora-orders-table-desktop">

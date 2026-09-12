@@ -273,7 +273,7 @@ export default function ClientManagementPage() {
 
   const handleSaveEdit = async (updated: ClientData) => {
     try {
-      const { error } = await supabase
+      const { error: clientErr } = await supabase
         .from('clients')
         .update({
           name: updated.name,
@@ -285,7 +285,42 @@ export default function ClientManagementPage() {
         })
         .eq('id', updated.id);
       
-      if (error) throw error;
+      if (clientErr) throw clientErr;
+
+      let statusTypeVal: ClientStatusType = 'collected';
+      const normalized = updated.status.toLowerCase();
+      if (normalized.includes('overdue')) {
+        statusTypeVal = 'overdue';
+      } else if (normalized.includes('due') || normalized.includes('pending') || normalized.includes('progress')) {
+        statusTypeVal = 'due';
+      }
+
+      // Also update orders table so orders and clients remain 100% in sync across dashboard and client management
+      if (updated.orderId) {
+        await supabase
+          .from('orders')
+          .update({
+            client_name: updated.name,
+            phone: updated.phone,
+            gender: updated.gender,
+            outfit: updated.outfit,
+            status: updated.status,
+            status_type: statusTypeVal
+          })
+          .eq('id', updated.orderId);
+      } else {
+        await supabase
+          .from('orders')
+          .update({
+            client_name: updated.name,
+            phone: updated.phone,
+            gender: updated.gender,
+            outfit: updated.outfit,
+            status: updated.status,
+            status_type: statusTypeVal
+          })
+          .eq('client_id', updated.id);
+      }
 
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("tailora_client_updated"));
@@ -294,14 +329,6 @@ export default function ClientManagementPage() {
       // Update local state
       setClients(prev => prev.map(c => {
         if (c.id === updated.id) {
-          const rawStatus = updated.status;
-          let statusTypeVal: ClientStatusType = 'collected';
-          const normalized = rawStatus.toLowerCase();
-          if (normalized.includes('overdue')) {
-            statusTypeVal = 'overdue';
-          } else if (normalized.includes('due')) {
-            statusTypeVal = 'due';
-          }
           return {
             ...c,
             name: updated.name,
