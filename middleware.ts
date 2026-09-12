@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/reset-password"];
+const PUBLIC_PATHS = ["/", "/forgot-password", "/reset-password"];
+const AUTH_PATHS = ["/login", "/signup"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -19,12 +20,18 @@ export function middleware(request: NextRequest) {
     return;
   }
 
-  if (PUBLIC_PATHS.includes(pathname)) {
+  // Redirect authenticated users away from auth pages (login/signup) to dashboard
+  if (AUTH_PATHS.includes(pathname)) {
     if (token) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
+    return;
+  }
+
+  // Allow public paths (landing page, reset password) for both guests and authenticated users
+  if (PUBLIC_PATHS.includes(pathname)) {
     return;
   }
 

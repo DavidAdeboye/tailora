@@ -7,6 +7,8 @@ import { supabase } from "../lib/supabase";
 import { resolveWorkspace } from "../lib/resolveWorkspace";
 import { ActionMenuButton, DeleteConfirmModal } from "./Actionmenu";
 import EditClientModal, { type ClientData } from "./EditClientModal";
+import { HandoverVerificationModal, type HandoverProofData } from "./HandoverVerificationModal";
+import { HandoverProofViewModal } from "./HandoverProofViewModal";
 
 type OrderStatusType = "collected" | "overdue" | "due";
 
@@ -26,6 +28,7 @@ interface Order {
   statusType: OrderStatusType;
   collectionDate?: string;
   dateReceived?: string;
+  handoverProof?: HandoverProofData;
 }
 
 function formatDateString(dateStr?: string) {
@@ -243,6 +246,45 @@ export default function TailoraDashboard() {
   }, [searchQuery, filterGender, filterStatus, filterOutfit, filterDateFrom, filterDateTo, orders]);
 
   const [deleteTarget, setDeleteTarget] = useState<Order | null>(null);
+  const [handoverTarget, setHandoverTarget] = useState<Order | null>(null);
+  const [proofViewTarget, setProofViewTarget] = useState<Order | null>(null);
+
+  const handleConfirmHandover = async (proofData: HandoverProofData) => {
+    if (!handoverTarget) return;
+    try {
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('measurements')
+        .eq('id', handoverTarget.id)
+        .maybeSingle();
+
+      const measurements = orderData?.measurements || {};
+      const updatedMeasurements = { ...measurements, handoverProof: proofData };
+
+      await supabase
+        .from('orders')
+        .update({
+          status: 'Collected',
+          status_type: 'collected',
+          measurements: updatedMeasurements,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', handoverTarget.id);
+
+      if (handoverTarget.clientId) {
+        await supabase
+          .from('clients')
+          .update({ status: 'Collected' })
+          .eq('id', handoverTarget.clientId);
+      }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent('tailora_client_updated'));
+      }
+    } catch (err) {
+      console.error("Error saving handover proof:", err);
+    }
+  };
 
   const ITEMS_PER_PAGE = 7;
   const totalPages = useMemo(() => {
@@ -605,6 +647,7 @@ export default function TailoraDashboard() {
               assignedTeam: o.assigned_team || [],
               collectionDate: meas.collectionDate || '',
               dateReceived: meas.dateReceived || '',
+              handoverProof: meas.handoverProof || undefined,
             };
           });
 
@@ -678,6 +721,7 @@ export default function TailoraDashboard() {
               assignedTeam: [],
               collectionDate: '',
               dateReceived: '',
+              handoverProof: undefined,
             });
           });
 
@@ -968,7 +1012,44 @@ export default function TailoraDashboard() {
                               <h3 className="tailora-client-card-name">{order.client}</h3>
                               <span className="tailora-client-card-id">{formatClientId(order.clientId || order.id)}</span>
                             </div>
-                            <span className="tailora-client-card-status" style={{ background: st.bg, color: st.color }}>{order.status}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                              <span className="tailora-client-card-status" style={{ background: st.bg, color: st.color }}>{order.status}</span>
+                              {order.handoverProof ? (
+                                <button
+                                  onClick={() => setProofViewTarget(order)}
+                                  style={{
+                                    padding: "2px 8px",
+                                    borderRadius: 12,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    background: "#ECFDF3",
+                                    color: "#027A48",
+                                    border: "1px solid #ABE5C5",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  ✓ Verified Proof
+                                </button>
+                              ) : (
+                                order.statusType !== 'collected' && (
+                                  <button
+                                    onClick={() => setHandoverTarget(order)}
+                                    style={{
+                                      padding: "2px 8px",
+                                      borderRadius: 12,
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                      background: "#F2F4F7",
+                                      color: "#344054",
+                                      border: "1px solid #D0D5DD",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    + Record Pickup
+                                  </button>
+                                )
+                              )}
+                            </div>
                           </div>
                           {order.phone && <div className="tailora-client-card-phone"><PhoneIcon /><span>{order.phone}</span></div>}
                           {order.collectionDate && (
@@ -985,6 +1066,8 @@ export default function TailoraDashboard() {
                       <ActionMenuButton
                         onEdit={() => handleEdit(order)}
                         onDelete={() => setDeleteTarget(order)}
+                        onVerifyHandover={() => setHandoverTarget(order)}
+                        onViewHandoverProof={order.handoverProof ? () => setProofViewTarget(order) : undefined}
                         showDelete={isOwnerOrAdmin}
                         label={`Actions for order ${order.id}`}
                       />
@@ -1008,29 +1091,24 @@ export default function TailoraDashboard() {
                     {loading ? (
                       <tr>
                         <td colSpan={8} style={{ padding: "40px 0", textAlign: "center" }}>
-                          <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
                             <div className="tailora-spinner" />
                           </div>
                         </td>
                       </tr>
                     ) : paginatedOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={8} style={{ padding: "48px 24px", textAlign: "center", color: "#667185", fontSize: 14 }}>
+                        <td colSpan={8} style={{ padding: "48px 24px", textAlign: "center" }}>
                           {hasActiveFilters ? (
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                              <div style={{ fontSize: 15, fontWeight: 700, color: "#1E293B" }}>
-                                No orders match your active filter criteria
-                              </div>
-                              <div style={{ fontSize: 13, color: "#64748B", maxWidth: 400 }}>
-                                Try adjusting your search query, status, gender, outfit, or date range filters.
-                              </div>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                              <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#101828" }}>No orders match your active filters</p>
+                              <p style={{ margin: 0, fontSize: 13, color: "#667085" }}>Try adjusting your search query, status, gender, or date range.</p>
                               <button
                                 type="button"
                                 onClick={resetAllFilters}
                                 style={{
-                                  marginTop: 6,
                                   padding: "8px 18px",
-                                  background: "#1E293B",
+                                  background: "#121212",
                                   color: "#FFFFFF",
                                   border: "none",
                                   borderRadius: 8,
@@ -1043,10 +1121,8 @@ export default function TailoraDashboard() {
                               </button>
                             </div>
                           ) : (
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
-                              <div style={{ fontSize: 15, fontWeight: 700, color: "#1E293B" }}>
-                                No orders recorded yet
-                              </div>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                              <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#101828" }}>No orders found</p>
                               <div style={{ fontSize: 13, color: "#64748B", maxWidth: 400 }}>
                                 Start by adding a client profile to manage measurements, orders, and delivery schedules.
                               </div>
@@ -1083,13 +1159,54 @@ export default function TailoraDashboard() {
                             <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054" }}>{order.outfit}</td>
                             <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", whiteSpace: "nowrap" }}>{formatDateString(order.collectionDate)}</td>
                             <td style={{ padding: "16px 24px" }}>
-                              <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, background: st.bg, color: st.color }}>{order.status}</span>
+                              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, background: st.bg, color: st.color }}>{order.status}</span>
+                                {order.handoverProof ? (
+                                  <button
+                                    onClick={() => setProofViewTarget(order)}
+                                    title="View Delivery Proof"
+                                    style={{
+                                      padding: "2px 8px",
+                                      borderRadius: 12,
+                                      fontSize: 11,
+                                      fontWeight: 700,
+                                      background: "#ECFDF3",
+                                      color: "#027A48",
+                                      border: "1px solid #ABE5C5",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    ✓ Verified
+                                  </button>
+                                ) : (
+                                  order.statusType !== 'collected' && (
+                                    <button
+                                      onClick={() => setHandoverTarget(order)}
+                                      title="Record Pickup Proof"
+                                      style={{
+                                        padding: "2px 8px",
+                                        borderRadius: 12,
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                        background: "#F2F4F7",
+                                        color: "#344054",
+                                        border: "1px solid #D0D5DD",
+                                        cursor: "pointer",
+                                      }}
+                                    >
+                                      + Proof
+                                    </button>
+                                  )
+                                )}
+                              </div>
                             </td>
                             <td style={{ padding: "16px 24px", textAlign: "center" }}>
                               <div style={{ display: "flex", justifyContent: "center" }}>
                                 <ActionMenuButton
                                   onEdit={() => handleEdit(order)}
                                   onDelete={() => setDeleteTarget(order)}
+                                  onVerifyHandover={() => setHandoverTarget(order)}
+                                  onViewHandoverProof={order.handoverProof ? () => setProofViewTarget(order) : undefined}
                                   showDelete={isOwnerOrAdmin}
                                   label={`Actions for ${order.id}`}
                                 />
@@ -1202,6 +1319,23 @@ export default function TailoraDashboard() {
         onClose={() => setIsEditOpen(false)}
         client={editTarget}
         onSave={handleSaveEdit}
+      />
+
+      <HandoverVerificationModal
+        isOpen={!!handoverTarget}
+        onClose={() => setHandoverTarget(null)}
+        clientName={handoverTarget?.client || ''}
+        outfit={handoverTarget?.outfit}
+        orderId={handoverTarget?.id}
+        onConfirm={handleConfirmHandover}
+      />
+
+      <HandoverProofViewModal
+        isOpen={!!proofViewTarget}
+        onClose={() => setProofViewTarget(null)}
+        clientName={proofViewTarget?.client || ''}
+        outfit={proofViewTarget?.outfit}
+        proofData={proofViewTarget?.handoverProof}
       />
     </div>
   );

@@ -33,19 +33,18 @@ const Button = ({
   }, [createAccountColor]);
 
   return (
-    <button
-      className={`tailora-landing-btn cursor-pointer [border:none] py-[13px] px-6 bg-foundation-primary-normal h-[46px] w-[175px] rounded-[999px] overflow-hidden shrink-0 flex items-center justify-center box-border ${className}`}
+    <a
+      href={href}
+      className={`tailora-landing-btn cursor-pointer no-underline py-[13px] px-6 bg-foundation-primary-normal h-[46px] w-[175px] rounded-[999px] overflow-hidden shrink-0 flex items-center justify-center box-border transition-all duration-150 active:scale-[0.96] active:duration-[40ms] ${className}`}
       style={buttonStyle}
     >
-      <a href={href}>
-        <div
-          className="relative text-sm leading-5 font-medium font-[Satoshi] text-[#fff] text-left"
-          style={createAccountStyle}
-        >
-          {text}
-        </div>
-      </a>
-    </button>
+      <span
+        className="relative text-sm leading-5 font-medium font-[Satoshi] text-[#fff] text-center select-none"
+        style={createAccountStyle}
+      >
+        {text}
+      </span>
+    </a>
   );
 };
 
@@ -717,6 +716,7 @@ const Desktop3 = ({ className = "" }: { className?: string }) => {
               scheduleContainers={card.img}
               measurementManagement={card.title}
               storeUnlimitedClientMeasurements={card.body}
+              className="tailora-reveal-item"
             />
           ))}
         </div>
@@ -751,28 +751,27 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
 
           {/* ════════════════════════════════════════════
               STEP 1 — orange card
-              Desktop  : flex-row, image right, full width
-              Tablet   : flex-row, image right, full width (just smaller)
-              Mobile   : flex-col, image bottom
+              Desktop (≥800px) : flex-row, text left, image right
+              Mobile  (<800px) : flex-col, image centered at bottom
           ════════════════════════════════════════════ */}
           <section
             className="
+              tailora-reveal-item tailora-landing-card
               w-full rounded-[40px] bg-[#e57301] overflow-hidden
-              flex flex-row items-center
-              gap-[109px] pt-7 px-10 pb-7
+              flex flex-row items-center justify-between
+              gap-10 pt-7 px-10 pb-7
               text-left text-[#fff] font-[Sora]
-              mq1350:gap-[54px]
+              mq1350:gap-8
               mq800:flex-col mq800:items-start
               mq800:gap-6 mq800:pt-8 mq800:px-6 mq800:pb-0
             "
           >
             {/* Text */}
-            <div className="flex flex-col items-start gap-6 shrink-0 mq800:gap-3 mq800:shrink-unset mq800:w-full">
+            <div className="flex flex-col items-start gap-6 flex-1 max-w-[540px] mq800:max-w-full mq800:w-full mq800:gap-3">
               <h2
                 className="
                   m-0 text-[32px] leading-8 font-bold font-[Sora]
-                  w-[489px] max-w-full
-                  mq800:w-full mq800:text-xl mq800:leading-7
+                  mq800:text-xl mq800:leading-7
                 "
               >
                 Add Clients &amp; Measurements
@@ -780,8 +779,7 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
               <p
                 className="
                   m-0 text-lg leading-6 font-[Satoshi] text-[#fffefd]
-                  w-[540px] max-w-full
-                  mq800:w-full mq800:text-sm mq800:leading-[22px]
+                  mq800:text-sm mq800:leading-[22px]
                 "
               >
                 Create digital profiles for your clients. Record over 30+ body
@@ -790,12 +788,12 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
               </p>
             </div>
 
-            {/* Image — on desktop/tablet it sits right; on mobile it sits below */}
+            {/* Image — on desktop/tablet it sits right; on mobile it sits centered below */}
             <div
               className="
-                relative shrink-0 self-end
-                h-[292px] w-[463px] max-w-full
-                mq800:w-full mq800:h-[240px] mq800:self-center
+                relative flex-1 max-w-[463px] w-full self-end
+                h-[292px] min-w-[240px]
+                mq800:w-full mq800:max-w-[360px] mq800:h-[220px] mq800:self-center mq800:flex mq800:justify-center
                 mq450:h-[200px]
               "
             >
@@ -803,39 +801,39 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
               <img
                 src="/image32.png"
                 alt=""
-                className="h-full w-full object-contain object-bottom mq800:hidden"
+                className="h-full w-full object-contain object-right-bottom block mq800:hidden"
               />
-              {/* Mobile image — full-width crop, sits flush at bottom */}
+              {/* Mobile image — centered, sits flush at bottom */}
               <img
                 src="/mobile-image32.png"
                 alt=""
-                className="hidden h-full w-full object-contain object-left-bottom mq800:block"
+                className="hidden h-full max-w-[360px] object-contain object-center mq800:block"
               />
             </div>
           </section>
 
           {/* ════════════════════════════════════════════
               STEPS 2 & 3 row
-              Desktop (≥960px) : side by side, equal flex, fixed 636px height
-              Tablet  (<960px) : STILL side by side but fluid height
-              Mobile  (<600px) : stack vertically
+              Desktop (≥800px) : side by side, equal flex (50%/50%)
+              Mobile  (<800px) : stack vertically with full width
           ════════════════════════════════════════════ */}
           <div
             className="
               flex w-full flex-row gap-[38px]
-              mq960:gap-6
-              mq450:flex-col mq450:items-stretch mq450:gap-5
+              mq1125:gap-6
+              mq800:flex-col mq800:items-stretch mq800:gap-6
             "
           >
 
             {/* ── STEP 2 — purple card ── */}
             <section
               className="
+                tailora-reveal-item tailora-landing-card
                 relative overflow-hidden rounded-3xl bg-[#7e015c]
                 text-left text-[#fff] font-[Sora]
                 flex-1 min-w-0
                 flex flex-col
-                mq450:w-full
+                mq800:w-full
               "
             >
               {/* Decorative star SVGs — only shown when card is wide enough */}
@@ -859,9 +857,10 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
               <div
                 className="
                   relative z-[1] mx-10 mt-[41px]
-                  h-[377px] overflow-hidden rounded-2xl
-                  mq960:mx-6 mq960:mt-6 mq960:h-[240px]
-                  mq450:h-[200px]
+                  h-[280px] overflow-hidden rounded-2xl
+                  mq1350:h-[250px] mq1350:mx-8 mq1350:mt-8
+                  mq1125:h-[220px] mq1125:mx-6 mq1125:mt-6
+                  mq800:h-[220px] mq800:mx-5 mq800:mt-5
                 "
               >
                 <img
@@ -872,19 +871,19 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
               </div>
 
               {/* Text block */}
-              <div className="relative z-[1] px-10 pt-[34px] pb-10 mq960:px-6 mq960:pt-5 mq960:pb-8">
+              <div className="relative z-[1] px-10 pt-6 pb-8 mq1350:px-8 mq1350:pt-5 mq1350:pb-8 mq1125:px-6 mq1125:pt-4 mq1125:pb-6 mq800:px-5">
                 <h2
                   className="
-                    m-0 mb-2 text-[32px] leading-8 font-bold
-                    mq960:text-xl mq960:leading-7
+                    m-0 mb-2 text-[28px] leading-8 font-bold
+                    mq1125:text-xl mq1125:leading-7
                   "
                 >
                   Create &amp; Track Orders
                 </h2>
                 <p
                   className="
-                    m-0 text-lg leading-6 font-[Satoshi] text-[#fffefd]
-                    mq960:text-sm mq960:leading-[22px]
+                    m-0 text-base leading-6 font-[Satoshi] text-[#fffefd]
+                    mq1125:text-sm mq1125:leading-[22px]
                   "
                 >
                   Convert measurements into orders instantly. Monitor fabric
@@ -897,20 +896,22 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
             {/* ── STEP 3 — green card ── */}
             <section
               className="
+                tailora-reveal-item tailora-landing-card
                 relative overflow-hidden rounded-3xl bg-[#007f61]
                 text-left text-[#fff] font-[Sora]
                 flex-1 min-w-0
                 flex flex-col
-                mq450:w-full
+                mq800:w-full
               "
             >
               {/* Image block */}
               <div
                 className="
                   relative z-[1] mx-10 mt-[41px]
-                  h-[377px] overflow-hidden rounded-2xl
-                  mq960:mx-6 mq960:mt-6 mq960:h-[240px]
-                  mq450:h-[200px]
+                  h-[280px] overflow-hidden rounded-2xl
+                  mq1350:h-[250px] mq1350:mx-8 mq1350:mt-8
+                  mq1125:h-[220px] mq1125:mx-6 mq1125:mt-6
+                  mq800:h-[220px] mq800:mx-5 mq800:mt-5
                 "
               >
                 <img
@@ -921,19 +922,19 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
               </div>
 
               {/* Text block */}
-              <div className="relative z-[1] px-10 pt-[34px] pb-10 mq960:px-6 mq960:pt-5 mq960:pb-8">
+              <div className="relative z-[1] px-10 pt-6 pb-8 mq1350:px-8 mq1350:pt-5 mq1350:pb-8 mq1125:px-6 mq1125:pt-4 mq1125:pb-6 mq800:px-5">
                 <h2
                   className="
-                    m-0 mb-2 text-[32px] leading-8 font-bold
-                    mq960:text-xl mq960:leading-7
+                    m-0 mb-2 text-[28px] leading-8 font-bold
+                    mq1125:text-xl mq1125:leading-7
                   "
                 >
                   Deliver On Time
                 </h2>
                 <p
                   className="
-                    m-0 text-lg leading-6 font-[Satoshi] text-[#fffefd]
-                    mq960:text-sm mq960:leading-[22px]
+                    m-0 text-base leading-6 font-[Satoshi] text-[#fffefd]
+                    mq1125:text-sm mq1125:leading-[22px]
                   "
                 >
                   Automated notifications alert clients for final fittings.
@@ -953,59 +954,166 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
 
 // Desktop - Pricing Section
 const Desktop = ({ className = "" }: { className?: string }) => {
+  const CheckIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
+      <circle cx="11" cy="11" r="11" fill="#E57301" />
+      <path d="M6.5 11L9.5 14L15.5 8" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+
   return (
     <section
-      className={`self-stretch bg-foundation-secondary-light-active overflow-hidden flex flex-col items-center justify-center pt-[100px] px-5 pb-[60px] mq800:pt-[60px] mq800:pb-10 mq450:pt-[48px] mq450:pb-8 ${className}`}
+      className={`self-stretch bg-[#FDF6EC] overflow-hidden flex flex-col items-center justify-center pt-[100px] pb-[60px] px-5 mq800:pt-[60px] mq800:pb-10 ${className}`}
     >
-      <div className="w-[914px] max-w-full flex flex-col items-center gap-10 mq450:gap-6">
-        <FrameComponent
-          productFeatures="Pricing"
-          heading="Atelier-Ready "
-          headingHighlight="Pricing"
-          everythingYouNeedToMoveFrom="Simple, transparent plans for every scale of fashion business."
-        />
-        <section className="self-stretch flex items-start justify-center gap-10 text-left text-base text-foundation-primary-normal font-[Sora] mq960:flex-wrap mq960:gap-6 mq450:gap-5 mq800:flex-col mq800:items-center mq450:px-2">
-          {/* Starter */}
-          <div className="w-[276px] mq960:w-full mq960:max-w-[400px] mq800:w-full mq800:max-w-[340px] flex flex-col items-start">
-            <TierColumns sTARTER="STARTER" />
-            <div className="self-stretch rounded-t-none rounded-b-3xl bg-foundation-secondary-light-active border-foundation-primary-normal border-solid border-r-[1px] border-b-[1px] border-l-[1px] flex flex-col items-start pt-6 px-[23px] pb-[22px] gap-[60px] text-sm mq450:gap-[30px]">
-              <div className="self-stretch flex flex-col items-start gap-3">
-                <div className="flex flex-col items-start gap-1">
-                  <div className="self-stretch relative leading-[22px]">Features</div>
-                  <div className="self-stretch h-[23px] relative text-xs leading-6 text-foundation-gray-dark flex items-center font-[Satoshi]">
-                    <span><span>{`Everything in `}</span><b>Free plan</b></span>
-                  </div>
-                </div>
-                <div className="self-stretch flex flex-col items-start gap-3 text-xs font-[Satoshi]">
-                  <div className="self-stretch flex items-center gap-3">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path opacity="0.4" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill="#121212" />
-                      <path d="M10.58 15.5801C10.38 15.5801 10.19 15.5001 10.05 15.3601L7.22 12.5301C6.93 12.2401 6.93 11.7601 7.22 11.4701C7.51 11.1801 7.99 11.1801 8.28 11.4701L10.58 13.7701L15.72 8.6301C16.01 8.3401 16.49 8.3401 16.78 8.6301C17.07 8.9201 17.07 9.4001 16.78 9.6901L11.11 15.3601C10.97 15.5001 10.78 15.5801 10.58 15.5801Z" fill="#121212" />
-                    </svg>
-                    <div className="h-[23px] w-[123px] relative leading-6 flex items-center">Up to 50 Clients</div>
-                  </div>
-                  <div className="self-stretch flex items-center gap-3">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path opacity="0.4" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill="#121212" />
-                      <path d="M10.58 15.5801C10.38 15.5801 10.19 15.5001 10.05 15.3601L7.22 12.5301C6.93 12.2401 6.93 11.7601 7.22 11.4701C7.51 11.1801 7.99 11.1801 8.28 11.4701L10.58 13.7701L15.72 8.6301C16.01 8.3401 16.49 8.3401 16.78 8.6301C17.07 8.9201 17.07 9.4001 16.78 9.6901L11.11 15.3601C10.97 15.5001 10.78 15.5801 10.58 15.5801Z" fill="#121212" />
-                    </svg>
-                    <div className="relative leading-5">Core Measurement Tools</div>
-                  </div>
-                  <div className="self-stretch flex items-center gap-3">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path opacity="0.4" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill="#121212" />
-                      <path d="M10.58 15.5801C10.38 15.5801 10.19 15.5001 10.05 15.3601L7.22 12.5301C6.93 12.2401 6.93 11.7601 7.22 11.4701C7.51 11.1801 7.99 11.1801 8.28 11.4701L10.58 13.7701L15.72 8.6301C16.01 8.3401 16.49 8.3401 16.78 8.6301C17.07 8.9201 17.07 9.4001 16.78 9.6901L11.11 15.3601C10.97 15.5001 10.78 15.5801 10.58 15.5801Z" fill="#121212" />
-                    </svg>
-                    <div className="relative leading-5">1 User</div>
-                  </div>
-                </div>
+      <div className="w-full max-w-[1052px] mx-auto flex flex-col items-center gap-10 mq800:gap-8">
+        {/* Section Header */}
+        <div className="flex flex-col items-center gap-3 text-center">
+          {/* Satoshi Medium 12px */}
+          <span
+            className="bg-[#FDF6EC] border border-[#E57301] rounded-full px-3.5 py-1 text-xs font-medium text-[#121212] uppercase tracking-[0.02em] transition-transform duration-200 hover:scale-105"
+            style={{ fontFamily: "Satoshi, sans-serif" }}
+          >
+            PRICING
+          </span>
+          {/* Sora Bold 48px */}
+          <h2
+            className="m-0 text-[48px] leading-[56px] font-bold text-[#121212] mq800:text-[32px] mq800:leading-[40px] mq450:text-[24px] mq450:leading-[32px]"
+            style={{ fontFamily: "Sora, sans-serif" }}
+          >
+            Simple <span className="text-[#E57301]" style={{ fontFamily: "Sora, sans-serif" }}>pricing</span> for every fashion business
+          </h2>
+        </div>
+
+        {/* Pricing Cards Row — 1052px max container, 324px cards */}
+        <div className="flex flex-row justify-center items-stretch gap-6 w-full max-w-[1052px] mq960:flex-col mq960:items-center text-left">
+          {/* Card 1 — Starter */}
+          <div className="tailora-reveal-item bg-[#FFFFFF] border border-[#D8D8D8] rounded-[28px] py-8 px-6 w-[324px] max-w-full flex flex-col justify-between shadow-sm shrink-0 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+            <div>
+              {/* Sora SemiBold 18px */}
+              <h3 className="text-lg font-semibold text-[#121212] m-0" style={{ fontFamily: "Sora, sans-serif" }}>Starter</h3>
+              {/* Satoshi Regular 12px */}
+              <p className="text-xs font-normal text-[#696969] mt-1.5 mb-5 leading-relaxed min-h-[36px]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                Ideal for individual fashion designers.
+              </p>
+              <div className="flex items-baseline gap-1 my-5">
+                {/* Sora Bold 32px */}
+                <span className="text-[32px] font-bold text-[#121212] tracking-tight" style={{ fontFamily: "Sora, sans-serif" }}>₦5,000</span>
+                {/* Sora Regular 14px */}
+                <span className="text-sm font-normal text-[#8E8E93]" style={{ fontFamily: "Sora, sans-serif" }}>/month</span>
               </div>
-              <button className="cursor-pointer border-foundation-primary-normal border-solid border-[1px] py-1.5 px-2.5 bg-[transparent] w-full rounded-[40px] box-border flex items-center justify-center hover:bg-[rgba(69,69,69,0.09)]">
-                <div className="relative text-sm leading-5 font-[Satoshi] text-foundation-primary-normal text-left">Chooser Starters</div>
-              </button>
+              <a href="/signup" className="block w-full mb-6">
+                {/* Satoshi Medium 14px */}
+                <button
+                  className="w-full cursor-pointer bg-[#121212] text-white border-none rounded-full py-2.5 text-sm font-medium transition-all duration-150 hover:bg-[#2a2a2a] hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.96] active:duration-[40ms]"
+                  style={{ fontFamily: "Satoshi, sans-serif" }}
+                >
+                  Get started
+                </button>
+              </a>
+              <div className="flex flex-col gap-3">
+                {["Up to 50 clients", "Unlimited measurements", "Basic order tracking", "Email support", "1 team member"].map((item) => (
+                  /* Satoshi Regular 12px */
+                  <div key={item} className="flex items-center gap-2.5 text-xs font-normal text-[#2C2C2E]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                    <CheckIcon />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </section>
+
+          {/* Card 2 — Professional (Most popular) */}
+          <div className="tailora-reveal-item bg-[#121212] border-2 border-[#E57301] rounded-[28px] py-8 px-6 w-[324px] max-w-full flex flex-col justify-between relative shadow-lg shrink-0 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl">
+            {/* Satoshi Medium 12px */}
+            <span
+              className="absolute -top-[13px] left-1/2 -translate-x-1/2 bg-[#E57301] text-white text-xs font-medium px-3.5 py-0.5 rounded-full shadow-sm whitespace-nowrap transition-transform duration-200 hover:scale-105"
+              style={{ fontFamily: "Satoshi, sans-serif" }}
+            >
+              Most popular
+            </span>
+            <div>
+              {/* Sora SemiBold 18px */}
+              <h3 className="text-lg font-semibold text-white m-0" style={{ fontFamily: "Sora, sans-serif" }}>Professional</h3>
+              {/* Satoshi Regular 12px */}
+              <p className="text-xs font-normal text-[#A1A1A1] mt-1.5 mb-5 leading-relaxed min-h-[36px]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                Perfect for growing tailoring businesses.
+              </p>
+              <div className="flex items-baseline gap-1 my-5">
+                {/* Sora Bold 32px */}
+                <span className="text-[32px] font-bold text-white tracking-tight" style={{ fontFamily: "Sora, sans-serif" }}>₦10,000</span>
+                {/* Sora Regular 14px */}
+                <span className="text-sm font-normal text-[#A1A1A1]" style={{ fontFamily: "Sora, sans-serif" }}>/month</span>
+              </div>
+              <a href="/signup" className="block w-full mb-6">
+                {/* Satoshi Medium 14px */}
+                <button
+                  className="w-full cursor-pointer bg-[#E57301] text-white border-none rounded-full py-2.5 text-sm font-medium transition-all duration-150 hover:bg-[#d06700] hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 active:scale-[0.96] active:duration-[40ms]"
+                  style={{ fontFamily: "Satoshi, sans-serif" }}
+                >
+                  Get started
+                </button>
+              </a>
+              <div className="flex flex-col gap-3">
+                {[
+                  "Up to 500 clients",
+                  "Advanced order tracking",
+                  "Priority support",
+                  "Up to 10 team members",
+                  "Smart scheduling",
+                  "Business insights dashboard",
+                ].map((item) => (
+                  /* Satoshi Regular 12px */
+                  <div key={item} className="flex items-center gap-2.5 text-xs font-normal text-[#D1D1D1]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                    <CheckIcon />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3 — Business */}
+          <div className="tailora-reveal-item bg-[#FFFFFF] border border-[#D8D8D8] rounded-[28px] py-8 px-6 w-[324px] max-w-full flex flex-col justify-between shadow-sm shrink-0 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+            <div>
+              {/* Sora SemiBold 18px */}
+              <h3 className="text-lg font-semibold text-[#121212] m-0" style={{ fontFamily: "Sora, sans-serif" }}>Business</h3>
+              {/* Satoshi Regular 12px */}
+              <p className="text-xs font-normal text-[#696969] mt-1.5 mb-5 leading-relaxed min-h-[36px]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                Designed for fashion houses and larger teams.
+              </p>
+              <div className="flex items-baseline gap-1 my-5">
+                {/* Sora Bold 32px */}
+                <span className="text-[32px] font-bold text-[#121212] tracking-tight" style={{ fontFamily: "Sora, sans-serif" }}>₦50,000</span>
+                {/* Sora Regular 14px */}
+                <span className="text-sm font-normal text-[#8E8E93]" style={{ fontFamily: "Sora, sans-serif" }}>/month</span>
+              </div>
+              <a href="/signup" className="block w-full mb-6">
+                {/* Satoshi Medium 14px */}
+                <button
+                  className="w-full cursor-pointer bg-[#121212] text-white border-none rounded-full py-2.5 text-sm font-medium transition-all duration-150 hover:bg-[#2a2a2a] hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-[0.96] active:duration-[40ms]"
+                  style={{ fontFamily: "Satoshi, sans-serif" }}
+                >
+                  Get started
+                </button>
+              </a>
+              <div className="flex flex-col gap-3">
+                {[
+                  "Unlimited clients",
+                  "Full order management",
+                  "Dedicated support",
+                  "Advanced analytics",
+                  "Custom integrations",
+                ].map((item) => (
+                  /* Satoshi Regular 12px */
+                  <div key={item} className="flex items-center gap-2.5 text-xs font-normal text-[#2C2C2E]" style={{ fontFamily: "Satoshi, sans-serif" }}>
+                    <CheckIcon />
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -1040,11 +1148,14 @@ const Desktop1 = ({ className = "" }: { className?: string }) => {
             Join 1,200+ fashion houses that use Tailora to power their ateliers every day.
           </div>
           <div className="mt-4">
-            <button className="cursor-pointer [border:none] py-[13px] px-6 bg-[#fdf6ec] h-[46px] w-[175px] rounded-[999px] overflow-hidden shrink-0 flex items-center justify-center box-border">
-              <div className="relative text-sm leading-5 font-medium font-[Satoshi] text-[#121212] text-left">
-                <a href="/contact">Talk to us</a>
-              </div>
-            </button>
+            <a
+              href="/contact"
+              className="tailora-landing-btn cursor-pointer no-underline py-[13px] px-6 bg-[#fdf6ec] h-[46px] w-[175px] rounded-[999px] overflow-hidden shrink-0 flex items-center justify-center box-border transition-all duration-150 active:scale-[0.96] active:duration-[40ms]"
+            >
+              <span className="relative text-sm leading-5 font-medium font-[Satoshi] text-[#121212] text-center select-none">
+                Talk to us
+              </span>
+            </a>
           </div>
         </div>
       </div>

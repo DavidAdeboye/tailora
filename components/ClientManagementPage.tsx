@@ -12,6 +12,8 @@ import { ActionMenuButton, DeleteConfirmModal } from "./Actionmenu";
 import EditClientModal, { type ClientData } from "./EditClientModal";
 import ClientMeasurementsModal from "./ClientMeasurementsModal";
 import ClientMeasurementHistoryModal from "./ClientMeasurementHistoryModal";
+import { HandoverVerificationModal, type HandoverProofData } from "./HandoverVerificationModal";
+import { HandoverProofViewModal } from "./HandoverProofViewModal";
 
 type ClientStatusType = "collected" | "overdue" | "due";
 
@@ -28,6 +30,7 @@ interface Client {
   status: string;
   statusType: ClientStatusType;
   collectionDate?: string;
+  handoverProof?: HandoverProofData;
 }
 
 function formatDateString(dateStr?: string) {
@@ -119,7 +122,7 @@ function formatClientId(id: string) {
   return `CLI-${part.toUpperCase()}`;
 }
 
-function ClientMobileCard({ client, onEdit, onDelete, onTakeMeasurements, onViewHistory, showActions = true, showDelete = true }: { client: Client; onEdit: () => void; onDelete: () => void; onTakeMeasurements?: () => void; onViewHistory?: () => void; showActions?: boolean; showDelete?: boolean }) {
+function ClientMobileCard({ client, onEdit, onDelete, onTakeMeasurements, onViewHistory, onVerifyHandover, onViewHandoverProof, showActions = true, showDelete = true }: { client: Client; onEdit: () => void; onDelete: () => void; onTakeMeasurements?: () => void; onViewHistory?: () => void; onVerifyHandover?: () => void; onViewHandoverProof?: () => void; showActions?: boolean; showDelete?: boolean }) {
   const st = statusStyles[client.statusType];
   return (
     <article className="tailora-client-card">
@@ -131,7 +134,44 @@ function ClientMobileCard({ client, onEdit, onDelete, onTakeMeasurements, onView
               <h3 className="tailora-client-card-name">{client.name}</h3>
               <span className="tailora-client-card-id">{formatClientId(client.id)}</span>
             </div>
-            <span className="tailora-client-card-status" style={{ background: st.bg, color: st.color }}>{client.status}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+              <span className="tailora-client-card-status" style={{ background: st.bg, color: st.color }}>{client.status}</span>
+              {client.handoverProof ? (
+                <button
+                  onClick={onViewHandoverProof}
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: 12,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    background: "#ECFDF3",
+                    color: "#027A48",
+                    border: "1px solid #ABE5C5",
+                    cursor: "pointer",
+                  }}
+                >
+                  ✓ Verified Proof
+                </button>
+              ) : (
+                client.statusType !== 'collected' && (
+                  <button
+                    onClick={onVerifyHandover}
+                    style={{
+                      padding: "2px 8px",
+                      borderRadius: 12,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      background: "#F2F4F7",
+                      color: "#344054",
+                      border: "1px solid #D0D5DD",
+                      cursor: "pointer",
+                    }}
+                  >
+                    + Record Pickup
+                  </button>
+                )
+              )}
+            </div>
           </div>
           <div className="tailora-client-card-phone"><PhoneIcon /><span>{client.phone}</span></div>
           {client.collectionDate && (
@@ -151,6 +191,8 @@ function ClientMobileCard({ client, onEdit, onDelete, onTakeMeasurements, onView
           onDelete={onDelete}
           onTakeMeasurements={onTakeMeasurements}
           onViewHistory={onViewHistory}
+          onVerifyHandover={onVerifyHandover}
+          onViewHandoverProof={onViewHandoverProof}
           showDelete={showDelete}
           label={`Actions for ${client.name}`}
         />
@@ -256,6 +298,71 @@ export default function ClientManagementPage() {
   const isOwnerOrAdmin = userRole === 'Owner' || userRole === 'Admin';
   const showActions = userRole === 'Owner' || userRole === 'Admin' || userRole === 'Assistant';
   const canDelete = userRole === 'Owner' || userRole === 'Admin';
+
+  const [handoverTarget, setHandoverTarget] = useState<Client | null>(null);
+  const [proofViewTarget, setProofViewTarget] = useState<Client | null>(null);
+
+  const handleConfirmHandover = async (proofData: HandoverProofData) => {
+    if (!handoverTarget) return;
+    try {
+      // 1. Update client status
+      await supabase
+        .from('clients')
+        .update({ status: 'Collected' })
+        .eq('id', handoverTarget.id);
+
+      // 2. Fetch and update order measurements with handoverProof
+      const targetOrderId = handoverTarget.orderId;
+      if (targetOrderId) {
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select('measurements')
+          .eq('id', targetOrderId)
+          .maybeSingle();
+
+        const measurements = orderData?.measurements || {};
+        const updatedMeasurements = { ...measurements, handoverProof: proofData };
+
+        await supabase
+          .from('orders')
+          .update({
+            status: 'Collected',
+            status_type: 'collected',
+            measurements: updatedMeasurements,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', targetOrderId);
+      } else {
+        // Fallback update by client_id
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select('id, measurements')
+          .eq('client_id', handoverTarget.id)
+          .maybeSingle();
+
+        if (orderData) {
+          const measurements = orderData.measurements || {};
+          const updatedMeasurements = { ...measurements, handoverProof: proofData };
+
+          await supabase
+            .from('orders')
+            .update({
+              status: 'Collected',
+              status_type: 'collected',
+              measurements: updatedMeasurements,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', orderData.id);
+        }
+      }
+
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent('tailora_client_updated'));
+      }
+    } catch (err) {
+      console.error("Error saving handover proof in ClientManagementPage:", err);
+    }
+  };
 
   const handleEdit = (client: Client) => {
     setEditTarget({
@@ -400,7 +507,7 @@ export default function ClientManagementPage() {
       if (!workspaceOwnerId) return;
 
       // Fetch associated orders to get collection dates (due dates) and order IDs
-      let clientToOrderMap: Record<string, { collectionDate: string; orderId: string }> = {};
+      let clientToOrderMap: Record<string, { collectionDate: string; orderId: string; handoverProof?: HandoverProofData }> = {};
       try {
         const { data: teamOrders } = await supabase
           .from('orders')
@@ -414,6 +521,7 @@ export default function ClientManagementPage() {
               clientToOrderMap[o.client_id] = {
                 collectionDate: o.measurements?.collectionDate || "",
                 orderId: o.id,
+                handoverProof: o.measurements?.handoverProof || undefined,
               };
             }
           });
@@ -519,6 +627,7 @@ export default function ClientManagementPage() {
               statusType: statusTypeVal,
               date: (c.created_at ?? '').toString(),
               collectionDate: orderDetails?.collectionDate || "",
+              handoverProof: orderDetails?.handoverProof,
             };
           }));
         }
@@ -574,6 +683,7 @@ export default function ClientManagementPage() {
               statusType: statusTypeVal,
               date: (c.created_at ?? '').toString(),
               collectionDate: orderDetails?.collectionDate || "",
+              handoverProof: orderDetails?.handoverProof,
             };
           }));
         }
@@ -965,6 +1075,8 @@ export default function ClientManagementPage() {
                   onDelete={() => setDeleteTarget(c)}
                   onTakeMeasurements={() => handleTakeMeasurements(c)}
                   onViewHistory={() => handleViewHistory(c)}
+                  onVerifyHandover={() => setHandoverTarget(c)}
+                  onViewHandoverProof={c.handoverProof ? () => setProofViewTarget(c) : undefined}
                   showActions={showActions}
                   showDelete={canDelete}
                 />
@@ -996,9 +1108,48 @@ export default function ClientManagementPage() {
                       <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "var(--font-satoshi)" }}>{c.outfit}</td>
                       <td style={{ padding: "16px 24px", fontSize: 14, color: "#344054", fontFamily: "var(--font-satoshi)", whiteSpace: "nowrap" }}>{formatDateString(c.collectionDate)}</td>
                       <td style={{ padding: "16px 24px" }}>
-                        <span style={{ display: "inline-block", padding: "0 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, lineHeight: "17px", background: st.bg, color: st.color, fontFamily: "var(--font-satoshi)" }}>
-                          {c.status}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ display: "inline-block", padding: "0 8px", borderRadius: 12, fontSize: 12, fontWeight: 500, lineHeight: "17px", background: st.bg, color: st.color, fontFamily: "var(--font-satoshi)" }}>
+                            {c.status}
+                          </span>
+                          {c.handoverProof ? (
+                            <button
+                              onClick={() => setProofViewTarget(c)}
+                              title="View Handover Proof"
+                              style={{
+                                padding: "2px 8px",
+                                borderRadius: 12,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                background: "#ECFDF3",
+                                color: "#027A48",
+                                border: "1px solid #ABE5C5",
+                                cursor: "pointer",
+                              }}
+                            >
+                              ✓ Verified
+                            </button>
+                          ) : (
+                            c.statusType !== 'collected' && (
+                              <button
+                                onClick={() => setHandoverTarget(c)}
+                                title="Record Pickup Proof"
+                                style={{
+                                  padding: "2px 8px",
+                                  borderRadius: 12,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  background: "#F2F4F7",
+                                  color: "#344054",
+                                  border: "1px solid #D0D5DD",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                + Proof
+                              </button>
+                            )
+                          )}
+                        </div>
                       </td>
                       {showActions && (
                         <td style={{ padding: "16px 24px", textAlign: "center" }}>
@@ -1008,6 +1159,8 @@ export default function ClientManagementPage() {
                               onDelete={() => setDeleteTarget(c)}
                               onTakeMeasurements={() => handleTakeMeasurements(c)}
                               onViewHistory={() => handleViewHistory(c)}
+                              onVerifyHandover={() => setHandoverTarget(c)}
+                              onViewHandoverProof={c.handoverProof ? () => setProofViewTarget(c) : undefined}
                               showDelete={canDelete}
                               label={`Actions for ${c.name}`}
                             />
@@ -1124,6 +1277,23 @@ export default function ClientManagementPage() {
             setIsMeasOpen(true);
           }
         }}
+      />
+
+      <HandoverVerificationModal
+        isOpen={!!handoverTarget}
+        onClose={() => setHandoverTarget(null)}
+        clientName={handoverTarget?.name || ''}
+        outfit={handoverTarget?.outfit}
+        orderId={handoverTarget?.orderId}
+        onConfirm={handleConfirmHandover}
+      />
+
+      <HandoverProofViewModal
+        isOpen={!!proofViewTarget}
+        onClose={() => setProofViewTarget(null)}
+        clientName={proofViewTarget?.name || ''}
+        outfit={proofViewTarget?.outfit}
+        proofData={proofViewTarget?.handoverProof}
       />
     </div>
   );

@@ -9,6 +9,8 @@ export interface ActionMenuProps {
   onTakeMeasurements?: () => void;
   onViewHistory?: () => void;
   onResendInvite?: () => void;
+  onVerifyHandover?: () => void;
+  onViewHandoverProof?: () => void;
   editLabel?: string;
   deleteLabel?: string;
   showDelete?: boolean;
@@ -69,6 +71,8 @@ export function ActionMenuButton({
   onTakeMeasurements,
   onViewHistory,
   onResendInvite,
+  onVerifyHandover,
+  onViewHandoverProof,
   editLabel,
   deleteLabel,
   showDelete = true,
@@ -177,6 +181,40 @@ export function ActionMenuButton({
         </button>
       )}
       {(onTakeMeasurements || onViewHistory) && (
+        <div style={{ height: 1, background: "#F1F1F2", margin: "2px 0" }} />
+      )}
+      {onVerifyHandover && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => { setOpen(false); onVerifyHandover(); }}
+          style={{ ...menuItemStyle, color: "#027A48", fontWeight: 600 }}
+          onMouseEnter={e => (e.currentTarget.style.background = "#ECFDF3")}
+          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#027A48" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Record Pickup Proof
+        </button>
+      )}
+      {onViewHandoverProof && (
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => { setOpen(false); onViewHandoverProof(); }}
+          style={menuItemStyle}
+          onMouseEnter={e => (e.currentTarget.style.background = "#F8F9FC")}
+          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#344054" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+          View Pickup Proof
+        </button>
+      )}
+      {(onVerifyHandover || onViewHandoverProof) && (
         <div style={{ height: 1, background: "#F1F1F2", margin: "2px 0" }} />
       )}
       {onResendInvite && (
