@@ -624,15 +624,30 @@ export default function TailoraDashboard() {
             });
           }
 
-          // DEF-ORD-007: Auto-detect overdue orders by comparing collectionDate to today.
+          // Trigger background evaluation API for notifications and DB status sync
+          fetch('/api/orders/evaluate-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: workspaceOwnerId })
+          }).catch(() => {});
+
+          // Smart auto-detect order status based on collectionDate and delivery rules:
+          // 1. Delivery date past by >= 3 days & NOT collected -> Overdue
+          // 2. Delivery date within 3 days (or 0-2 days past) & NOT collected -> Due
           const today = new Date();
           today.setHours(0, 0, 0, 0);
           ordersList = ordersList.map((o: any) => {
-            if (o.statusType === 'due' && o.collectionDate) {
+            const isCollected = (o.status || '').toLowerCase().includes('collected') || o.statusType === 'collected';
+            if (!isCollected && o.collectionDate) {
               const colDate = new Date(o.collectionDate);
               colDate.setHours(0, 0, 0, 0);
-              if (colDate < today) {
+              const diffMs = today.getTime() - colDate.getTime();
+              const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+              if (diffDays >= 3) {
                 return { ...o, statusType: 'overdue' as OrderStatusType, status: 'Overdue' };
+              } else if (diffDays >= -3) {
+                return { ...o, statusType: 'due' as OrderStatusType, status: 'Due' };
               }
             }
             return o;

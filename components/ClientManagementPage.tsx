@@ -472,6 +472,13 @@ export default function ClientManagementPage() {
           return;
         }
 
+        // Trigger background evaluation API for notifications and DB status sync
+        fetch('/api/orders/evaluate-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: workspaceOwnerId })
+        }).catch(() => {});
+
         if (mounted && data) {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
@@ -480,16 +487,24 @@ export default function ClientManagementPage() {
             let statusTypeVal: ClientStatusType = 'collected';
             const normalized = rawStatus.toLowerCase();
             if (normalized.includes('overdue')) statusTypeVal = 'overdue';
-            else if (normalized.includes('due')) statusTypeVal = 'due';
+            else if (normalized.includes('due') || normalized.includes('pending') || normalized.includes('progress')) statusTypeVal = 'due';
+
             const orderDetails = clientToOrderMap[c.id];
-            // DEF-ORD-007: Auto-detect overdue based on collection date
             let finalStatus = rawStatus;
-            if (statusTypeVal === 'due' && orderDetails?.collectionDate) {
+            const isCollected = normalized.includes('collected');
+
+            if (!isCollected && orderDetails?.collectionDate) {
               const colDate = new Date(orderDetails.collectionDate);
               colDate.setHours(0, 0, 0, 0);
-              if (colDate < today) {
+              const diffMs = today.getTime() - colDate.getTime();
+              const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+              if (diffDays >= 3) {
                 statusTypeVal = 'overdue';
                 finalStatus = 'Overdue';
+              } else if (diffDays >= -3) {
+                statusTypeVal = 'due';
+                finalStatus = 'Due';
               }
             }
             return {
@@ -518,6 +533,7 @@ export default function ClientManagementPage() {
           console.error('Error fetching clients', error);
           return;
         }
+
         if (mounted && data) {
           const today2 = new Date();
           today2.setHours(0, 0, 0, 0);
@@ -526,16 +542,24 @@ export default function ClientManagementPage() {
             let statusTypeVal: ClientStatusType = 'collected';
             const normalized = rawStatus.toLowerCase();
             if (normalized.includes('overdue')) statusTypeVal = 'overdue';
-            else if (normalized.includes('due')) statusTypeVal = 'due';
+            else if (normalized.includes('due') || normalized.includes('pending') || normalized.includes('progress')) statusTypeVal = 'due';
+
             const orderDetails = clientToOrderMap[c.id];
-            // DEF-ORD-007: Auto-detect overdue based on collection date
             let finalStatus = rawStatus;
-            if (statusTypeVal === 'due' && orderDetails?.collectionDate) {
+            const isCollected = normalized.includes('collected');
+
+            if (!isCollected && orderDetails?.collectionDate) {
               const colDate = new Date(orderDetails.collectionDate);
               colDate.setHours(0, 0, 0, 0);
-              if (colDate < today2) {
+              const diffMs = today2.getTime() - colDate.getTime();
+              const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+              if (diffDays >= 3) {
                 statusTypeVal = 'overdue';
                 finalStatus = 'Overdue';
+              } else if (diffDays >= -3) {
+                statusTypeVal = 'due';
+                finalStatus = 'Due';
               }
             }
             return {
