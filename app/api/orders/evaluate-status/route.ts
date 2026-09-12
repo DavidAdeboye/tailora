@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Perform Owner email notification for Overdue
+      // Perform Overdue email notification (Sent to BOTH assigned staff AND workspace owner)
       if (shouldSendOverdueEmail && resend) {
         try {
           const ownerId = order.user_id;
@@ -118,16 +118,49 @@ export async function POST(req: NextRequest) {
               .maybeSingle();
             profilesCache[ownerId] = ownerProfile || {};
           }
-          const ownerProfile = profilesCache[ownerId];
-          const ownerEmail = ownerProfile.email;
+          if (!teamMembersCache[ownerId]) {
+            const { data: members } = await supabase
+              .from('team_members')
+              .select('name, email, role')
+              .eq('user_id', ownerId);
+            teamMembersCache[ownerId] = members || [];
+          }
 
-          if (ownerEmail) {
+          const ownerProfile = profilesCache[ownerId];
+          let ownerEmail = ownerProfile.email;
+
+          if (!ownerEmail && ownerId) {
+            const { data: authUserData } = await supabase.auth.admin.getUserById(ownerId);
+            ownerEmail = authUserData?.user?.email;
+            if (ownerEmail) {
+              profilesCache[ownerId].email = ownerEmail;
+            }
+          }
+
+          const teamMembers = teamMembersCache[ownerId];
+          const assignedTeamArr: string[] = Array.isArray(order.assigned_team)
+            ? order.assigned_team
+            : typeof order.assigned_team === 'string'
+            ? JSON.parse(order.assigned_team)
+            : [];
+
+          // Build list of all overdue alert recipients (Owner + Assigned Staff)
+          const overdueRecipientEmails: string[] = [];
+          if (ownerEmail) overdueRecipientEmails.push(ownerEmail);
+
+          if (assignedTeamArr.length > 0) {
+            for (const assignedName of assignedTeamArr) {
+              const matchedMember = teamMembers.find(
+                m => m.name.toLowerCase().trim() === assignedName.toLowerCase().trim()
+              );
+              if (matchedMember && matchedMember.email && !overdueRecipientEmails.includes(matchedMember.email)) {
+                overdueRecipientEmails.push(matchedMember.email);
+              }
+            }
+          }
+
+          if (overdueRecipientEmails.length > 0) {
             const daysPastText = diffDays === 3 ? '3 days' : `${diffDays} days`;
-            const assignedTeamArr = Array.isArray(order.assigned_team)
-              ? order.assigned_team
-              : typeof order.assigned_team === 'string'
-              ? JSON.parse(order.assigned_team)
-              : [];
 
             const htmlContent = buildOverdueOwnerEmailHtml({
               ownerName: ownerProfile.full_name || 'Workspace Owner',
@@ -142,14 +175,14 @@ export async function POST(req: NextRequest) {
 
             await resend.emails.send({
               from: `Tailora Alerts <${senderEmail}>`,
-              to: [ownerEmail],
+              to: overdueRecipientEmails,
               subject: `🚨 OVERDUE ALERT: Order for ${order.client_name} is ${daysPastText} past delivery date`,
               html: htmlContent,
             });
 
             updatedMeasurements.overdue_email_sent_date = todayISO;
             updatedMeasurements.overdue_email_sent_at = new Date().toISOString();
-            notificationsSent++;
+            notificationsSent += overdueRecipientEmails.length;
           }
         } catch (emailErr) {
           console.error(`[evaluate-status] Error sending overdue email for order ${order.id}:`, emailErr);
@@ -177,6 +210,15 @@ export async function POST(req: NextRequest) {
           }
 
           const ownerProfile = profilesCache[ownerId];
+          let ownerEmail = ownerProfile.email;
+          if (!ownerEmail && ownerId) {
+            const { data: authUserData } = await supabase.auth.admin.getUserById(ownerId);
+            ownerEmail = authUserData?.user?.email;
+            if (ownerEmail) {
+              profilesCache[ownerId].email = ownerEmail;
+            }
+          }
+
           const teamMembers = teamMembersCache[ownerId];
           const assignedTeamArr: string[] = Array.isArray(order.assigned_team)
             ? order.assigned_team
@@ -209,8 +251,8 @@ export async function POST(req: NextRequest) {
           }
 
           // Fallback: If no assigned worker email found, notify workspace owner
-          if (recipientEmails.length === 0 && ownerProfile.email) {
-            recipientEmails.push({ email: ownerProfile.email, name: ownerProfile.full_name || 'Team Lead' });
+          if (recipientEmails.length === 0 && ownerEmail) {
+            recipientEmails.push({ email: ownerEmail, name: ownerProfile.full_name || 'Team Lead' });
           }
 
           for (const recipient of recipientEmails) {
