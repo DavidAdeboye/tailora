@@ -477,7 +477,7 @@ const Desktop4 = ({ className = "" }: { className?: string }) => {
         {/* Subtext */}
         <p className="m-0 text-base leading-6 font-[Satoshi] text-[#696969] max-w-[600px] mq800:text-sm mq450:leading-[22px] mq450:tracking-[0.01em] mq450:opacity-85">
           Tailora helps fashion designers organize client measurements, manage
-          deliveries, and collaborate with their team — all in one smart
+          deliveries, and collaborate with their team all in one smart
           workspace.
         </p>
 
@@ -997,7 +997,7 @@ const Desktop = ({ className = "" }: { className?: string }) => {
     if (!user) {
       try {
         localStorage.setItem("tailora_pending_plan", planTier);
-      } catch {}
+      } catch { }
       window.location.href = `/signup?plan=${planTier}`;
       return;
     }
@@ -1169,11 +1169,10 @@ const Desktop = ({ className = "" }: { className?: string }) => {
                     id={`choose-${plan.tier}-btn`}
                     onClick={() => handleChoosePlan(plan.tier)}
                     disabled={isLoading}
-                    className={`w-full cursor-pointer border border-[#121212] py-2.5 px-4 rounded-[40px] flex items-center justify-center text-sm font-medium font-[Satoshi] transition-all duration-150 active:scale-[0.96] active:duration-[40ms] disabled:opacity-60 disabled:cursor-wait ${
-                      plan.filled
-                        ? "bg-[#121212] text-white hover:bg-[#2a2a2a]"
-                        : "bg-transparent text-[#121212] hover:bg-[#121212] hover:text-white"
-                    }`}
+                    className={`w-full cursor-pointer border border-[#121212] py-2.5 px-4 rounded-[40px] flex items-center justify-center text-sm font-medium font-[Satoshi] transition-all duration-150 active:scale-[0.96] active:duration-[40ms] disabled:opacity-60 disabled:cursor-wait ${plan.filled
+                      ? "bg-[#121212] text-white hover:bg-[#2a2a2a]"
+                      : "bg-transparent text-[#121212] hover:bg-[#121212] hover:text-white"
+                      }`}
                   >
                     {isLoading ? (
                       <span className="flex items-center gap-2">
