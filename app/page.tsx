@@ -995,8 +995,10 @@ const Desktop = ({ className = "" }: { className?: string }) => {
 
   const handleChoosePlan = async (planTier: string) => {
     if (!user) {
-      // Not logged in — send to signup
-      window.location.href = "/signup";
+      try {
+        localStorage.setItem("tailora_pending_plan", planTier);
+      } catch {}
+      window.location.href = `/signup?plan=${planTier}`;
       return;
     }
 

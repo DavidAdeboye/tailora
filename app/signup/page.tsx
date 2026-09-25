@@ -332,6 +332,32 @@
           document.cookie = `sb-access-token=${activeSession.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
         }
 
+        // Check if user clicked a pricing plan prior to signup
+        try {
+          const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+          const pendingPlan = searchParams?.get("plan") || (typeof window !== "undefined" ? localStorage.getItem("tailora_pending_plan") : null);
+
+          if (pendingPlan && (pendingPlan === "starter" || pendingPlan === "professional") && sessionUser) {
+            localStorage.removeItem("tailora_pending_plan");
+            const res = await fetch("/api/payments/initialize", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userId: sessionUser.id,
+                email: sessionUser.email,
+                planTier: pendingPlan,
+              }),
+            });
+            const data = await res.json();
+            if (data.link) {
+              window.location.href = data.link;
+              return;
+            }
+          }
+        } catch (planErr) {
+          console.error("Auto checkout error on signup:", planErr);
+        }
+
         // Hard-navigate so the browser sends the cookie with the server
         // request — router.push() is client-side and middleware won't see
         // the cookie in time, causing a redirect loop back to /login.
@@ -533,7 +559,7 @@
           <div className="flex flex-1 flex-col justify-start pt-6 pb-10 lg:justify-center lg:pt-0 lg:pb-0 px-5 lg:px-0 lg:items-start lg:pl-16 xl:pl-24">
             <div className="w-full max-w-[440px] mx-auto lg:mx-0 flex flex-col pointer-events-auto bg-white lg:bg-transparent py-6 px-4 lg:p-0 rounded-[24px] lg:rounded-none shadow-[0px_0px_4px_rgba(0,0,0,0.08)] lg:shadow-none border-0">
 
-              {step > 1 && (
+              {step > 1 ? (
                 <button
                   onClick={goBack}
                   aria-label="Go back"
@@ -541,6 +567,14 @@
                 >
                   ←
                 </button>
+              ) : (
+                <Link
+                  href="/#pricing"
+                  className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#6C717D] hover:text-[#121212] transition-colors self-start"
+                >
+                  <span>←</span>
+                  <span>Back to Tailora</span>
+                </Link>
               )}
 
               {/* Progress bar */}

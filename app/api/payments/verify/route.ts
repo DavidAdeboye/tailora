@@ -27,7 +27,7 @@ export async function GET(req: Request) {
 
   // ── Quick bail for cancelled / failed ──
   if (status !== "successful" || !transaction_id) {
-    return NextResponse.redirect(`${baseUrl}/pricing?payment=failed`);
+    return NextResponse.redirect(`${baseUrl}/#pricing?payment=cancelled`);
   }
 
   try {
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
       verifyData.data?.status !== "successful"
     ) {
       console.error("[FLW verify fail]", verifyData);
-      return NextResponse.redirect(`${baseUrl}/pricing?payment=failed`);
+      return NextResponse.redirect(`${baseUrl}/#pricing?payment=failed`);
     }
 
     const userId = verifyData.data.meta?.user_id;
@@ -60,7 +60,7 @@ export async function GET(req: Request) {
         expected: tier.amount,
         got: verifyData.data.amount,
       });
-      return NextResponse.redirect(`${baseUrl}/pricing?payment=failed`);
+      return NextResponse.redirect(`${baseUrl}/#pricing?payment=failed`);
     }
 
     // ── Activate subscription ──
@@ -95,6 +95,6 @@ export async function GET(req: Request) {
     );
   } catch (err: any) {
     console.error("[/api/payments/verify]", err);
-    return NextResponse.redirect(`${baseUrl}/pricing?payment=failed`);
+    return NextResponse.redirect(`${baseUrl}/#pricing?payment=failed`);
   }
 }

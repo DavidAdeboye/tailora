@@ -51,7 +51,31 @@ export default function AuthCallbackPage() {
             }
           }
 
-          // 3. Hard navigate to /dashboard so server middleware receives cookie
+          // 3. Check for pending plan checkout
+          try {
+            const pendingPlan = typeof window !== "undefined" ? localStorage.getItem("tailora_pending_plan") : null;
+            if (pendingPlan && (pendingPlan === "starter" || pendingPlan === "professional") && user) {
+              localStorage.removeItem("tailora_pending_plan");
+              const res = await fetch("/api/payments/initialize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userId: user.id,
+                  email: user.email,
+                  planTier: pendingPlan,
+                }),
+              });
+              const data = await res.json();
+              if (data.link) {
+                window.location.href = data.link;
+                return;
+              }
+            }
+          } catch (planErr) {
+            console.error("Auto checkout error on OAuth callback:", planErr);
+          }
+
+          // 4. Hard navigate to /dashboard so server middleware receives cookie
           window.location.href = "/dashboard";
           return;
         }
@@ -79,6 +103,29 @@ export default function AuthCallbackPage() {
                   full_name: fullName,
                   business_name: businessName,
                 });
+              }
+
+              try {
+                const pendingPlan = typeof window !== "undefined" ? localStorage.getItem("tailora_pending_plan") : null;
+                if (pendingPlan && (pendingPlan === "starter" || pendingPlan === "professional")) {
+                  localStorage.removeItem("tailora_pending_plan");
+                  const res = await fetch("/api/payments/initialize", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      userId: user.id,
+                      email: user.email,
+                      planTier: pendingPlan,
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.link) {
+                    window.location.href = data.link;
+                    return;
+                  }
+                }
+              } catch (planErr) {
+                console.error("Auto checkout error on OAuth listener:", planErr);
               }
             }
 

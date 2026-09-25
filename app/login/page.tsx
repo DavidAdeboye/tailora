@@ -156,6 +156,37 @@ export default function SigninPage() {
     return () => subscription.unsubscribe();
   }, [router]);
 
+  const handlePostAuthRedirect = async (targetUser?: { id: string; email?: string } | null) => {
+    try {
+      const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const pendingPlan = searchParams?.get("plan") || (typeof window !== "undefined" ? localStorage.getItem("tailora_pending_plan") : null);
+
+      if (pendingPlan && (pendingPlan === "starter" || pendingPlan === "professional")) {
+        const u = targetUser || (await supabase.auth.getUser()).data.user;
+        if (u) {
+          try { localStorage.removeItem("tailora_pending_plan"); } catch {}
+          const res = await fetch("/api/payments/initialize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: u.id,
+              email: u.email,
+              planTier: pendingPlan,
+            }),
+          });
+          const data = await res.json();
+          if (data.link) {
+            window.location.href = data.link;
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Post-login redirect error:", e);
+    }
+    window.location.href = "/dashboard";
+  };
+
   const handleSignIn = async () => {
     setIsLoading(true);
     setAuthError(null);
@@ -188,7 +219,7 @@ export default function SigninPage() {
             refresh_token: data.session.refresh_token,
           });
         }
-        window.location.href = "/dashboard";
+        await handlePostAuthRedirect(data.session?.user);
       }
     } catch (error: any) {
       setAuthError(error.message || "Failed to sign in");
@@ -235,7 +266,7 @@ export default function SigninPage() {
           console.warn("setSession warning:", sErr);
         }
       }
-      window.location.href = "/dashboard";
+      await handlePostAuthRedirect(data.session?.user);
     } catch (error: any) {
       const errMsg = error.name === 'TimeoutError' || error.name === 'AbortError'
         ? "Request timed out. Please check your network connection and try again."
@@ -438,7 +469,7 @@ export default function SigninPage() {
           {/* Mobile: solid white card | Desktop: transparent */}
           <div className="w-full max-w-[440px] mx-auto lg:mx-0 flex flex-col pointer-events-auto bg-white lg:bg-transparent py-6 px-4 lg:p-0 rounded-[24px] lg:rounded-none shadow-[0px_0px_4px_rgba(0,0,0,0.08)] lg:shadow-none border-0">
 
-            {showBackButton && (
+            {showBackButton ? (
               <button
                 onClick={goBack}
                 aria-label="Go back"
@@ -446,6 +477,14 @@ export default function SigninPage() {
               >
                 ←
               </button>
+            ) : (
+              <Link
+                href="/#pricing"
+                className="mb-4 inline-flex items-center gap-1.5 text-xs font-medium text-[#6C717D] hover:text-[#121212] transition-colors self-start"
+              >
+                <span>←</span>
+                <span>Back to Tailora</span>
+              </Link>
             )}
 
             {/* Progress bar */}
