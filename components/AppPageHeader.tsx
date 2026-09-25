@@ -658,7 +658,7 @@ export default function AppPageHeader({ title }: { title: string }) {
                           type="button"
                           onClick={() => {
                             setShowUserMenu(false);
-                            router.push('/settings');
+                            router.push('/settings?tab=plan');
                           }}
                           style={{
                             fontSize: 11,

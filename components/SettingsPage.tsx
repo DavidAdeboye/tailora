@@ -2,12 +2,13 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { uploadAvatar, getPublicUrl } from "../lib/supabaseStorage";
+import { PLAN_CONFIGS, getPlanLimit } from "../lib/plans";
 import AppPageHeader from "./AppPageHeader";
 import ChangePasswordModal from "./Changepasswordmodal";
 
 
 /* ── Types ── */
-type Tab = "Profile" | "Workspace" | "Notifications" | "Security";
+type Tab = "Profile" | "Workspace" | "Plan & Billing" | "Notifications" | "Security";
 
 /* ── Icons ── */
 const BellIcon = () => (
@@ -584,12 +585,6 @@ function WorkspaceTab({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }
   const [expressDays, setExpressDays] = useState("5");
   const [savingWorkspace, setSavingWorkspace] = useState(false);
 
-  // Plan info
-  const [subscriptionTier, setSubscriptionTier] = useState<string>("free");
-  const [subscriptionStatus, setSubscriptionStatus] = useState<string>("inactive");
-  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
-  const [isUpgrading, setIsUpgrading] = useState(false);
-
   // Track initial (saved) values for dirty detection
   const [initialWs, setInitialWs] = useState({ standardDays: "14", expressDays: "5" });
   const isWsDirty = standardDays !== initialWs.standardDays || expressDays !== initialWs.expressDays;
@@ -614,19 +609,6 @@ function WorkspaceTab({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }
           setStandardDays(std);
           setExpressDays(exp);
           setInitialWs({ standardDays: std, expressDays: exp });
-        }
-
-        // Load plan tier from profiles
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('subscription_tier, subscription_status, current_period_end')
-          .eq('id', userId)
-          .maybeSingle();
-
-        if (profile && mounted) {
-          setSubscriptionTier(profile.subscription_tier || 'free');
-          setSubscriptionStatus(profile.subscription_status || 'inactive');
-          setPeriodEnd(profile.current_period_end || null);
         }
       } catch (err) {
         console.error('Error loading workspace data', err);
@@ -661,44 +643,6 @@ function WorkspaceTab({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }
     }
   }
 
-  const handlePlanUpgrade = async () => {
-    try {
-      setIsUpgrading(true);
-      const targetPlan = subscriptionTier === 'professional' ? 'starter' : 'professional';
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData?.user;
-      if (!user) {
-        alert("Please log in to upgrade.");
-        setIsUpgrading(false);
-        return;
-      }
-
-      const res = await fetch('/api/payments/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          email: user.email,
-          planTier: targetPlan,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.link) {
-        window.location.href = data.link;
-      } else {
-        alert(data.error || "Failed to initialize payment");
-        setIsUpgrading(false);
-      }
-    } catch (err: any) {
-      alert(err.message || "Upgrade error");
-      setIsUpgrading(false);
-    }
-  };
-
-  const isStarter = subscriptionTier === 'starter';
-  const isPro = subscriptionTier === 'professional';
-
   return (
     <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
       {/* Deadline Defaults */}
@@ -707,7 +651,7 @@ function WorkspaceTab({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }
         <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 20, width: 305, flexShrink: 0 }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Deadline defaults</span>
-            <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>Standard delivery turnaround.</span>
+            <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>Standard delivery turnaround days.</span>
           </div>
           <button
             style={{
@@ -737,89 +681,824 @@ function WorkspaceTab({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }
           <InputField label="Express order (days)" placeholder="5" value={expressDays} onChange={setExpressDays} type="number" />
         </div>
       </div>
+    </div>
+  );
+}
 
-      <SectionDivider />
+/* ── PLAN & BILLING TAB ── */
+function PlanAndBillingTab() {
+  const [subscriptionTier, setSubscriptionTier] = useState<string>("free");
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>("inactive");
+  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
 
-      {/* Subscription Plan Row */}
-      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
-        {/* Left */}
+  const [clientCount, setClientCount] = useState<number>(0);
+  const [teamCount, setTeamCount] = useState<number>(0);
+  const [orderCount, setOrderCount] = useState<number>(0);
+
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isUpgradingTier, setIsUpgradingTier] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadBillingData() {
+      try {
+        setLoading(true);
+        const { data: userData } = await supabase.auth.getUser();
+        const user = userData?.user;
+        if (!user) return;
+
+        // 1. Profile subscription info
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("subscription_tier, subscription_status, current_period_end")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profile && mounted) {
+          setSubscriptionTier(profile.subscription_tier || "free");
+          setSubscriptionStatus(profile.subscription_status || "inactive");
+          setPeriodEnd(profile.current_period_end || null);
+        }
+
+        // 2. Resource Counts
+        const [clientsRes, teamRes, ordersRes] = await Promise.all([
+          supabase.from("clients").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+          supabase.from("team_members").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+          supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+        ]);
+
+        if (mounted) {
+          setClientCount(clientsRes.count || 0);
+          setTeamCount(teamRes.count || 0);
+          setOrderCount(ordersRes.count || 0);
+        }
+
+        // 3. Transactions History (server-authenticated API strictly for this user)
+        try {
+          const res = await fetch("/api/payments/history");
+          if (res.ok) {
+            const json = await res.json();
+            if (mounted && json.transactions) {
+              setTransactions(json.transactions);
+            }
+          } else {
+            const { data: txData } = await supabase
+              .from("payment_transactions")
+              .select("*")
+              .eq("user_id", user.id)
+              .in("status", ["successful", "failed"])
+              .order("created_at", { ascending: false });
+
+            if (mounted && txData) {
+              setTransactions(txData);
+            }
+          }
+        } catch (fetchErr) {
+          console.error("Transactions fetch fallback:", fetchErr);
+          const { data: txData } = await supabase
+            .from("payment_transactions")
+            .select("*")
+            .eq("user_id", user.id)
+            .in("status", ["successful", "failed"])
+            .order("created_at", { ascending: false });
+
+          if (mounted && txData) {
+            setTransactions(txData);
+          }
+        }
+      } catch (err) {
+        console.error("Error loading billing data:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    loadBillingData();
+    return () => { mounted = false; };
+  }, []);
+
+  const handleChoosePlan = async (planTier: string) => {
+    try {
+      setIsUpgradingTier(planTier);
+      setActionError(null);
+
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) {
+        alert("Please sign in to manage your plan.");
+        setIsUpgradingTier(null);
+        return;
+      }
+
+      const res = await fetch("/api/payments/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          planTier,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.link) {
+        window.location.href = data.link;
+      } else {
+        setActionError(data.error || "Failed to initialize checkout. Please try again.");
+        setIsUpgradingTier(null);
+      }
+    } catch (err: any) {
+      console.error("Payment init error:", err);
+      setActionError("An unexpected error occurred. Please try again.");
+      setIsUpgradingTier(null);
+    }
+  };
+
+  const planLimit = getPlanLimit(subscriptionTier);
+  const isStarter = subscriptionTier.toLowerCase() === "starter";
+  const isPro = subscriptionTier.toLowerCase() === "professional";
+  const isFree = !isStarter && !isPro;
+
+  // Percentage calculations for usage bars
+  const clientPercent = Math.min(100, Math.round((clientCount / planLimit.maxClients) * 100));
+  const teamPercent = planLimit.maxTeamMembers > 0
+    ? Math.min(100, Math.round((teamCount / planLimit.maxTeamMembers) * 100))
+    : (teamCount > 0 ? 100 : 0);
+
+  const getProgressColor = (percent: number) => {
+    if (percent >= 90) return "#D92D20"; // Red
+    if (percent >= 70) return "#F79009"; // Amber
+    return "#12B76A"; // Green
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", width: "100%", gap: 0 }}>
+      {/* ── 1. ACTIVE PLAN HEADER & HERO ── */}
+      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "26px 24px" }}>
         <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Workspace Plan</span>
-          <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>Current tier and subscription details.</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Current Subscription</span>
+          <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif", lineHeight: "22px" }}>
+            Overview of your active workspace tier, recurring billing cycle, and plan features.
+          </span>
         </div>
 
-        {/* Right */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, width: "100%", minWidth: 0 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16, width: "100%", minWidth: 0 }}>
+          {actionError && (
+            <div style={{ padding: "10px 14px", background: "#FEF3F2", border: "1px solid #FECDCA", borderRadius: 8, color: "#B42318", fontSize: 13, fontFamily: "Satoshi, sans-serif" }}>
+              {actionError}
+            </div>
+          )}
+
+          {/* Active Plan Card */}
           <div
             style={{
-              padding: "16px 18px",
-              borderRadius: 10,
-              background: isPro ? "#FEF6EE" : isStarter ? "#F0F9F4" : "#F9FAFB",
-              border: `1px solid ${isPro ? "#F9DBAF" : isStarter ? "#D1FADF" : "#EAECF0"}`,
+              padding: "22px 24px",
+              borderRadius: 14,
+              background: isPro
+                ? "linear-gradient(135deg, #FEF6EE 0%, #FFF9F2 100%)"
+                : isStarter
+                ? "linear-gradient(135deg, #F4FBF7 0%, #FFFFFF 100%)"
+                : "#F9FAFB",
+              border: `1.5px solid ${isPro ? "#F9DBAF" : isStarter ? "#A6F4C5" : "#EAECF0"}`,
               display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
+              flexDirection: "column",
+              gap: 16,
+              boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
             }}
           >
-            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 15, fontWeight: 700, color: "#121212", fontFamily: "Sora, sans-serif", textTransform: "capitalize" }}>
-                  {subscriptionTier} Plan
-                </span>
-                <span
-                  style={{
-                    padding: "2px 8px",
-                    borderRadius: 12,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    background: subscriptionStatus === "active" ? "#E7F6EC" : "#F2F4F7",
-                    color: subscriptionStatus === "active" ? "#036B26" : "#667085",
-                    textTransform: "capitalize",
-                  }}
-                >
-                  {subscriptionStatus === "active" ? "● Active" : "Free"}
-                </span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <span style={{ fontSize: 20, fontWeight: 700, color: "#121212", fontFamily: "Sora, sans-serif", textTransform: "capitalize" }}>
+                    {subscriptionTier} Plan
+                  </span>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      padding: "3px 10px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      fontFamily: "Satoshi, sans-serif",
+                      background: subscriptionStatus === "active" ? "#DCFAE6" : "#F2F4F7",
+                      color: subscriptionStatus === "active" ? "#027A48" : "#475467",
+                      border: `1px solid ${subscriptionStatus === "active" ? "#ABEFCE" : "#E4E7EC"}`,
+                    }}
+                  >
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: subscriptionStatus === "active" ? "#12B76A" : "#98A2B3" }} />
+                    {subscriptionStatus === "active" ? "Active Subscription" : "Free Plan"}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
+                  <span style={{ fontSize: 24, fontWeight: 800, color: "#121212", fontFamily: "Sora, sans-serif" }}>
+                    {isPro ? "₦10,000" : isStarter ? "₦5,000" : "₦0"}
+                  </span>
+                  <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif", fontWeight: 500 }}>
+                    / month
+                  </span>
+                </div>
               </div>
-              <span style={{ fontSize: 13, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>
-                {isPro
-                  ? "₦10,000 / month · Up to 50 clients · 5 team members"
-                  : isStarter
-                  ? "₦5,000 / month · Up to 20 clients · 1 team member"
-                  : "Free tier · Core tools included"}
-              </span>
-              {periodEnd && (
-                <span style={{ fontSize: 12, color: "#98A2B3", fontFamily: "Satoshi, sans-serif" }}>
-                  Renews on: <strong style={{ color: "#475467" }}>{new Date(periodEnd).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
-                </span>
-              )}
+
+              {/* Action Button */}
+              <div>
+                <button
+                  type="button"
+                  disabled={loading || isUpgradingTier !== null}
+                  onClick={() => handleChoosePlan(isFree ? "starter" : "professional")}
+                  style={{
+                    padding: "10px 20px",
+                    background: "#121212",
+                    color: "#FFFFFF",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    fontFamily: "Satoshi, sans-serif",
+                    cursor: loading || isUpgradingTier !== null ? "wait" : "pointer",
+                    transition: "all 0.15s ease",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#2C2C2C"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#121212"; }}
+                >
+                  {isUpgradingTier ? "Connecting..." : isFree ? "Upgrade to Starter" : isStarter ? "Upgrade to Professional" : "Renew Subscription"}
+                </button>
+              </div>
             </div>
 
-            <button
-              type="button"
-              disabled={isUpgrading}
-              onClick={handlePlanUpgrade}
-              style={{
-                padding: "8px 16px",
-                height: 36,
-                background: "#121212",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 600,
-                fontFamily: "Satoshi, sans-serif",
-                cursor: isUpgrading ? "default" : "pointer",
-                transition: "opacity 0.2s",
-                opacity: isUpgrading ? 0.7 : 1,
-              }}
-            >
-              {isUpgrading ? "Redirecting..." : subscriptionTier === "professional" ? "Change Plan" : "Upgrade Plan"}
-            </button>
+            {/* Renewal / Expiry info */}
+            <div style={{ display: "flex", alignItems: "center", gap: 16, paddingTop: 12, borderTop: "1px solid rgba(0,0,0,0.06)", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#475467", fontFamily: "Satoshi, sans-serif" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>
+                  {periodEnd ? (
+                    <>Next Renewal Date: <strong>{new Date(periodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong></>
+                  ) : (
+                    "No expiration · Free tier active"
+                  )}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: "#475467", fontFamily: "Satoshi, sans-serif" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#667085" strokeWidth="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                <span>Payments processed securely via Flutterwave</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <SectionDivider />
+
+      {/* ── 2. LIVE RESOURCE USAGE & QUOTAS ── */}
+      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "26px 24px" }}>
+        <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Resource Usage & Quotas</span>
+          <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif", lineHeight: "22px" }}>
+            Live metrics tracking your clients, team capacity, and measurement capacity against your tier allowances.
+          </span>
+        </div>
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14, width: "100%", minWidth: 0 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
+            
+            {/* Clients Usage Card */}
+            <div
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E4E7EC",
+                borderRadius: 12,
+                padding: "16px 18px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+                boxShadow: "0 1px 3px rgba(16,24,40,0.04)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: "#F0F9FF", color: "#026AA2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#1D2939", fontFamily: "Satoshi, sans-serif" }}>Client Capacity</span>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: getProgressColor(clientPercent), fontFamily: "Satoshi, sans-serif" }}>
+                  {clientPercent}%
+                </span>
+              </div>
+
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#475467", fontFamily: "Satoshi, sans-serif", marginBottom: 6 }}>
+                  <span>Used: <strong>{clientCount} clients</strong></span>
+                  <span>Limit: <strong>{planLimit.maxClients}</strong></span>
+                </div>
+                <div style={{ width: "100%", height: 8, background: "#F2F4F7", borderRadius: 4, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${clientPercent}%`,
+                      height: "100%",
+                      background: getProgressColor(clientPercent),
+                      borderRadius: 4,
+                      transition: "width 0.4s ease",
+                    }}
+                  />
+                </div>
+              </div>
+
+              <span style={{ fontSize: 12, color: "#667085", fontFamily: "Satoshi, sans-serif" }}>
+                {planLimit.maxClients - clientCount > 0
+                  ? `${planLimit.maxClients - clientCount} client slots available before hitting plan cap.`
+                  : "Plan limit reached. Upgrade for more capacity."}
+              </span>
+            </div>
+
+            {/* Team Members Seats Card */}
+            <div
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E4E7EC",
+                borderRadius: 12,
+                padding: "16px 18px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+                boxShadow: "0 1px 3px rgba(16,24,40,0.04)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: "#FDF2FA", color: "#C11574", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <line x1="19" y1="8" x2="19" y2="14"/>
+                      <line x1="22" y1="11" x2="16" y2="11"/>
+                    </svg>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#1D2939", fontFamily: "Satoshi, sans-serif" }}>Team Seats</span>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: getProgressColor(teamPercent), fontFamily: "Satoshi, sans-serif" }}>
+                  {planLimit.maxTeamMembers === 0 ? "None" : `${teamPercent}%`}
+                </span>
+              </div>
+
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#475467", fontFamily: "Satoshi, sans-serif", marginBottom: 6 }}>
+                  <span>Active: <strong>{teamCount} members</strong></span>
+                  <span>Limit: <strong>{planLimit.maxTeamMembers} seats</strong></span>
+                </div>
+                <div style={{ width: "100%", height: 8, background: "#F2F4F7", borderRadius: 4, overflow: "hidden" }}>
+                  <div
+                    style={{
+                      width: `${planLimit.maxTeamMembers === 0 ? 0 : teamPercent}%`,
+                      height: "100%",
+                      background: getProgressColor(teamPercent),
+                      borderRadius: 4,
+                      transition: "width 0.4s ease",
+                    }}
+                  />
+                </div>
+              </div>
+
+              <span style={{ fontSize: 12, color: "#667085", fontFamily: "Satoshi, sans-serif" }}>
+                {planLimit.maxTeamMembers === 0
+                  ? "Upgrade to Starter or Pro to invite collaborators."
+                  : `${Math.max(0, planLimit.maxTeamMembers - teamCount)} teammate seat(s) remaining.`}
+              </span>
+            </div>
+
+            {/* Measurement & Orders Card */}
+            <div
+              style={{
+                background: "#FFFFFF",
+                border: "1px solid #E4E7EC",
+                borderRadius: 12,
+                padding: "16px 18px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+                boxShadow: "0 1px 3px rgba(16,24,40,0.04)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 8, background: "#FEF6EE", color: "#B93815", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                      <line x1="3" y1="6" x2="21" y2="6"/>
+                      <path d="M16 10a4 4 0 0 1-8 0"/>
+                    </svg>
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#1D2939", fontFamily: "Satoshi, sans-serif" }}>Orders & Tools</span>
+                </div>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#12B76A", fontFamily: "Satoshi, sans-serif" }}>
+                  Unlimited
+                </span>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <div style={{ fontSize: 13, color: "#475467", fontFamily: "Satoshi, sans-serif" }}>
+                  Recorded Orders: <strong>{orderCount} total orders</strong>
+                </div>
+                <div style={{ fontSize: 13, color: "#475467", fontFamily: "Satoshi, sans-serif" }}>
+                  Measurement Vault: <strong>Unlimited storage</strong>
+                </div>
+              </div>
+
+              <span style={{ fontSize: 12, color: "#667085", fontFamily: "Satoshi, sans-serif" }}>
+                Full access to measurement templates and order timelines.
+              </span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <SectionDivider />
+
+      {/* ── 3. PLAN COMPARISON & UPGRADE MATRIX ── */}
+      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "26px 24px" }}>
+        <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Available Plans</span>
+          <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif", lineHeight: "22px" }}>
+            Select the tier that fits your atelier's client base and team scale. Upgrade or downgrade anytime.
+          </span>
+        </div>
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16, width: "100%", minWidth: 0 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+            
+            {/* Starter Tier Card */}
+            <div
+              style={{
+                background: "#FFFFFF",
+                border: `1.5px solid ${isStarter ? "#121212" : "#E4E7EC"}`,
+                borderRadius: 12,
+                padding: "20px 18px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 16,
+                position: "relative",
+              }}
+            >
+              {isStarter && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: -10,
+                    right: 14,
+                    background: "#121212",
+                    color: "#FFFFFF",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    padding: "2px 8px",
+                    borderRadius: 12,
+                    fontFamily: "Satoshi, sans-serif",
+                  }}
+                >
+                  Current Plan
+                </span>
+              )}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div>
+                  <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700, color: "#121212", fontFamily: "Sora, sans-serif" }}>Starter</h3>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "#121212", fontFamily: "Sora, sans-serif" }}>
+                    ₦5,000 <span style={{ fontSize: 13, fontWeight: 500, color: "#667085" }}>/ mo</span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 12, color: "#475467", fontFamily: "Satoshi, sans-serif" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span><strong>Up to 20 clients</strong></span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span><strong>1 team member seat</strong></span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Unlimited measurements</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Basic order tracking</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action */}
+              {isStarter ? (
+                <button
+                  type="button"
+                  disabled
+                  style={{
+                    width: "100%",
+                    height: 38,
+                    borderRadius: 8,
+                    border: "1px solid #EAECF0",
+                    background: "#F9FAFB",
+                    color: "#98A2B3",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontFamily: "Satoshi, sans-serif",
+                    cursor: "default",
+                  }}
+                >
+                  Active Plan
+                </button>
+              ) : isFree ? (
+                <button
+                  type="button"
+                  disabled={isUpgradingTier === "starter"}
+                  onClick={() => handleChoosePlan("starter")}
+                  style={{
+                    width: "100%",
+                    height: 38,
+                    borderRadius: 8,
+                    border: "none",
+                    background: "#121212",
+                    color: "#FFFFFF",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontFamily: "Satoshi, sans-serif",
+                    cursor: "pointer",
+                  }}
+                >
+                  {isUpgradingTier === "starter" ? "Connecting..." : "Upgrade to Starter"}
+                </button>
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: 38,
+                    borderRadius: 8,
+                    border: "1px solid #EAECF0",
+                    background: "#F9FAFB",
+                    color: "#667085",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    fontFamily: "Satoshi, sans-serif",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  Included in Professional
+                </div>
+              )}
+            </div>
+
+            {/* Professional Tier Card */}
+            <div
+              style={{
+                background: "#FEF6EE",
+                border: `1.5px solid ${isPro ? "#121212" : "#F9DBAF"}`,
+                borderRadius: 12,
+                padding: "20px 18px",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                gap: 16,
+                position: "relative",
+                boxShadow: "0 4px 12px rgba(229,115,1,0.08)",
+              }}
+            >
+              <span
+                style={{
+                  position: "absolute",
+                  top: -10,
+                  right: 14,
+                  background: isPro ? "#121212" : "#E57301",
+                  color: "#FFFFFF",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: "2px 8px",
+                  borderRadius: 12,
+                  fontFamily: "Satoshi, sans-serif",
+                }}
+              >
+                {isPro ? "Current Plan" : "Most Popular"}
+              </span>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div>
+                  <h3 style={{ margin: "0 0 4px", fontSize: 16, fontWeight: 700, color: "#121212", fontFamily: "Sora, sans-serif" }}>Professional</h3>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "#121212", fontFamily: "Sora, sans-serif" }}>
+                    ₦10,000 <span style={{ fontSize: 13, fontWeight: 500, color: "#667085" }}>/ mo</span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 12, color: "#475467", fontFamily: "Satoshi, sans-serif" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span><strong>Up to 50 clients</strong></span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span><strong>5 team member seats</strong></span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Unlimited measurements</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Advanced order tracking</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    <span>Smart scheduling</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action */}
+              {isPro ? (
+                <button
+                  type="button"
+                  disabled
+                  style={{
+                    width: "100%",
+                    height: 38,
+                    borderRadius: 8,
+                    border: "1px solid #EAECF0",
+                    background: "#F9FAFB",
+                    color: "#98A2B3",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    fontFamily: "Satoshi, sans-serif",
+                    cursor: "default",
+                  }}
+                >
+                  Active Plan
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isUpgradingTier === "professional"}
+                  onClick={() => handleChoosePlan("professional")}
+                  style={{
+                    width: "100%",
+                    height: 38,
+                    borderRadius: 8,
+                    border: "none",
+                    background: "#E57301",
+                    color: "#FFFFFF",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    fontFamily: "Satoshi, sans-serif",
+                    cursor: "pointer",
+                    transition: "background 0.15s ease",
+                  }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "#CC6500"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "#E57301"; }}
+                >
+                  {isUpgradingTier === "professional" ? "Connecting..." : "Upgrade to Pro"}
+                </button>
+              )}
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <SectionDivider />
+
+      {/* ── 4. BILLING & INVOICE HISTORY TABLE ── */}
+      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "26px 24px" }}>
+        <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Payment History</span>
+          <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif", lineHeight: "22px" }}>
+            Review past subscription receipts, transaction references, and payment statuses.
+          </span>
+        </div>
+
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, width: "100%", minWidth: 0 }}>
+          {transactions.length === 0 ? (
+            <div
+              style={{
+                padding: "36px 24px",
+                border: "1px dashed #E4E7EC",
+                borderRadius: 12,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                textAlign: "center",
+                gap: 8,
+                background: "#FAFAFA",
+              }}
+            >
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#F2F4F7", display: "flex", alignItems: "center", justifyContent: "center", color: "#667085" }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="5" width="20" height="14" rx="2"/>
+                  <line x1="2" y1="10" x2="22" y2="10"/>
+                </svg>
+              </div>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#344054", fontFamily: "Satoshi, sans-serif" }}>No billing history yet</span>
+              <span style={{ fontSize: 13, color: "#667085", fontFamily: "Satoshi, sans-serif", maxWidth: 360 }}>
+                When you subscribe or upgrade your plan, invoices and transaction references will automatically appear here.
+              </span>
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto", border: "1px solid #E4E7EC", borderRadius: 10 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, fontFamily: "Satoshi, sans-serif", textAlign: "left" }}>
+                <thead>
+                  <tr style={{ background: "#F9FAFB", borderBottom: "1px solid #E4E7EC", color: "#475467", fontWeight: 600 }}>
+                    <th style={{ padding: "10px 14px" }}>Date</th>
+                    <th style={{ padding: "10px 14px" }}>Plan</th>
+                    <th style={{ padding: "10px 14px" }}>Reference</th>
+                    <th style={{ padding: "10px 14px" }}>Amount</th>
+                    <th style={{ padding: "10px 14px" }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions.map((tx) => {
+                    const isSuccess = tx.status === "successful";
+                    const isPending = tx.status === "pending";
+                    return (
+                      <tr key={tx.id} style={{ borderBottom: "1px solid #F2F4F7" }}>
+                        <td style={{ padding: "12px 14px", color: "#344054" }}>
+                          {tx.created_at ? new Date(tx.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                        </td>
+                        <td style={{ padding: "12px 14px", fontWeight: 600, color: "#121212", textTransform: "capitalize" }}>
+                          {tx.payment_plan || "Subscription"}
+                        </td>
+                        <td style={{ padding: "12px 14px", color: "#667085", fontFamily: "monospace", fontSize: 12 }}>
+                          {tx.tx_ref ? tx.tx_ref.slice(0, 18) + "..." : "—"}
+                        </td>
+                        <td style={{ padding: "12px 14px", fontWeight: 600, color: "#121212" }}>
+                          ₦{Number(tx.amount || 0).toLocaleString()}
+                        </td>
+                        <td style={{ padding: "12px 14px" }}>
+                          <span
+                            style={{
+                              padding: "2px 8px",
+                              borderRadius: 12,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              background: isSuccess ? "#ECFDF3" : isPending ? "#FFFAEB" : "#FEF3F2",
+                              color: isSuccess ? "#027A48" : isPending ? "#B54708" : "#B42318",
+                              textTransform: "capitalize",
+                            }}
+                          >
+                            {tx.status}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <SectionDivider />
+
+      {/* ── 5. BILLING SUPPORT & GUARANTEE ── */}
+      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 24px", background: "#FCFCFD", flexWrap: "wrap", gap: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#F0F9FF", color: "#026AA2", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+          </div>
+          <span style={{ fontSize: 13, color: "#475467", fontFamily: "Satoshi, sans-serif" }}>
+            Need invoice modifications, VAT details, or billing inquiries? Reach out to our finance support at{" "}
+            <a href="mailto:billing@tailora.ng" style={{ color: "#121212", fontWeight: 600, textDecoration: "underline" }}>
+              billing@tailora.ng
+            </a>
+          </span>
+        </div>
+      </div>
+
     </div>
   );
 }
@@ -1092,7 +1771,17 @@ function SettingsBadge() {
 
 /* ── MAIN SETTINGS PAGE ── */
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("Profile");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get("tab")?.toLowerCase();
+      if (tabParam === "plan" || tabParam === "billing" || tabParam === "subscription") return "Plan & Billing";
+      if (tabParam === "workspace") return "Workspace";
+      if (tabParam === "notifications") return "Notifications";
+      if (tabParam === "security") return "Security";
+    }
+    return "Profile";
+  });
   const [isTabDirty, setIsTabDirty] = useState(false);
 
   type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
@@ -1163,7 +1852,7 @@ export default function SettingsPage() {
     );
   }
 
-  const tabs: Tab[] = ["Profile", "Workspace", "Notifications", "Security"];
+  const tabs: Tab[] = ["Profile", "Workspace", "Plan & Billing", "Notifications", "Security"];
 
   return (
     <div className="tailora-page-view" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
@@ -1179,7 +1868,7 @@ export default function SettingsPage() {
                   Settings <SettingsBadge/>
                 </h1>
                 <p className="tailora-page-subtitle" style={{ margin: 0, fontSize: 14, fontWeight: 300, color: "#696969", fontFamily: "var(--font-satoshi)" }}>
-                  Manage your personal account, workspace preferences, and security in one place.
+                  Manage your personal account, workspace preferences, plan & billing, and security in one place.
                 </p>
               </div>
             </div>
@@ -1246,6 +1935,7 @@ export default function SettingsPage() {
             }}>
               {activeTab === "Profile" && <ProfileTab onDirtyChange={setIsTabDirty} />}
               {activeTab === "Workspace" && <WorkspaceTab onDirtyChange={setIsTabDirty} />}
+              {activeTab === "Plan & Billing" && <PlanAndBillingTab />}
               {activeTab === "Notifications" && <NotificationsTab onDirtyChange={setIsTabDirty} />}
               {activeTab === "Security" && <SecurityTab />}
             </div>
