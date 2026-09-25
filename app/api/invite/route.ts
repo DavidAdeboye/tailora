@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { getPlanLimit } from '../../../lib/plans';
+
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('Authorization');
@@ -72,8 +74,8 @@ export async function POST(req: NextRequest) {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // Check existing member and fetch inviter profile in parallel using service client
-    const [existingMemberRes, inviterProfileRes] = await Promise.all([
+    // Check existing member, fetch inviter profile, and count current team members in parallel
+    const [existingMemberRes, inviterProfileRes, currentTeamCountRes] = await Promise.all([
       supabaseService
         .from('team_members')
         .select('id, status')
@@ -82,9 +84,13 @@ export async function POST(req: NextRequest) {
         .maybeSingle(),
       supabaseService
         .from('profiles')
-        .select('full_name, business_name, email')
+        .select('full_name, business_name, email, subscription_tier, subscription_status')
         .eq('id', workspaceOwnerId)
-        .maybeSingle()
+        .maybeSingle(),
+      supabaseService
+        .from('team_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', workspaceOwnerId)
     ]);
 
     if (existingMemberRes.error) {
@@ -92,6 +98,20 @@ export async function POST(req: NextRequest) {
     }
 
     const inviterProfile = inviterProfileRes.data;
+    const planConfig = getPlanLimit(inviterProfile?.subscription_tier);
+    const currentMemberCount = currentTeamCountRes.count ?? 0;
+
+    // Enforce team member limits based on plan
+    if (currentMemberCount >= planConfig.maxTeamMembers) {
+      const upgradeMsg = planConfig.id === 'free'
+        ? 'Team collaboration is available on Starter (1 member) and Professional (5 members) plans. Please upgrade to invite team members.'
+        : `You have reached your limit of ${planConfig.maxTeamMembers} team member${planConfig.maxTeamMembers > 1 ? 's' : ''} on the ${planConfig.name} plan. Upgrade to Professional to invite up to 5 teammates.`;
+
+      return NextResponse.json(
+        { error: upgradeMsg, code: 'PLAN_LIMIT_REACHED' },
+        { status: 403 }
+      );
+    }
 
     // Block inviting the workspace owner email
     if (inviterProfile?.email && cleanEmail === inviterProfile.email.trim().toLowerCase()) {

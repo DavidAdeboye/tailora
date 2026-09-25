@@ -584,6 +584,12 @@ function WorkspaceTab({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }
   const [expressDays, setExpressDays] = useState("5");
   const [savingWorkspace, setSavingWorkspace] = useState(false);
 
+  // Plan info
+  const [subscriptionTier, setSubscriptionTier] = useState<string>("free");
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>("inactive");
+  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
   // Track initial (saved) values for dirty detection
   const [initialWs, setInitialWs] = useState({ standardDays: "14", expressDays: "5" });
   const isWsDirty = standardDays !== initialWs.standardDays || expressDays !== initialWs.expressDays;
@@ -601,18 +607,29 @@ function WorkspaceTab({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }
         const userId = user?.id;
 
         if (!userId) return;
-        const { data, error } = await supabase.from('workspace_settings').select('standard_deadline_days, express_deadline_days').eq('user_id', userId).maybeSingle();
-        if (error) return;
-        if (!data) return;
-        if (mounted) {
+        const { data } = await supabase.from('workspace_settings').select('standard_deadline_days, express_deadline_days').eq('user_id', userId).maybeSingle();
+        if (data && mounted) {
           const std = String(data.standard_deadline_days ?? standardDays);
           const exp = String(data.express_deadline_days ?? expressDays);
           setStandardDays(std);
           setExpressDays(exp);
           setInitialWs({ standardDays: std, expressDays: exp });
         }
+
+        // Load plan tier from profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('subscription_tier, subscription_status, current_period_end')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (profile && mounted) {
+          setSubscriptionTier(profile.subscription_tier || 'free');
+          setSubscriptionStatus(profile.subscription_status || 'inactive');
+          setPeriodEnd(profile.current_period_end || null);
+        }
       } catch (err) {
-        console.error('Error loading workspace defaults', err);
+        console.error('Error loading workspace data', err);
       }
     }
     loadWorkspace();
@@ -644,41 +661,164 @@ function WorkspaceTab({ onDirtyChange }: { onDirtyChange: (d: boolean) => void }
     }
   }
 
+  const handlePlanUpgrade = async () => {
+    try {
+      setIsUpgrading(true);
+      const targetPlan = subscriptionTier === 'professional' ? 'starter' : 'professional';
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) {
+        alert("Please log in to upgrade.");
+        setIsUpgrading(false);
+        return;
+      }
+
+      const res = await fetch('/api/payments/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          planTier: targetPlan,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.link) {
+        window.location.href = data.link;
+      } else {
+        alert(data.error || "Failed to initialize payment");
+        setIsUpgrading(false);
+      }
+    } catch (err: any) {
+      alert(err.message || "Upgrade error");
+      setIsUpgrading(false);
+    }
+  };
+
+  const isStarter = subscriptionTier === 'starter';
+  const isPro = subscriptionTier === 'professional';
+
   return (
-    <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
-      {/* Left */}
-      <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 20, width: 305, flexShrink: 0 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Deadline defaults</span>
-          <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>Standard delivery turnaround.</span>
+    <div style={{ display: "flex", flexDirection: "column", width: "100%" }}>
+      {/* Deadline Defaults */}
+      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
+        {/* Left */}
+        <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 20, width: 305, flexShrink: 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Deadline defaults</span>
+            <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>Standard delivery turnaround.</span>
+          </div>
+          <button
+            style={{
+              width: 124,
+              height: 38,
+              background: isWsDirty ? "#121212" : "#D0D5DD",
+              border: "none",
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 700,
+              color: "#fff",
+              fontFamily: "Satoshi, sans-serif",
+              cursor: isWsDirty ? "pointer" : "default",
+              opacity: isWsDirty ? 1 : 0.6,
+              transition: "background 0.2s, opacity 0.2s",
+            }}
+            onClick={saveWorkspace}
+            disabled={!isWsDirty || savingWorkspace}
+          >
+            {savingWorkspace ? 'Saving...' : 'Save Changes'}
+          </button>
         </div>
-        <button
-          style={{
-            width: 124,
-            height: 38,
-            background: isWsDirty ? "#121212" : "#D0D5DD",
-            border: "none",
-            borderRadius: 8,
-            fontSize: 14,
-            fontWeight: 700,
-            color: "#fff",
-            fontFamily: "Satoshi, sans-serif",
-            cursor: isWsDirty ? "pointer" : "default",
-            opacity: isWsDirty ? 1 : 0.6,
-            transition: "background 0.2s, opacity 0.2s",
-          }}
-          onClick={saveWorkspace}
-          disabled={!isWsDirty || savingWorkspace}
-        >
-          {savingWorkspace ? 'Saving...' : 'Save Changes'}
-        </button>
+
+        {/* Right */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16, width: "100%", minWidth: 0 }}>
+          <InputField label="Standard order (days)" placeholder="14" value={standardDays} onChange={setStandardDays} type="number" />
+          <InputField label="Express order (days)" placeholder="5" value={expressDays} onChange={setExpressDays} type="number" />
+        </div>
       </div>
 
-      {/* Right */}
-      {/* CHANGED: added width:100% and minWidth:0 */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 16, width: "100%", minWidth: 0 }}>
-        <InputField label="Standard order (days)" placeholder="14" value={standardDays} onChange={setStandardDays} type="number" />
-        <InputField label="Express order (days)" placeholder="5" value={expressDays} onChange={setExpressDays} type="number" />
+      <SectionDivider />
+
+      {/* Subscription Plan Row */}
+      <div className="tailora-settings-row" style={{ display: "flex", alignItems: "flex-start", gap: 56, padding: "22px 24px" }}>
+        {/* Left */}
+        <div className="tailora-settings-row-left" style={{ display: "flex", flexDirection: "column", gap: 6, width: 305, flexShrink: 0 }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#28292D", fontFamily: "Satoshi, sans-serif" }}>Workspace Plan</span>
+          <span style={{ fontSize: 14, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>Current tier and subscription details.</span>
+        </div>
+
+        {/* Right */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 12, width: "100%", minWidth: 0 }}>
+          <div
+            style={{
+              padding: "16px 18px",
+              borderRadius: 10,
+              background: isPro ? "#FEF6EE" : isStarter ? "#F0F9F4" : "#F9FAFB",
+              border: `1px solid ${isPro ? "#F9DBAF" : isStarter ? "#D1FADF" : "#EAECF0"}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 12,
+            }}
+          >
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 15, fontWeight: 700, color: "#121212", fontFamily: "Sora, sans-serif", textTransform: "capitalize" }}>
+                  {subscriptionTier} Plan
+                </span>
+                <span
+                  style={{
+                    padding: "2px 8px",
+                    borderRadius: 12,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    background: subscriptionStatus === "active" ? "#E7F6EC" : "#F2F4F7",
+                    color: subscriptionStatus === "active" ? "#036B26" : "#667085",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {subscriptionStatus === "active" ? "● Active" : "Free"}
+                </span>
+              </div>
+              <span style={{ fontSize: 13, color: "#667185", fontFamily: "Satoshi, sans-serif" }}>
+                {isPro
+                  ? "₦10,000 / month · Up to 50 clients · 5 team members"
+                  : isStarter
+                  ? "₦5,000 / month · Up to 20 clients · 1 team member"
+                  : "Free tier · Core tools included"}
+              </span>
+              {periodEnd && (
+                <span style={{ fontSize: 12, color: "#98A2B3", fontFamily: "Satoshi, sans-serif" }}>
+                  Renews on: <strong style={{ color: "#475467" }}>{new Date(periodEnd).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</strong>
+                </span>
+              )}
+            </div>
+
+            <button
+              type="button"
+              disabled={isUpgrading}
+              onClick={handlePlanUpgrade}
+              style={{
+                padding: "8px 16px",
+                height: 36,
+                background: "#121212",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                fontFamily: "Satoshi, sans-serif",
+                cursor: isUpgrading ? "default" : "pointer",
+                transition: "opacity 0.2s",
+                opacity: isUpgrading ? 0.7 : 1,
+              }}
+            >
+              {isUpgrading ? "Redirecting..." : subscriptionTier === "professional" ? "Change Plan" : "Upgrade Plan"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -976,12 +976,101 @@ const Desktop2 = ({ className = "" }: { className?: string }) => {
 
 // Desktop - Pricing Section
 const Desktop = ({ className = "" }: { className?: string }) => {
+  const [user, setUser] = useState<any>(null);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+  }, []);
+
+  // Show a transient error toast (auto-clears after 4 seconds)
+  useEffect(() => {
+    if (!paymentError) return;
+    const t = setTimeout(() => setPaymentError(null), 4000);
+    return () => clearTimeout(t);
+  }, [paymentError]);
+
+  const handleChoosePlan = async (planTier: string) => {
+    if (!user) {
+      // Not logged in — send to signup
+      window.location.href = "/signup";
+      return;
+    }
+
+    setLoadingPlan(planTier);
+    setPaymentError(null);
+
+    try {
+      const res = await fetch("/api/payments/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          planTier,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.link) {
+        // Redirect to Flutterwave hosted checkout
+        window.location.href = data.link;
+      } else {
+        setPaymentError(data.error || "Failed to initialize payment");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setPaymentError("Something went wrong. Please try again.");
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
+
   const DarkTickIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0">
       <path opacity="0.4" d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" fill="#121212" />
       <path d="M10.58 15.5801C10.38 15.5801 10.19 15.5001 10.05 15.3601L7.22 12.5301C6.93 12.2401 6.93 11.7601 7.22 11.4701C7.51 11.1801 7.99 11.1801 8.28 11.4701L10.58 13.7701L15.72 8.6301C16.01 8.3401 16.49 8.3401 16.78 8.6301C17.07 8.9201 17.07 9.4001 16.78 9.6901L11.11 15.3601C10.97 15.5001 10.78 15.5801 10.58 15.5801Z" fill="#121212" />
     </svg>
   );
+
+  const plans = [
+    {
+      tier: "starter",
+      name: "Starter",
+      price: "₦5,000",
+      tagline: "Basic features for everyone",
+      inherit: "Starter plan",
+      features: [
+        "Up to 20 clients",
+        "Unlimited measurements",
+        "Core measurement tools",
+        "Basic order tracking",
+        "1 team member",
+      ],
+      filled: true,     // dark filled button
+    },
+    {
+      tier: "professional",
+      name: "Professional",
+      price: "₦10,000",
+      tagline: "Professional features for everyone",
+      inherit: "Professional plan",
+      features: [
+        "Up to 50 clients",
+        "Unlimited measurements",
+        "Advanced order tracking",
+        "Core measurement tools",
+        "Smart scheduling",
+        "Basic order tracking",
+        "5 team members",
+      ],
+      filled: false,    // outlined button
+    },
+  ];
 
   return (
     <section
@@ -1013,138 +1102,99 @@ const Desktop = ({ className = "" }: { className?: string }) => {
           </p>
         </div>
 
-        {/* Cards Row (276px fixed cards, slightly wider 52px gap between cards) */}
+        {/* Payment error toast */}
+        {paymentError && (
+          <div className="w-full max-w-[500px] bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-2xl text-sm font-[Satoshi] text-center animate-[fadeIn_0.2s_ease]">
+            {paymentError}
+          </div>
+        )}
+
+        {/* Cards Row */}
         <div className="flex flex-row justify-center items-stretch gap-[52px] w-full max-w-[1052px] mq800:flex-col mq800:items-center text-left">
-          {/* Card 1 — Starter */}
-          <div className="tailora-reveal-item w-[276px] max-w-full shrink-0 border border-[#121212] rounded-[24px] overflow-hidden flex flex-col justify-between bg-[#FEFCF9] transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-            {/* Gradient Header */}
-            <div
-              className="py-[22px] px-[23px] border-b border-[#121212] flex flex-col items-start gap-1 text-left font-[Sora]"
-              style={{
-                background: "linear-gradient(228.95deg, rgba(253, 246, 236, 0) 29.3%, #FDF6EC 108.4%)",
-              }}
-            >
-              <div className="self-stretch text-base font-normal text-[#121212]">
-                Starter
-              </div>
-              <div className="self-stretch flex flex-col items-start gap-1 text-[32px]">
-                <div className="self-stretch relative leading-[48px] text-[#121212]">
-                  <b className="font-bold">₦5,000</b>
-                  <span className="text-base font-normal"> /month</span>
-                </div>
-                <div className="self-stretch text-xs font-medium font-[Satoshi] text-[#696969]">
-                  Basic features for everyone
-                </div>
-              </div>
-            </div>
+          {plans.map((plan) => {
+            const isLoading = loadingPlan === plan.tier;
 
-            {/* Body — compact gap-8 (32px) for balanced height */}
-            <div className="pt-6 px-[23px] pb-[22px] flex flex-col justify-between flex-1 gap-8 text-sm mq450:gap-6">
-              <div className="flex flex-col items-start gap-3">
-                <div className="flex flex-col items-start gap-1">
-                  <div className="self-stretch text-sm font-normal font-[Sora] text-[#121212]">
-                    Features
-                  </div>
-                  <div className="self-stretch text-xs font-normal font-[Satoshi] text-[#555960]">
-                    <span>Everything in </span>
-                    <b className="font-bold text-[#121212]">Starter plan</b>
-                  </div>
-                </div>
-
-                <div className="self-stretch flex flex-col items-start gap-3 text-xs font-[Satoshi] text-[#121212]">
-                  {[
-                    "Up to 20 clients",
-                    "Unlimited measurements",
-                    "Core measurement tools",
-                    "Basic order tracking",
-                    "1 team member",
-                  ].map((item) => (
-                    <div key={item} className="self-stretch flex items-center gap-3">
-                      <DarkTickIcon />
-                      <div className="relative leading-5 font-normal">{item}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <a href="/signup" className="block w-full">
-                <button
-                  className="w-full cursor-pointer border border-[#121212] py-2.5 px-4 bg-[#121212] text-white rounded-[40px] flex items-center justify-center text-sm font-medium font-[Satoshi] transition-all duration-150 hover:bg-[#2a2a2a] active:scale-[0.96] active:duration-[40ms]"
+            return (
+              <div
+                key={plan.tier}
+                className="tailora-reveal-item w-[276px] max-w-full shrink-0 border border-[#121212] rounded-[24px] overflow-hidden flex flex-col justify-between bg-[#FEFCF9] transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
+              >
+                {/* Gradient Header */}
+                <div
+                  className="py-[22px] px-[23px] border-b border-[#121212] flex flex-col items-start gap-1 text-left font-[Sora]"
+                  style={{
+                    background: "linear-gradient(228.95deg, rgba(253, 246, 236, 0) 29.3%, #FDF6EC 108.4%)",
+                  }}
                 >
-                  Choose starter
-                </button>
-              </a>
-            </div>
-          </div>
-
-          {/* Card 2 — Professional */}
-          <div className="tailora-reveal-item w-[276px] max-w-full shrink-0 border border-[#121212] rounded-[24px] overflow-hidden flex flex-col justify-between bg-[#FEFCF9] transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-            {/* Gradient Header */}
-            <div
-              className="py-[22px] px-[23px] border-b border-[#121212] flex flex-col items-start gap-1 text-left font-[Sora]"
-              style={{
-                background: "linear-gradient(228.95deg, rgba(253, 246, 236, 0) 29.3%, #FDF6EC 108.4%)",
-              }}
-            >
-              <div className="self-stretch text-base font-normal text-[#121212]">
-                Professional
-              </div>
-              <div className="self-stretch flex flex-col items-start gap-1 text-[32px]">
-                <div className="self-stretch relative leading-[48px] text-[#121212]">
-                  <b className="font-bold">₦10,000</b>
-                  <span className="text-base font-normal"> /month</span>
-                </div>
-                <div className="self-stretch text-xs font-medium font-[Satoshi] text-[#696969]">
-                  Professional features for everyone
-                </div>
-              </div>
-            </div>
-
-            {/* Body — compact gap-8 (32px) for balanced height */}
-            <div className="pt-6 px-[23px] pb-[22px] flex flex-col justify-between flex-1 gap-8 text-sm mq450:gap-6">
-              <div className="flex flex-col items-start gap-3">
-                <div className="flex flex-col items-start gap-1">
-                  <div className="self-stretch text-sm font-normal font-[Sora] text-[#121212]">
-                    Features
+                  <div className="self-stretch text-base font-normal text-[#121212]">
+                    {plan.name}
                   </div>
-                  <div className="self-stretch text-xs font-normal font-[Satoshi] text-[#555960]">
-                    <span>Everything in </span>
-                    <b className="font-bold text-[#121212]">Professional plan</b>
-                  </div>
-                </div>
-
-                <div className="self-stretch flex flex-col items-start gap-3 text-xs font-[Satoshi] text-[#121212]">
-                  {[
-                    "Up to 50 clients",
-                    "Unlimited measurements",
-                    "Advanced order tracking",
-                    "Core measurement tools",
-                    "Smart scheduling",
-                    "Basic order tracking",
-                    "5 team members",
-                  ].map((item) => (
-                    <div key={item} className="self-stretch flex items-center gap-3">
-                      <DarkTickIcon />
-                      <div className="relative leading-5 font-normal">{item}</div>
+                  <div className="self-stretch flex flex-col items-start gap-1 text-[32px]">
+                    <div className="self-stretch relative leading-[48px] text-[#121212]">
+                      <b className="font-bold">{plan.price}</b>
+                      <span className="text-base font-normal"> /month</span>
                     </div>
-                  ))}
+                    <div className="self-stretch text-xs font-medium font-[Satoshi] text-[#696969]">
+                      {plan.tagline}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Body */}
+                <div className="pt-6 px-[23px] pb-[22px] flex flex-col justify-between flex-1 gap-8 text-sm mq450:gap-6">
+                  <div className="flex flex-col items-start gap-3">
+                    <div className="flex flex-col items-start gap-1">
+                      <div className="self-stretch text-sm font-normal font-[Sora] text-[#121212]">
+                        Features
+                      </div>
+                      <div className="self-stretch text-xs font-normal font-[Satoshi] text-[#555960]">
+                        <span>Everything in </span>
+                        <b className="font-bold text-[#121212]">{plan.inherit}</b>
+                      </div>
+                    </div>
+
+                    <div className="self-stretch flex flex-col items-start gap-3 text-xs font-[Satoshi] text-[#121212]">
+                      {plan.features.map((item) => (
+                        <div key={item} className="self-stretch flex items-center gap-3">
+                          <DarkTickIcon />
+                          <div className="relative leading-5 font-normal">{item}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    id={`choose-${plan.tier}-btn`}
+                    onClick={() => handleChoosePlan(plan.tier)}
+                    disabled={isLoading}
+                    className={`w-full cursor-pointer border border-[#121212] py-2.5 px-4 rounded-[40px] flex items-center justify-center text-sm font-medium font-[Satoshi] transition-all duration-150 active:scale-[0.96] active:duration-[40ms] disabled:opacity-60 disabled:cursor-wait ${
+                      plan.filled
+                        ? "bg-[#121212] text-white hover:bg-[#2a2a2a]"
+                        : "bg-transparent text-[#121212] hover:bg-[#121212] hover:text-white"
+                    }`}
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Processing…
+                      </span>
+                    ) : (
+                      `Choose ${plan.name.toLowerCase()}`
+                    )}
+                  </button>
                 </div>
               </div>
-
-              <a href="/signup" className="block w-full">
-                <button
-                  className="w-full max-w-[217px] mx-auto cursor-pointer border border-[#121212] py-2.5 px-6 bg-transparent text-[#121212] rounded-[40px] flex items-center justify-center text-sm font-normal font-[Satoshi] transition-all duration-150 hover:bg-[#121212] hover:text-white active:scale-[0.96] active:duration-[40ms]"
-                >
-                  Choose professional
-                </button>
-              </a>
-            </div>
-          </div>
+            );
+          })}
         </div>
       </div>
     </section>
   );
 };
+
 
 // Desktop1 - CTA Section
 const Desktop1 = ({ className = "" }: { className?: string }) => {

@@ -30,6 +30,19 @@ export default function AppPageHeader({ title }: { title: string }) {
   const [fullName, setFullName] = useState("");
   const [businessName, setBusinessName] = useState("");
 
+  const [subscriptionTier, setSubscriptionTier] = useState<string>(() => {
+    try {
+      return localStorage.getItem('tailora_tier') || 'free';
+    } catch {}
+    return 'free';
+  });
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>(() => {
+    try {
+      return localStorage.getItem('tailora_sub_status') || 'inactive';
+    } catch {}
+    return 'inactive';
+  });
+
   type UserRole = 'Owner' | 'Admin' | 'Tailor' | 'Assistant';
   const [userRole, setUserRole] = useState<UserRole>(() => {
     try {
@@ -57,6 +70,10 @@ export default function AppPageHeader({ title }: { title: string }) {
       if (storedName) setFullName(storedName);
       const storedBusiness = localStorage.getItem('tailora_businessname');
       if (storedBusiness) setBusinessName(storedBusiness);
+      const storedTier = localStorage.getItem('tailora_tier');
+      if (storedTier) setSubscriptionTier(storedTier);
+      const storedStatus = localStorage.getItem('tailora_sub_status');
+      if (storedStatus) setSubscriptionStatus(storedStatus);
     } catch {}
 
     async function refreshAvatar() {
@@ -78,7 +95,7 @@ export default function AppPageHeader({ title }: { title: string }) {
           try { localStorage.setItem('tailora_role', 'Owner'); } catch {}
         }
 
-        const { data: profile, error } = await supabase.from('profiles').select('avatar_path, full_name, business_name').eq('id', userId).maybeSingle();
+        const { data: profile, error } = await supabase.from('profiles').select('avatar_path, full_name, business_name, subscription_tier, subscription_status').eq('id', userId).maybeSingle();
         if (error) return;
         if (profile) {
           if (profile.full_name && mounted) {
@@ -88,6 +105,14 @@ export default function AppPageHeader({ title }: { title: string }) {
           if (profile.business_name && mounted) {
             setBusinessName(profile.business_name);
             try { localStorage.setItem('tailora_businessname', profile.business_name); } catch {}
+          }
+          if (profile.subscription_tier && mounted) {
+            setSubscriptionTier(profile.subscription_tier);
+            try { localStorage.setItem('tailora_tier', profile.subscription_tier); } catch {}
+          }
+          if (profile.subscription_status && mounted) {
+            setSubscriptionStatus(profile.subscription_status);
+            try { localStorage.setItem('tailora_sub_status', profile.subscription_status); } catch {}
           }
           if (profile.avatar_path) {
             const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(profile.avatar_path);
@@ -112,6 +137,10 @@ export default function AppPageHeader({ title }: { title: string }) {
         if (storedName) setFullName(storedName);
         const storedBusiness = localStorage.getItem('tailora_businessname');
         if (storedBusiness) setBusinessName(storedBusiness);
+        const storedTier = localStorage.getItem('tailora_tier');
+        if (storedTier) setSubscriptionTier(storedTier);
+        const storedStatus = localStorage.getItem('tailora_sub_status');
+        if (storedStatus) setSubscriptionStatus(storedStatus);
       } catch {}
     }
     window.addEventListener('tailora_profile_updated', handleProfileUpdate);
@@ -592,6 +621,58 @@ export default function AppPageHeader({ title }: { title: string }) {
                         }}
                       >
                         {userEmail}
+                      </div>
+                    )}
+
+                    {/* Plan Badge / Card for Workspace Owner */}
+                    {userRole === 'Owner' && (
+                      <div
+                        style={{
+                          marginTop: 6,
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          background: subscriptionTier === 'professional' ? '#FEF6EE' : subscriptionTier === 'starter' ? '#F0F9F4' : '#F9FAFB',
+                          border: `1px solid ${subscriptionTier === 'professional' ? '#F9DBAF' : subscriptionTier === 'starter' ? '#D1FADF' : '#EAECF0'}`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span style={{ fontSize: 10, fontWeight: 600, color: "#667085", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                            Current Plan
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: subscriptionTier === 'professional' ? '#B54708' : subscriptionTier === 'starter' ? '#027A48' : '#344054',
+                              textTransform: 'capitalize',
+                              fontFamily: "var(--font-satoshi)",
+                            }}
+                          >
+                            {subscriptionTier && subscriptionTier !== 'free' ? `${subscriptionTier} Plan` : 'Free Plan'}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowUserMenu(false);
+                            router.push('/settings');
+                          }}
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "#E57301",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            padding: 0,
+                            fontFamily: "var(--font-satoshi)",
+                          }}
+                        >
+                          {subscriptionTier === 'free' ? 'Upgrade →' : 'Manage'}
+                        </button>
                       </div>
                     )}
                   </div>

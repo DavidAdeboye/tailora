@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { getPlanLimit } from "../lib/plans";
 
 export interface ClientFormData {
   id?: string;
@@ -49,6 +50,12 @@ export default function AddClientModal({
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Plan limits state
+  const [isLimitReached, setIsLimitReached] = useState(false);
+  const [currentPlanName, setCurrentPlanName] = useState("Free");
+  const [maxClientsAllowed, setMaxClientsAllowed] = useState(10);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+
   // Unsaved changes modal state
   const [showDiscardPrompt, setShowDiscardPrompt] = useState(false);
 
@@ -62,17 +69,43 @@ export default function AddClientModal({
 
   useEffect(() => {
     if (isOpen) {
-      const fetchClients = async () => {
+      const fetchClientsAndLimits = async () => {
         try {
-          const { data } = await supabase.from("clients").select("name, phone");
-          if (data) {
-            setFetchedClients(data.map((c: any) => ({ name: c.name || "", phone: c.phone || "" })));
+          const { data: userData } = await supabase.auth.getUser();
+          const user = userData?.user;
+          if (!user) return;
+
+          let workspaceOwnerId = user.id;
+          const { data: rpcResult } = await supabase.rpc('get_my_team_role');
+          if (rpcResult && rpcResult.length > 0) {
+            workspaceOwnerId = rpcResult[0].owner_id;
+          }
+
+          const [profileRes, clientsRes] = await Promise.all([
+            supabase.from('profiles').select('subscription_tier').eq('id', workspaceOwnerId).maybeSingle(),
+            supabase.from('clients').select('id, name, phone', { count: 'exact' }),
+          ]);
+
+          const planConfig = getPlanLimit(profileRes.data?.subscription_tier);
+          setCurrentPlanName(planConfig.name);
+          setMaxClientsAllowed(planConfig.maxClients);
+
+          const clientCount = clientsRes.count ?? clientsRes.data?.length ?? 0;
+          if (clientsRes.data) {
+            setFetchedClients(clientsRes.data.map((c: any) => ({ name: c.name || "", phone: c.phone || "" })));
+          }
+
+          // If creating a brand-new client (not editing), check if limit is reached
+          if (!initialData?.id && clientCount >= planConfig.maxClients) {
+            setIsLimitReached(true);
+          } else {
+            setIsLimitReached(false);
           }
         } catch (err) {
-          console.error("Error loading clients for dup check:", err);
+          console.error("Error loading clients / limits check:", err);
         }
       };
-      fetchClients();
+      fetchClientsAndLimits();
 
       if (initialData && (initialData.name || initialData.phone)) {
         const isPreset = OUTFIT_OPTIONS.includes(initialData.outfitType);
@@ -99,10 +132,145 @@ export default function AddClientModal({
       setDuplicateMatchInfo("");
       setPendingAction(null);
       setIsSubmitting(false);
+      setIsLimitReached(false);
     }
   }, [isOpen, initialData]);
 
+  const handleUpgradeCheckout = async () => {
+    try {
+      setIsUpgrading(true);
+      const targetPlan = currentPlanName.toLowerCase() === 'starter' ? 'professional' : 'starter';
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
+      if (!user) {
+        alert("Please log in to upgrade.");
+        setIsUpgrading(false);
+        return;
+      }
+
+      const res = await fetch('/api/payments/initialize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          email: user.email,
+          planTier: targetPlan,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.link) {
+        window.location.href = data.link;
+      } else {
+        alert(data.error || "Failed to initialize payment");
+        setIsUpgrading(false);
+      }
+    } catch (err: any) {
+      alert(err.message || "Upgrade error");
+      setIsUpgrading(false);
+    }
+  };
+
   if (!isOpen) return null;
+
+  if (isLimitReached) {
+    return (
+      <div
+        className="tailora-modal-backdrop"
+        onClick={onClose}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(10,13,18,0.70)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          zIndex: 200,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          className="tailora-modal-panel"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: "relative",
+            width: 480,
+            maxHeight: "calc(100vh - 48px)",
+            overflowY: "auto",
+            background: "#fff",
+            borderRadius: 16,
+            fontFamily: "Satoshi, Inter, sans-serif",
+            padding: "32px 28px",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: "50%",
+              background: "#FEF0E6",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginBottom: 16,
+            }}
+          >
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+              <path d="M12 8V12M12 16H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z" stroke="#E57301" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <h2 style={{ margin: "0 0 8px", fontFamily: "Sora, sans-serif", fontWeight: 800, fontSize: 22, color: "#1a1a1a" }}>
+            Client Limit Reached
+          </h2>
+          <p style={{ margin: "0 0 24px", fontSize: 14, color: "#667185", lineHeight: "22px" }}>
+            You've reached your plan's maximum capacity of <strong style={{ color: "#121212" }}>{maxClientsAllowed} clients</strong> on the <strong style={{ color: "#121212" }}>{currentPlanName}</strong> plan. Upgrade to unlock more clients and continue growing your workspace.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <button
+              type="button"
+              disabled={isUpgrading}
+              onClick={handleUpgradeCheckout}
+              style={{
+                width: "100%",
+                padding: "13px 24px",
+                background: "#121212",
+                border: "none",
+                borderRadius: 999,
+                fontSize: 14,
+                fontWeight: 600,
+                color: "#fff",
+                cursor: isUpgrading ? "default" : "pointer",
+                fontFamily: "Satoshi, sans-serif",
+                opacity: isUpgrading ? 0.7 : 1,
+              }}
+            >
+              {isUpgrading ? "Redirecting..." : currentPlanName.toLowerCase() === "starter" ? "Upgrade to Professional (50 Clients)" : "Upgrade to Starter (20 Clients)"}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              style={{
+                width: "100%",
+                padding: "12px 24px",
+                background: "transparent",
+                border: "1px solid #EAECF0",
+                borderRadius: 999,
+                fontSize: 14,
+                fontWeight: 500,
+                color: "#667185",
+                cursor: "pointer",
+                fontFamily: "Satoshi, sans-serif",
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleOutfitChange = (value: string) => {
     if (value === "Custom") {
